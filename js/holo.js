@@ -13,7 +13,15 @@
      · 画布不再固定铺满窗口：尺寸取画布自身的 CSS 盒子（ResizeObserver），指针坐标换算到画布内
      · setActive(false) 时完全停止渲染与交互（切回 CSS 模式 / 画布滚出视口时）
      · setGyro / clearGyro：陀螺仪驱动倾斜（指针优先，与 CSS 模式同一套规则）
-     · setEffects：与控制面板同步开关镭射 / 压纹 / 边缘光 / 高光
+     · setEffects：与控制面板同步开关镭射 / 压纹 / 边缘光 / 高光 / 视差破框
+     · 分层卡（多层视差 + 角色破框，与 CSS 模式同样的四张卡）：
+         模板缓冲（stencil）开窗：卡面正面写 1，插画窗口的遮罩网格写 2；
+         远景 / 中景是卡面“后方”有真实深度的平面，只在 stencil = 2 的像素里绘制 → 透过窗口看到真实视差，
+         从背面、侧面看都不会穿帮（背面朝向镜头时正面与遮罩被背面剔除，stencil 里没有 2）；
+         角色 / 徽记、粒子是卡面前方的平面（带 alpha、底部柔和渐隐），角色超出卡框上沿 = 破框；
+         箔面只作用在该有的层：霜晶龙 / 焰尾狐的镭射只在远景层，星尘狐只在卡框，金曜狮王是卡框 + 文字区；
+         「视差破框」关掉时各层贴回卡面，角色裁回窗口内、粒子裁回卡内（同样用 stencil）。
+       角色 / 背景贴图由汇总页把 CSS 模式里的同一份内联 SVG 交给 start({ layers })，在这里光栅化到 canvas。
    ========================================================= */
 import {
   WebGLRenderer, Scene, PerspectiveCamera, Group, Mesh, Shape, ShapeGeometry, ExtrudeGeometry, PlaneGeometry,
@@ -22,7 +30,13 @@ import {
   NeutralToneMapping, WebGLRenderTarget, DirectionalLight, Float32BufferAttribute, MathUtils,
   SphereGeometry, ShaderMaterial, BackSide, RoomEnvironment, EffectComposer, RenderPass, UnrealBloomPass, OutputPass,
 } from 'three';
-import { CARDS, buildCard, buildBack, buildShadow, drawBackground } from './textures.js';
+import {
+  CARDS, LAYOUT, TW, TH, buildCard, buildBack, buildShadow, drawBackground,
+  rasterSvg, fadeEdges, fadeBottom, buildWindowShade, buildLayerFoil,
+} from './textures.js';
+
+/* WebGL 模板缓冲常量（与 three 的同名常量数值相同；精简版 vendor 没有导出它们，直接写 GL 枚举值） */
+const ALWAYS = 519, EQUAL = 514, LEQUAL = 515, KEEP = 7680, REPLACE = 7681;
 
 /* ---------------- 可调参数 ---------------- */
 export const CONFIG = {
@@ -46,6 +60,13 @@ export const CONFIG = {
   envBlur: 0.03,                             // PMREM 预模糊
   bloom: { strength: 0.28, radius: 0.5, threshold: 0.92 },  // 克制：只有亮片与箔面最亮处溢出
   clearcoat: 0.6,                            // 覆膜光泽（「高光」开关关掉时为 0）
+  // 分层卡（单位：世界单位，卡片宽 2.5；z 相对卡面，负数在卡面后方）
+  layerZ: { bg: -0.55, mid: -0.25, char: 0.32, fg: 0.6 },
+  bleed: { bg: 0.36, mid: 0.2 },             // 远景 / 中景比窗口大出的一圈（倾斜时不露边；最外圈 alpha 渐隐）
+  breakout: 0.24,                            // 角色超出窗口上沿的高度（× 卡高，与 CSS 版相同）
+  flatDepth: 0.02,                           // 「视差破框」关掉时的深度倍率
+  camY: 0.25,                                // 镜头略微上移：给破框的角色留出头顶空间
+  pxPerUnit: 300,                            // 图层光栅化分辨率（像素 / 世界单位）
   pointerPriorityMs: 400,                    // 指针刚离开的这段时间内忽略陀螺仪（避免打架）
   // 共享的着色器参数（每张卡还可以覆盖，见 CARD_LOOK）
   rimColor: new Color(0.75, 0.82, 1.0),
@@ -54,6 +75,12 @@ export const CONFIG = {
 
 /** 每张卡的材质外观 */
 const CARD_LOOK = {
+  dragon: { rainbow: 0.3, holoEmit: 0.2, foilTint: [0.92, 0.96, 1.0], foilMetal: 0.75, foilRough: 0.30, foilCover: 0.35,
+           baseRough: 0.48, sparkle: 0, sparkleDensity: 52, bandFreq: 1.3, viewFreq: 1.6,
+           iridescence: 0.35, iriRange: [180, 620], normalScale: 0.7, anisotropy: 0, rim: 0.28 },
+  fox:   { rainbow: 0.45, holoEmit: 0.22, foilTint: [1.0, 0.86, 1.0], foilMetal: 0.65, foilRough: 0.36, foilCover: 0.35,
+           baseRough: 0.5, sparkle: 0, sparkleDensity: 52, bandFreq: 1.0, viewFreq: 1.3,
+           iridescence: 0.3, iriRange: [250, 700], normalScale: 0.7, anisotropy: 0, rim: 0.28 },
   frost: { rainbow: 1.0, holoEmit: 0.85, foilTint: [0.92, 0.96, 1.0], foilMetal: 0.75, foilRough: 0.30, foilCover: 0.55,
            baseRough: 0.48, sparkle: 3.0, sparkleDensity: 52, bandFreq: 1.3, viewFreq: 1.6,
            iridescence: 0.6, iriRange: [180, 620], normalScale: 0.7, anisotropy: 0, rim: 0.28 },
@@ -63,6 +90,13 @@ const CARD_LOOK = {
   sun:   { rainbow: 0.12, holoEmit: 0.12, foilTint: [1.0, 0.80, 0.42], foilMetal: 0.95, foilRough: 0.32, foilCover: 0.55,
            baseRough: 0.55, sparkle: 3.0, sparkleDensity: 52, bandFreq: 0.8, viewFreq: 1.1,
            iridescence: 0.35, iriRange: [300, 500], normalScale: 0.8, anisotropy: 0.55, rim: 0.28 },
+  // 远景层（插画）上的箔：参数沿用 WebGL 版原来插画窗口的箔面
+  'layer:rainbow': { rainbow: 1.0, holoEmit: 0.55, foilTint: [0.92, 0.96, 1.0], foilMetal: 0.6, foilRough: 0.30, foilCover: 0.4,
+           baseRough: 0.5, sparkle: 2.0, sparkleDensity: 52, bandFreq: 1.3, viewFreq: 1.6,
+           iridescence: 0.5, iriRange: [180, 620], normalScale: 0, anisotropy: 0, rim: 0 },
+  'layer:sparkle': { rainbow: 0.4, holoEmit: 0.2, foilTint: [1.0, 0.88, 0.95], foilMetal: 0.55, foilRough: 0.36, foilCover: 0.3,
+           baseRough: 0.5, sparkle: 8.0, sparkleDensity: 52, bandFreq: 1.0, viewFreq: 1.3,
+           iridescence: 0.35, iriRange: [250, 700], normalScale: 0, anisotropy: 0, rim: 0 },
   back:  { rainbow: 0.7, holoEmit: 0.18, foilTint: [1.0, 0.88, 0.6], foilMetal: 0.85, foilRough: 0.3, foilCover: 0.6,
            baseRough: 0.5, sparkle: 3.0, sparkleDensity: 52, bandFreq: 1.0, viewFreq: 1.4,
            iridescence: 0.7, iriRange: [200, 600], normalScale: 0.7, anisotropy: 0, rim: 0.3 },
@@ -253,9 +287,9 @@ function studioEnvironment() {
 }
 
 /* ---------------- 主程序 ---------------- */
-export function start({ canvas, onReady, initialCard = 'frost', embedded = false, effects = {} }) {
+export function start({ canvas, onReady, initialCard = 'dragon', embedded = false, effects = {}, layers: layerSvgs = {} }) {
   // 特效开关（与汇总页控制面板同步）：镭射 / 压纹 / 边缘光 / 高光
-  const fx = { foil: true, etch: true, rim: true, glare: true, ...effects };
+  const fx = { foil: true, etch: true, rim: true, glare: true, depth: true, ...effects };
   let active = true;           // false：不渲染、不响应指针（CSS 模式下或画布不可见时）
   let inView = true;           // 画布是否在视口里（IntersectionObserver）
   const W = CONFIG.width, H = W * 88 / 63, T = CONFIG.thickness;
@@ -311,11 +345,13 @@ export function start({ canvas, onReady, initialCard = 'frost', embedded = false
     return { m, u };
   };
   const front = makeFace(), back = makeFace();
+  // 正面在模板缓冲里写 1（卡面范围）：「视差破框」关掉时粒子裁回卡内要用
+  Object.assign(front.m, { stencilWrite: true, stencilRef: 1, stencilFunc: ALWAYS, stencilZPass: REPLACE });
   const applyLook = (face, look, texs) => {
     const { m, u } = face;
     face.look = look; face.texs = texs;           // 记下来：开关特效时按同一套外观重新套用
     const F = fx.foil ? 1 : 0;
-    m.map = texs.map; m.normalMap = texs.normal; m.iridescenceMap = texs.foil; m.iridescenceThicknessMap = texs.foil;
+    m.map = texs.map; m.normalMap = texs.normal || null; m.iridescenceMap = texs.foil; m.iridescenceThicknessMap = texs.foil;
     const ns = fx.etch ? look.normalScale : 0;    // 压纹 = 法线贴图（卡框压纹、窗口内凹、凸印标题、蚀刻纹）
     m.normalScale.set(ns, ns);
     m.roughness = look.baseRough;
@@ -379,38 +415,210 @@ export function start({ canvas, onReady, initialCard = 'frost', embedded = false
 
   // 每个面每帧更新：相机位置 / 亮片光源方向 → 该网格的局部坐标
   const q = new Quaternion(), lightW = CONFIG.sparkleLight.clone().normalize();
-  for (const [mesh, face] of [[frontMesh, front], [backMesh, back]]) {
+  const trackCamera = (mesh, face) => {
     mesh.onBeforeRender = (_r, _s, cam) => {
       mesh.worldToLocal(face.u.uCamLocal.value.copy(cam.position));
       mesh.getWorldQuaternion(q).invert();
       face.u.uLightLocal.value.copy(lightW).applyQuaternion(q);
     };
-  }
+  };
+  trackCamera(frontMesh, front); trackCamera(backMesh, back);
 
   const backTex = (() => { const b = buildBack(); return { map: tex(b.map, true), normal: tex(b.normal, false), foil: tex(b.foil, false) }; })();
   applyLook(back, CARD_LOOK.back, backTex);
-  const texCache = {};
-  let current = null;
-  const setCard = (key) => {
-    if (!CARDS[key] || key === current) return;
+
+  /* ----- 分层卡：窗口 / 远景 / 中景 / 内阴影 / 角色 / 粒子 ----- */
+  // 插画窗口（世界单位，卡片中心为原点；与卡面纹理的版式 LAYOUT.art 一致）
+  const WIN = (() => {
+    const a = LAYOUT.art, sx = W / TW, sy = H / TH;
+    const w = a.w * sx, h = a.h * sy, cx = -W / 2 + (a.x + a.w / 2) * sx, cy = H / 2 - (a.y + a.h / 2) * sy;
+    return { w, h, cx, cy, r: a.r * sx, top: cy + h / 2, bottom: cy - h / 2 };
+  })();
+  const CSS_PX = W / 256;    // CSS 版卡宽 256px ↔ 2.5 单位：把 CSS 里的投影 / 描边像素换算过来
+  const PXU = CONFIG.pxPerUnit;
+  const canvasTex = (cv, premul) => {
+    const t = tex(cv, true);
+    if (premul) t.premultiplyAlpha = true;   // 预乘 alpha：角色剪影边缘线性过滤 / mipmap 时不出现暗边
+    return t;
+  };
+  // 图层材质：贴图是预乘 alpha（canvas 本来就是预乘存储），混合用 One / OneMinusSrcAlpha。
+  // 不开深度测试：前后顺序由 renderOrder 决定；正面剔除保证从背面看不到前景层。
+  const layerMat = (opacity = 1) => new MeshBasicMaterial({
+    transparent: true, depthTest: false, depthWrite: false, side: 0 /* FrontSide */,
+    blending: 5 /* CustomBlending */, blendSrc: 201 /* One */, blendDst: 205 /* OneMinusSrcAlpha */,
+    blendSrcAlpha: 201, blendDstAlpha: 205,
+    color: new Color(opacity, opacity, opacity), opacity,     // 预乘数据：颜色与 alpha 一起乘
+  });
+  const inWindow = (m) => Object.assign(m, { stencilWrite: true, stencilRef: 2, stencilFunc: EQUAL, stencilZPass: KEEP, stencilFail: KEEP, stencilZFail: KEEP });
+
+  /** 光栅化一张卡的全部图层（异步：SVG → Image → canvas） */
+  async function rasterCard(key) {
+    const def = CARDS[key], svg = layerSvgs[key];
+    if (!def.layered || !svg?.bg) return null;          // 没有图层源：退回“插画画在卡面上”的单层卡
+    const P = (u) => Math.max(8, Math.round(u * PXU));
+    const out = {};
+    // 远景：先铺 CSS 版的 --art-bg 渐变，再画 SVG；四周渐隐
+    const bgW = WIN.w + CONFIG.bleed.bg * 2, bgH = WIN.h + CONFIG.bleed.bg * 2;
+    out.bg = fadeEdges(await rasterSvg(svg.bg, P(bgW), P(bgH), { under: def.artBg }), P(CONFIG.bleed.bg * 0.66));
+    out.bgSize = [bgW, bgH];
+    if (svg.mid) {
+      const mW = WIN.w + CONFIG.bleed.mid * 2, mH = WIN.h + CONFIG.bleed.mid * 2;
+      out.mid = fadeEdges(await rasterSvg(svg.mid, P(mW), P(mH)), P(CONFIG.bleed.mid * 0.6));
+      out.midSize = [mW, mH];
+    }
+    // 卡面上的“压平”插画：远景 + 中景按静止时的位置裁到窗口里
+    {
+      const fw = P(WIN.w), fh = P(WIN.h), cv = document.createElement('canvas'); cv.width = fw; cv.height = fh;
+      const c = cv.getContext('2d');
+      c.drawImage(out.bg, -P(CONFIG.bleed.bg), -P(CONFIG.bleed.bg));
+      if (out.mid) c.drawImage(out.mid, -P(CONFIG.bleed.mid), -P(CONFIG.bleed.mid));
+      out.flat = cv;
+    }
+    out.shade = buildWindowShade(def, P(WIN.w), P(WIN.h), PXU * CSS_PX);
+    if (svg.char) {
+      const K = PXU * 1.4;   // 角色离镜头最近：分辨率高一些
+      if (def.layered.breakout) {
+        // viewBox 0 0 200 250、底边对齐窗口下沿、高度 = 窗口 + 破框；四周各留 20 个 viewBox 单位给犄角 / 投影
+        const u = (WIN.h + CONFIG.breakout * H) / 250, pad = 20;
+        const pw = (200 + pad * 2) * u, ph = (250 + pad * 2) * u;
+        const px = Math.round(pw * K), py = Math.round(ph * K), k = px / (200 + pad * 2);
+        const cv = await rasterSvg(svg.char, px, py, { viewBox: `${-pad} ${-pad} ${200 + pad * 2} ${250 + pad * 2}`,
+          shadow: { color: 'rgba(0,0,0,.45)', blur: 10 * k, y: 10 * k } });   // = CSS drop-shadow(0 10px 10px)
+        out.char = fadeBottom(cv, pad * k, 35 * k);                            // = CSS --char-fade 14%
+        out.charRect = { w: pw, h: ph, cx: WIN.cx, cy: WIN.bottom - pad * u + ph / 2 };
+      } else {
+        // 徽记：CSS 版是窗口内 inset 14% 20% 的方形区域（viewBox 100）
+        const S = Math.min(WIN.w * 0.6, WIN.h * 0.72), pad = 14, u = S / 100;
+        const pw = (100 + pad * 2) * u, px = Math.round(pw * K), k = px / (100 + pad * 2);
+        out.char = await rasterSvg(svg.char, px, px, { viewBox: `${-pad} ${-pad} ${100 + pad * 2} ${100 + pad * 2}`,
+          shadow: { color: 'rgba(0,0,0,.45)', blur: 6.8 * k, y: 5 * k } });
+        out.charRect = { w: pw, h: pw, cx: WIN.cx, cy: WIN.cy };
+      }
+    }
+    if (svg.fg) {
+      // 粒子层：横向 = 卡宽，纵向从破框高度到卡片下沿（与 CSS 版 .layer--fg 相同）
+      const top = WIN.top + CONFIG.breakout * H, bottom = -H / 2;
+      out.fg = await rasterSvg(svg.fg, P(W), P(top - bottom));
+      out.fgRect = { w: W, h: top - bottom, cx: 0, cy: (top + bottom) / 2 };
+    }
+    return out;
+  }
+
+  /** 由光栅化结果搭建一张卡的图层网格 */
+  function buildLayerGroup(key, R) {
+    const def = CARDS[key], g = new Group(), items = [];
+    g.visible = false;
+    const plane = (w, h) => new PlaneGeometry(w, h);
+    // ① 窗口遮罩：只写模板缓冲（不写颜色 / 深度），正面朝向镜头时才会光栅化
+    const mask = new Mesh(new ShapeGeometry(roundedShape(WIN.w, WIN.h, WIN.r), 12),
+      new MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false,
+        stencilWrite: true, stencilRef: 2, stencilFunc: ALWAYS, stencilZPass: REPLACE }));
+    mask.position.set(WIN.cx, WIN.cy, T / 2 + 0.001); mask.renderOrder = 1; g.add(mask);
+    // ② 远景（带箔的卡用 holo 材质，否则哑光）
+    let bgFace = null, bgMesh;
+    const bgT = canvasTex(R.bg, false);
+    if (def.layered.foil) {
+      bgFace = makeFace();
+      bgFace.u.uCardSize = { value: new Vector2(R.bgSize[0], R.bgSize[1]) };
+      const look = { ...CARD_LOOK['layer:' + def.layered.foil] };
+      look.sparkleDensity *= R.bgSize[0] / W;    // 亮片大小与卡面一致
+      const ft = tex(buildLayerFoil(def.layered.foil, key.length), false);
+      bgFace.layer = { look, texs: { map: bgT, normal: null, foil: ft } };
+      Object.assign(bgFace.m, { transparent: true, depthTest: false, depthWrite: false, clearcoat: 0 });
+      inWindow(bgFace.m);
+      bgMesh = new Mesh(plane(...R.bgSize), bgFace.m);
+      trackCamera(bgMesh, bgFace);
+      applyLook(bgFace, look, bgFace.layer.texs);
+      bgFace.m.clearcoat = 0;
+    } else {
+      bgMesh = new Mesh(plane(...R.bgSize), inWindow(new MeshBasicMaterial({ map: bgT, transparent: true, depthTest: false, depthWrite: false })));
+    }
+    bgMesh.renderOrder = 2; g.add(bgMesh);
+    items.push({ mesh: bgMesh, z: CONFIG.layerZ.bg, cx: WIN.cx, cy: WIN.cy });
+    // ③ 中景
+    if (R.mid) {
+      const m = new Mesh(plane(...R.midSize), inWindow(layerMat()));
+      m.material.map = canvasTex(R.mid, true); m.renderOrder = 3; g.add(m);
+      items.push({ mesh: m, z: CONFIG.layerZ.mid, cx: WIN.cx, cy: WIN.cy });
+    }
+    // ④ 窗口内阴影 + 描边（贴在卡面上，同样只画在窗口里）
+    const shade = new Mesh(plane(WIN.w, WIN.h), inWindow(layerMat()));
+    shade.material.map = canvasTex(R.shade, true);
+    shade.position.set(WIN.cx, WIN.cy, T / 2 + 0.002); shade.renderOrder = 4; g.add(shade);
+    // ⑤ 角色 / 徽记（卡面前方；破框的角色超出卡框上沿）
+    let charMesh = null, fgMesh = null;
+    if (R.char) {
+      charMesh = new Mesh(plane(R.charRect.w, R.charRect.h), layerMat());
+      charMesh.material.map = canvasTex(R.char, true); charMesh.renderOrder = 5; g.add(charMesh);
+      items.push({ mesh: charMesh, z: CONFIG.layerZ.char, cx: R.charRect.cx, cy: R.charRect.cy });
+    }
+    // ⑥ 前景粒子
+    if (R.fg) {
+      fgMesh = new Mesh(plane(R.fgRect.w, R.fgRect.h), layerMat(0.8));
+      fgMesh.material.map = canvasTex(R.fg, true); fgMesh.renderOrder = 6; g.add(fgMesh);
+      items.push({ mesh: fgMesh, z: CONFIG.layerZ.fg, cx: R.fgRect.cx, cy: R.fgRect.cy });
+    }
+    flipGroup.add(g);
+    return { group: g, items, bgFace, charMesh, fgMesh, breakout: !!(def.layered.breakout && R.char) };
+  }
+
+  /** 按镜头距离与「视差破框」开关摆放各层：
+   *  每层放在 z（× 深度倍率），并按 (镜头距离 − z) / 镜头距离 缩放 → 静止正视时与设计稿尺寸、位置完全一致，
+   *  倾斜时才因为真实透视产生视差（与 CSS 版 translateZ + scale 的做法相同） */
+  let camDist = 10;
+  function layoutLayers() {
+    const L = cards[current]?.layers; if (!L) return;
+    const k = fx.depth ? 1 : CONFIG.flatDepth;
+    for (const it of L.items) {
+      const z = T / 2 + it.z * k, s = (camDist - z) / camDist;
+      it.mesh.position.set(it.cx * s, (it.cy - CONFIG.camY) * s + CONFIG.camY, z);
+      it.mesh.scale.set(s, s, 1);
+    }
+    // 关掉视差破框：角色裁回窗口（stencil = 2），粒子裁回卡面（stencil ≥ 1）
+    const clip = (m, ref, func) => Object.assign(m.material, ref ? { stencilWrite: true, stencilRef: ref, stencilFunc: func, stencilZPass: KEEP } : { stencilWrite: false });
+    if (L.charMesh) clip(L.charMesh, fx.depth ? 0 : 2, EQUAL);
+    if (L.fgMesh) clip(L.fgMesh, fx.depth ? 0 : 1, LEQUAL);
+  }
+
+  const cards = {};    // key → { texs, layers }（按需生成并缓存）
+  let current = null, wanted = null;
+  const ensureCard = (key) => {
+    cards[key] ??= (async () => {
+      const R = await rasterCard(key).catch((err) => { console.warn('图层光栅化失败，退回单层卡', err); return null; });
+      const b = buildCard(key, R?.flat);
+      const entry = { texs: { map: tex(b.map, true), normal: tex(b.normal, false), foil: tex(b.foil, false) } };
+      if (R) entry.layers = buildLayerGroup(key, R);
+      cards[key] = entry;           // 之后同步可取
+      return entry;
+    })();
+    return Promise.resolve(cards[key]);
+  };
+  const setCard = async (key) => {
+    if (!CARDS[key]) return;
+    wanted = key;
+    if (key === current) return;
+    const entry = await ensureCard(key);
+    if (wanted !== key) return;      // 等待期间又切到了别的卡
+    for (const k in cards) if (cards[k]?.layers) cards[k].layers.group.visible = (k === key);
     current = key;
-    if (!texCache[key]) { const b = buildCard(key); texCache[key] = { map: tex(b.map, true), normal: tex(b.normal, false), foil: tex(b.foil, false) }; }
-    applyLook(front, CARD_LOOK[key], texCache[key]);
+    applyLook(front, CARD_LOOK[key], entry.texs);
+    layoutLayers(); resize();
     requestRender();
   };
 
   /* ----- 背景 + 后处理 ----- */
   let bgTex = null;
-  const composer = new EffectComposer(renderer, new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4 })); // 4×MSAA：圆角卡缘无锯齿
+  const composer = new EffectComposer(renderer, new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4, stencilBuffer: true })); // 4×MSAA：圆角卡缘无锯齿；带模板缓冲：分层卡开窗用
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new Vector2(256, 256), CONFIG.bloom.strength, CONFIG.bloom.radius, CONFIG.bloom.threshold);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
   /* ----- 布局 ----- */
-  const rest = { x: 0, y: 0, w: 1, h: 1 };     // 卡片静止时在屏幕上的矩形（用来算指针位置，和 CSS 版一样不随倾斜变化）
+  const rest = { x: 0, y: 0, w: 1, h: 1, hotTop: 0 };     // 卡片静止时在屏幕上的矩形（用来算指针位置，和 CSS 版一样不随倾斜变化）
   const resize = () => {
     // 嵌入模式：按画布自己的 CSS 尺寸；独立页（旧行为）：铺满窗口
+    if (embedded && !canvas.clientWidth) return;     // 画布隐藏（display:none）时尺寸为 0：等显示出来再算
     const w = Math.max(1, embedded ? canvas.clientWidth : window.innerWidth);
     const h = Math.max(1, embedded ? canvas.clientHeight : window.innerHeight);
     const dpr = Math.min(window.devicePixelRatio || 1, CONFIG.maxDPR);
@@ -419,11 +627,16 @@ export function start({ canvas, onReady, initialCard = 'frost', embedded = false
     camera.aspect = w / h;
     const tanH = Math.tan(CONFIG.fov * DEG / 2);
     const dist = Math.max(H / (2 * tanH * CONFIG.fill), W / (2 * tanH * camera.aspect * 0.78));
-    camera.position.set(0, 0, dist); camera.lookAt(0, 0, 0); camera.updateProjectionMatrix();
+    camera.position.set(0, CONFIG.camY, dist); camera.lookAt(0, CONFIG.camY, 0); camera.updateProjectionMatrix();
+    camDist = dist;
     const v = new Vector3();
     const proj = (x, y) => { v.set(x, y, 0).project(camera); return [(v.x + 1) / 2 * w, (1 - v.y) / 2 * h]; };
     const [x0, y0] = proj(-W / 2, H / 2), [x1, y1] = proj(W / 2, -H / 2);
     Object.assign(rest, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+    // 破框热区：角色探出卡框上沿的那一截也算“在卡上”（与 CSS 版 .card[data-break="top"]::after 相同）
+    const L = cards[current]?.layers;
+    rest.hotTop = (L?.breakout && fx.depth) ? proj(0, WIN.top + CONFIG.breakout * H)[1] : y0;
+    layoutLayers();
     if (!embedded) {
       bgTex?.dispose();
       bgTex = new CanvasTexture(drawBackground(Math.max(64, Math.round(w / 3)), Math.max(64, Math.round(h / 3))));
@@ -470,7 +683,7 @@ export function start({ canvas, onReady, initialCard = 'frost', embedded = false
   const shift = shared.uShift.value;
   // 指针坐标换算到画布内（嵌入模式下画布不在窗口左上角，且会随页面滚动）
   const loc = (e) => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-  const inRest = (e, m = 0) => { const [x, y] = loc(e); return x >= rest.x - m && x <= rest.x + rest.w + m && y >= rest.y - m && y <= rest.y + rest.h + m; };
+  const inRest = (e, m = 0) => { const [x, y] = loc(e); return x >= rest.x - m && x <= rest.x + rest.w + m && y >= Math.min(rest.y, rest.hotTop) - m && y <= rest.y + rest.h + m; };
   let gyroPose = null, lastPointerAt = 0;   // 陀螺仪目标姿态（度，three 坐标：x 俯仰 / y 偏航）
   const hover = (e) => {
     lastPointerAt = performance.now();
@@ -566,9 +779,8 @@ export function start({ canvas, onReady, initialCard = 'frost', embedded = false
   reduceMotion.addEventListener?.('change', () => { leave(); });
   canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); onReady?.({ lost: true }); });
 
-  setCard(initialCard);
   resize();
-  draw();
+  const ready = setCard(initialCard).then(() => { draw(); });
 
   /** 开 / 关：关掉时停止渲染；打开时按当前尺寸重算并补一帧 */
   const setActive = (on) => {
@@ -587,10 +799,15 @@ export function start({ canvas, onReady, initialCard = 'frost', embedded = false
     tilt.set(gyroPose, CONFIG.follow); glow.set({ o: 1 }); requestRender();
   };
   const clearGyro = () => { gyroPose = null; if (!press && !over) leave(); };
-  /** 特效开关：{ foil, etch, rim, glare }，缺省的键保持原值 */
+  /** 特效开关：{ foil, etch, rim, glare, depth }，缺省的键保持原值 */
   const setEffects = (next = {}) => {
     Object.assign(fx, next);
     for (const face of [front, back]) if (face.look) applyLook(face, face.look, face.texs);
+    for (const k in cards) {   // 远景层上的箔
+      const bf = cards[k]?.layers?.bgFace;
+      if (bf) { applyLook(bf, bf.layer.look, bf.layer.texs); bf.m.clearcoat = 0; }
+    }
+    resize();                  // 破框热区随「视差破框」变化；同时重排各层
     edgeUniforms.uRim.value = fx.rim ? 0.35 : 0;
     bloom.enabled = !!fx.glare;
     requestRender();
@@ -598,9 +815,11 @@ export function start({ canvas, onReady, initialCard = 'frost', embedded = false
   setEffects();
 
   const api = {
-    setCard, flipOver, setActive, setGyro, clearGyro, setEffects, renderer, CONFIG, CARD_LOOK,
+    setCard, flipOver, setActive, setGyro, clearGyro, setEffects, renderer, CONFIG, CARD_LOOK, ready,
+    /** 预先生成某张卡的贴图与图层（不切换），用于开包结果页提前准备 */
+    preload: (key) => (CARDS[key] ? ensureCard(key) : Promise.resolve()),
     get effects() { return { ...fx }; }, get current() { return current; },
-    debug: { front, back, edgeMat, bloom, scene, draw },
+    debug: { front, back, edgeMat, bloom, scene, draw, cards, WIN, get camDist() { return camDist; } },
     get frames() { return frames; }, get rendering() { return !!raf; },
     /** 调试 / 截图用：直接摆姿势（度） */
     pose(tx = 0, ty = 0, fy = 0, fx = 0) { tilt.set({ x: tx, y: ty }); flip.set({ x: fx, y: fy }); glow.set({ o: tx || ty ? 1 : 0 }); tilt.jump(); flip.jump(); glow.jump(); draw(); },

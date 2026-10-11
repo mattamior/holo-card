@@ -24,44 +24,65 @@ export const LAYOUT = {
 
 const FONT = 'system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif';
 
-/* ---------------- 卡面定义（沿用 CSS 版三张卡的配色与图案） ---------------- */
+/* ---------------- 卡面定义（与汇总页 CSS 模式同样的四张卡、同样的配色） ----------------
+   layered：插画窗口不是画在卡面上，而是由 holo.js 用模板缓冲（stencil）开出“窗口”，
+            窗口里是有真实深度的远景 / 中景平面，前面再浮一层角色 / 徽记与粒子（SVG 光栅化而来）。
+     foil     远景层上的箔面：'rainbow' / 'sparkle' / null（null = 插画哑光）
+     breakout true = 角色超出卡框上沿（破框）；false = 徽记浮在窗口正前方 */
 export const CARDS = {
-  frost: {
+  dragon: {
     name: '霜晶龙', hp: 'HP 120',
     move: '冰棱吐息 · 60',
-    text: '令对手的下一回合无法撤退。彩虹镭射随视角流动，只出现在插画窗口。',
-    foot: ['Rainbow Holo · WebGL', '001/003 ★'],
+    text: '令对手的下一回合无法撤退。彩虹镭射只在极光夜空里流动，龙头探出卡框。',
+    foot: ['Rainbow Holo · WebGL', '001/004 ★★'],
     frame: [160, [[0, '#eef1f6'], [1, '#a7b1c2']]],
-    artBg: (ctx, a) => radial(ctx, a, 0.5, 0.4, [[0, '#6f7c99'], [0.55, '#3a4260'], [1, '#1a1d2c']]),
-    panel: 'rgba(255,255,255,.82)', ink: '#1b1b22',
+    artBg: (ctx, a) => linear(ctx, 180, a, [[0, '#0a1230'], [0.55, '#1d3566'], [1, '#3f73a6']]),
+    panel: 'rgba(255,255,255,.82)', ink: '#1b1b22', ring: 'rgba(0,0,0,.35)',
     symbol: drawSnowflake,
-    // 箔面分布：插画窗口 = 全箔；银色卡框 = 少量箔（半金属光泽）；亮片少量
-    foil: (m) => ({ r: m.art * 1.0 + m.frame * 0.22, b: m.art * 0.45 }),
-    etch: 'ripple',
+    // 只闪插画：卡框不带箔（箔光全部在远景层上）
+    foil: (m) => ({ r: m.frame * 0.12, b: 0 }),
+    etch: 'lattice',
+    layered: { foil: 'rainbow', breakout: true },
+  },
+  fox: {
+    name: '焰尾狐', hp: 'HP 90',
+    move: '流星焰 · 40×',
+    text: '掷 3 次硬币，每次正面造成 40 点伤害。亮片只在晚霞里闪，狐耳探出卡框。',
+    foot: ['Sparkle Foil · WebGL', '002/004 ★★★'],
+    frame: [160, [[0, '#3b2a5c'], [1, '#120c22']]],
+    artBg: (ctx, a) => linear(ctx, 180, a, [[0, '#241046'], [0.45, '#7a2a78'], [0.75, '#e0606a'], [1, '#f6b46a']]),
+    panel: 'rgba(18,12,36,.84)', ink: '#f2eaff', ring: 'rgba(255,190,140,.35)',
+    symbol: drawStars,
+    foil: (m) => ({ r: 0, b: 0 }),
+    etch: 'lattice',
+    layered: { foil: 'sparkle', breakout: true },
   },
   star: {
     name: '星尘狐', hp: 'HP 90',
     move: '流星雨 · 40×',
-    text: '掷 3 次硬币，每次正面造成 40 点伤害。卡框里的亮片只在特定角度一闪。',
-    foot: ['Sparkle Foil · WebGL', '002/003 ★★'],
+    text: '亮片只在卡缘一圈闪，插画保持哑光；星辰徽记浮在窗口前方。',
+    foot: ['Sparkle Border · WebGL', '003/004 ★★'],
     frame: [160, [[0, '#3b2a5c'], [1, '#120c22']]],
     artBg: (ctx, a) => radial(ctx, a, 0.3, 0.3, [[0, '#ff9ad5'], [0.45, '#7a3cff'], [1, '#1a0b3d']]),
-    panel: 'rgba(18,12,36,.82)', ink: '#f2eaff',
+    panel: 'rgba(18,12,36,.82)', ink: '#f2eaff', ring: 'rgba(200,170,255,.3)',
     symbol: drawStars,
-    foil: (m) => ({ r: m.frame * 0.9 + m.art * 0.5, b: m.frame * 1.0 + m.art * 0.75 }),
+    // 只闪边框：箔面与亮片都只在卡框
+    foil: (m) => ({ r: m.frame * 0.9, b: m.frame * 1.0 }),
     etch: 'none',
+    layered: { foil: null, breakout: false },
   },
   sun: {
     name: '金曜狮王', hp: 'HP 250',
     move: '王者咆哮 · 200',
-    text: '弃掉 2 张能量。反闪金卡：卡框与文字区是拉丝金箔，插画保持哑光。',
-    foot: ['Reverse Gold Foil · WebGL', '003/003 ★★★'],
+    text: '反闪：卡框与文字区是拉丝金箔，插画保持哑光；烈日徽记浮在窗口前方。',
+    foot: ['Reverse Gold Foil · WebGL', '004/004 ★★★'],
     frame: [160, [[0, '#d9b45a'], [0.45, '#8a6420'], [0.7, '#e3c77a'], [1, '#7a5616']]],
     artBg: (ctx, a) => linear(ctx, 160, a, [[0, '#3a2a10'], [0.5, '#a57a28'], [1, '#2a1d08']]),
-    panel: 'rgba(255,247,222,.86)', ink: '#1b1b22',
+    panel: 'rgba(255,247,222,.86)', ink: '#1b1b22', ring: 'rgba(60,40,8,.4)',
     symbol: drawSun,
     foil: (m) => ({ r: m.frame * 1.0 + m.panel * 0.4, b: m.frame * 0.3 }),
     etch: 'brushed',
+    layered: { foil: null, breakout: false },
   },
 };
 
@@ -215,7 +236,7 @@ function drawSun(ctx, a) {
 }
 
 /* ---------------- 正面颜色 ---------------- */
-function drawFront(def) {
+function drawFront(def, flat) {
   const cv = document.createElement('canvas'); cv.width = TW; cv.height = TH;
   const ctx = cv.getContext('2d', { willReadFrequently: true });   // CPU 画布：稍后要逐像素读回（抖动），也避免个别 GPU 画布实现丢失大面积渐变
   const { art, panel } = LAYOUT;
@@ -227,7 +248,8 @@ function drawFront(def) {
   ctx.font = `700 40px ${FONT}`; ctx.textAlign = 'right'; ctx.fillText(def.hp, TW - PAD - 18, 116); ctx.textAlign = 'left';
   // 插画窗口
   ctx.save(); rrect(ctx, art.x, art.y, art.w, art.h, art.r); ctx.clip();
-  def.artBg(ctx, art); def.symbol(ctx, art);
+  if (flat) ctx.drawImage(flat, art.x, art.y, art.w, art.h);   // 分层卡：窗口里先画一份“压平”的远景 + 中景（极端角度时远景淡出后的兜底）
+  else { def.artBg(ctx, art); def.symbol(ctx, art); }
   ctx.restore();
   ctx.save(); ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 11;
   rrect(ctx, art.x + 5.5, art.y + 5.5, art.w - 11, art.h - 11, art.r); ctx.stroke(); ctx.restore();
@@ -352,6 +374,10 @@ function buildNormal(def, isBack = false) {
           const { art } = LAYOUT;
           const d = Math.hypot(i - (art.x + art.w / 2), y - (art.y + art.h / 2));
           e = m.art * 0.010 * Math.sin(d / 12 * 6.2832 / 1.0 + nz(i / 80, y / 80) * 3);
+        } else if (def.etch === 'lattice') {     // 卡框 / 面板：斜向菱格压纹（正弦脊线，截面是平滑的波，没有台阶）
+          const u = (i + y) / 46, v = (i - y) / 46;
+          const ridge = Math.pow(Math.abs(Math.cos(Math.PI * u)), 18) + Math.pow(Math.abs(Math.cos(Math.PI * v)), 18);
+          e = (m.frame + m.panel * 0.35) * 0.006 * ridge;
         } else if (def.etch === 'brushed') {     // 卡框 / 面板：横向拉丝（纵向高频、横向低频，轻微起伏）
           const yy = y + nz(i / 300, y / 300) * 20;
           e = (m.frame + m.panel * 0.6) * 0.012 * (nz(i / 220, yy / 1.6) - 0.5);
@@ -377,10 +403,10 @@ function buildNormal(def, isBack = false) {
 
 const cache = new Map();
 /** 生成（并缓存）某张卡的全部贴图原始数据 */
-export function buildCard(key) {
+export function buildCard(key, flat) {
   if (!cache.has(key)) {
     const def = CARDS[key];
-    cache.set(key, { map: drawFront(def), normal: buildNormal(def), foil: buildFoil(def.foil, key.length * 17) });
+    cache.set(key, { map: drawFront(def, flat), normal: buildNormal(def), foil: buildFoil(def.foil, key.length * 17) });
   }
   return cache.get(key);
 }
@@ -411,4 +437,95 @@ export function drawBackground(w, h) {
   ctx.fillStyle = g; ctx.fillRect(-1, 0, 2, 1); ctx.restore();
   dither(ctx, w, h, 2.5);
   return cv;
+}
+
+/* =========================================================
+   分层卡：SVG → canvas 光栅化（feature/all-in-one）
+   SVG 直接取自汇总页 CSS 模式里的同一份内联 SVG（单一来源），保证两种模式画面一致。
+   所有边缘都做柔和处理：远景 / 中景四周 alpha 渐隐，角色底部渐隐，投影用高斯模糊。
+   ========================================================= */
+/** 把一段 SVG 源码画到 w×h 的 canvas 上。viewBox 可改写（给角色四周留出投影 / 犄角的空间） */
+export async function rasterSvg(svg, w, h, { viewBox, under, shadow } = {}) {
+  let src = svg.replace(/<svg\b([^>]*)>/, (m, attrs) => {
+    attrs = attrs.replace(/\s(width|height)="[^"]*"/g, '');
+    if (viewBox) attrs = attrs.replace(/viewBox="[^"]*"/, `viewBox="${viewBox}"`);
+    if (!/xmlns=/.test(attrs)) attrs += ' xmlns="http://www.w3.org/2000/svg"';
+    return `<svg${attrs} width="${w}" height="${h}">`;
+  });
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src);
+  await img.decode();
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d');
+  if (under) under(ctx, { x: 0, y: 0, w, h });
+  ctx.save();   // 投影只作用在这一次 drawImage（之后的渐隐 / 合成不能再带投影）
+  if (shadow) { ctx.shadowColor = shadow.color; ctx.shadowBlur = shadow.blur; ctx.shadowOffsetY = shadow.y; }
+  ctx.drawImage(img, 0, 0, w, h);
+  ctx.restore();
+  return cv;
+}
+/** 四周 alpha 渐隐：从边缘（alpha 0）向内 fx / fy 像素内平滑升到 1。横纵两遍相乘，角上也是柔的 */
+export function fadeEdges(cv, fx, fy = fx) {
+  const ctx = cv.getContext('2d'), { width: w, height: h } = cv;
+  const ramp = (g, f, len) => {
+    const N = 10;   // 多段色标近似 smoothstep：渐隐没有“起点线”
+    for (let k = 0; k <= N; k++) {
+      const t = k / N, a = `rgba(0,0,0,${(t * t * (3 - 2 * t)).toFixed(3)})`;
+      g.addColorStop(Math.min(0.5, t * f / len), a);
+      g.addColorStop(Math.max(0.5, 1 - t * f / len), a);
+    }
+  };
+  ctx.save(); ctx.globalCompositeOperation = 'destination-in';
+  const gx = ctx.createLinearGradient(0, 0, w, 0); ramp(gx, fx, w);
+  ctx.fillStyle = gx; ctx.fillRect(0, 0, w, h);
+  const gy = ctx.createLinearGradient(0, 0, 0, h); ramp(gy, fy, h);
+  ctx.fillStyle = gy; ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+  return cv;
+}
+/** 底部渐隐（角色下沿融进中景）：最下面 zero 像素全透明，再往上 len 像素内平滑升到 1（与 CSS 版 --char-fade 相同的作用） */
+export function fadeBottom(cv, zero, len) {
+  const ctx = cv.getContext('2d'), { width: w, height: h } = cv;
+  ctx.save(); ctx.globalCompositeOperation = 'destination-in';
+  const g = ctx.createLinearGradient(0, h - zero, 0, h - zero - len);
+  const N = 10;
+  for (let k = 0; k <= N; k++) { const t = k / N, s = t * t * (3 - 2 * t); g.addColorStop(t, `rgba(0,0,0,${s.toFixed(3)})`); }
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+  return cv;
+}
+/** 插画窗口的内阴影 + 描边（叠在窗口内容上方，做出“窗口凹进卡里”的感觉） */
+export function buildWindowShade(def, w, h, pxPerCssPx) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d'), k = pxPerCssPx, r = 3 * k;
+  const inset = (blur, oy, color) => {
+    // 经典技巧：把“外框减去窗口”的形状画到画布外，只把它的投影偏移回来 → 得到柔和的内阴影
+    ctx.save();
+    ctx.shadowColor = color; ctx.shadowBlur = blur; ctx.shadowOffsetX = 10000; ctx.shadowOffsetY = oy;
+    ctx.beginPath();
+    ctx.rect(-10000 - w, -h, w * 3, h * 3);
+    rrect(ctx, -10000, 0, w, h, r);
+    ctx.fill('evenodd');
+    ctx.restore();
+  };
+  inset(14 * k, 6 * k, 'rgba(0,0,0,.45)');
+  inset(22 * k, 0, 'rgba(0,0,0,.25)');
+  ctx.strokeStyle = def.ring; ctx.lineWidth = 3 * k;
+  rrect(ctx, 1.5 * k, 1.5 * k, w - 3 * k, h - 3 * k, r); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1 * k;
+  rrect(ctx, 3.5 * k, 3.5 * k, w - 7 * k, h - 7 * k, r); ctx.stroke();
+  return cv;
+}
+/** 远景层的箔面遮罩（整层都是箔；G = 薄膜厚度扰动，B = 亮片密度） */
+export function buildLayerFoil(kind, seed = 3) {
+  const S = 128, data = new Uint8Array(S * S * 4);
+  for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {
+    const o = (j * S + i) * 4;
+    data[o] = 255;
+    data[o + 1] = Math.round(Math.min(1, warpField(i * 8, j * 8, seed)) * 255);
+    data[o + 2] = kind === 'sparkle' ? 255 : 115;
+    data[o + 3] = 255;
+  }
+  return { data, width: S, height: S };
 }
