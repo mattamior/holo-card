@@ -33,7 +33,26 @@ body {
   padding: 32px 16px 48px;
 }
 h1 { font-size: 22px; font-weight: 600; letter-spacing: .05em; margin: 0 0 6px; }
-p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
+p.tip { margin: 0 0 16px; opacity: .6; font-size: 13px; text-align: center; }
+
+.gyro-bar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 10px 14px; margin: 0 0 28px; min-height: 36px;
+}
+.gyro-btn {
+  appearance: none; border: 1px solid rgba(200,190,255,.35);
+  background: linear-gradient(180deg, rgba(90,70,140,.55), rgba(40,30,70,.75));
+  color: #e8e8f0; font: inherit; font-size: 13px; font-weight: 600;
+  letter-spacing: .04em; padding: 8px 16px; border-radius: 999px;
+  cursor: pointer; transition: border-color .2s, background .2s, opacity .2s;
+}
+.gyro-btn:hover:not(:disabled) { border-color: rgba(220,210,255,.6); background: linear-gradient(180deg, rgba(110,85,170,.65), rgba(50,38,90,.8)); }
+.gyro-btn:disabled { opacity: .45; cursor: not-allowed; }
+.gyro-btn[data-state="on"] {
+  border-color: rgba(120,220,180,.55);
+  background: linear-gradient(180deg, rgba(40,120,90,.55), rgba(20,60,50,.75));
+}
+.gyro-hint { font-size: 12px; opacity: .55; text-align: center; max-width: 28em; line-height: 1.4; }
 
 .stage { display: flex; flex-wrap: wrap; justify-content: center; gap: 48px; }
 .label { text-align: center; margin-top: 14px; font-size: 13px; opacity: .7; }
@@ -269,7 +288,12 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
 </head>
 <body>
   <h1>全息闪卡 Holo Card</h1>
-  <p class="tip">鼠标悬停 / 手指拖动卡片，看倾斜和镭射反光</p>
+  <p class="tip">鼠标悬停 / 手指拖动卡片，或开启体感后轻晃手机</p>
+
+  <div class="gyro-bar" id="gyro-bar">
+    <button type="button" class="gyro-btn" id="gyro-btn" data-state="off">开启体感</button>
+    <span class="gyro-hint" id="gyro-hint">手机上效果更好 · 桌面也可点开试权限流程</span>
+  </div>
 
   <div class="stage">
     <!-- 卡 1：普通彩虹镭射 -->
@@ -354,17 +378,23 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
 
 <script>
 /* =========================================================
-   交互：指针 → 目标值 → 物理弹簧（按真实时间积分，与屏幕刷新率无关）→ CSS 变量
+   交互：指针 / 陀螺仪 → 目标值 → 物理弹簧 → CSS 变量
+   注意：若本页嵌在 iframe 里，父页面需设置
+     allow="accelerometer; gyroscope"
+   否则 DeviceOrientationEvent 不可用（尤其 iOS Safari）。
    ========================================================= */
 const CONFIG = {
   maxTilt: 14,                          // 最大倾斜角（度）
   follow: { stiffness: 260, damping: 30 },  // 跟手：接近临界阻尼，不拖泥带水
   settle: { stiffness: 140, damping: 22 },  // 移出回正：约 0.6s 回正，几乎不过冲
   fade:   { stiffness: 220, damping: 32 },  // 光泽淡出：约 0.3s 消失
+  gyroRange: 28,                        // 相对零点晃多少度到达最大倾斜
+  pointerPriorityMs: 400,               // 指针活动后这段时间内忽略陀螺仪（避免打架）
 };
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const clamp = (v, min = 0, max = 100) => Math.min(max, Math.max(min, v));
+const clampTilt = (v) => Math.min(CONFIG.maxTilt, Math.max(-CONFIG.maxTilt, v));
 
 /** 物理弹簧：a = k·(目标 - 当前) - c·速度，固定小步长积分保证稳定 */
 class Spring {
@@ -401,6 +431,8 @@ function setupCard(card) {
   const motion = new Spring({ rx: 0, ry: 0, px: 50, py: 50 }, CONFIG.follow); // 倾斜 + 光点位置
   const glow = new Spring({ o: 0 }, CONFIG.fade);                              // 光泽强度
   let raf = 0, last = 0;
+  let lastPointerAt = 0;
+  let pointerActive = false;
 
   const render = () => {
     const v = motion.value, s = card.style;
@@ -423,20 +455,42 @@ function setupCard(card) {
     if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); }
   };
 
+  /** 统一入口：指针与陀螺仪都走同一套弹簧 */
+  const applyPose = (rx, ry, px, py, o, springParams = CONFIG.follow) => {
+    const tiltScale = reduceMotion.matches ? 0 : 1;
+    motion.set({
+      rx: rx * tiltScale,
+      ry: ry * tiltScale,
+      px: clamp(px),
+      py: clamp(py),
+    }, springParams);
+    glow.set({ o: reduceMotion.matches ? Math.min(o, 0.35) : o });
+    kick();
+  };
+  const settle = () => {
+    motion.set({ rx: 0, ry: 0, px: 50, py: 50 }, CONFIG.settle);
+    glow.set({ o: 0 });
+    kick();
+  };
+
   const onMove = (e) => {
+    lastPointerAt = performance.now();
+    pointerActive = true;
     const r = rotator.getBoundingClientRect();
     const px = clamp(((e.clientX - r.left) / r.width) * 100);
     const py = clamp(((e.clientY - r.top) / r.height) * 100);
     const tilt = reduceMotion.matches ? 0 : CONFIG.maxTilt;
     // 指针所在一侧抬向观众：rotateY 负值 → 右边缘靠近；rotateX 正值 → 下边缘靠近
-    motion.set({ rx: -((px - 50) / 50) * tilt, ry: ((py - 50) / 50) * tilt, px, py }, CONFIG.follow);
-    glow.set({ o: 1 });
-    kick();
+    applyPose(
+      -((px - 50) / 50) * tilt,
+      ((py - 50) / 50) * tilt,
+      px, py, 1, CONFIG.follow
+    );
   };
   const onLeave = () => {
-    motion.set({ rx: 0, ry: 0, px: 50, py: 50 }, CONFIG.settle);
-    glow.set({ o: 0 });
-    kick();
+    pointerActive = false;
+    lastPointerAt = performance.now();
+    settle();
   };
 
   card.addEventListener('pointermove', onMove);
@@ -448,9 +502,180 @@ function setupCard(card) {
   card.addEventListener('pointercancel', onLeave);
   card.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') onLeave(); });
   render();
+
+  return {
+    /** 陀螺仪驱动：指针正在操作或刚操作过则跳过，避免打架 */
+    applyGyro(rx, ry, px, py) {
+      if (pointerActive) return;
+      if (performance.now() - lastPointerAt < CONFIG.pointerPriorityMs) return;
+      applyPose(rx, ry, px, py, 1, CONFIG.follow);
+    },
+    settleGyro() {
+      if (pointerActive) return;
+      settle();
+    },
+  };
 }
 
-document.querySelectorAll('.card').forEach(setupCard);
+const cards = [...document.querySelectorAll('.card')].map(setupCard);
+
+/* ---------- 陀螺仪 / 体感倾斜 ---------- */
+const gyroBtn = document.getElementById('gyro-btn');
+const gyroHint = document.getElementById('gyro-hint');
+
+const gyro = {
+  enabled: false,
+  listening: false,
+  calibrated: false,
+  zeroBeta: 0,
+  zeroGamma: 0,
+  // 一阶低通，再交给弹簧（双平滑，手机噪声更小）
+  filtBeta: 0,
+  filtGamma: 0,
+  handler: null,
+};
+
+function setGyroUi(state, hint) {
+  gyroBtn.dataset.state = state;
+  if (state === 'on') gyroBtn.textContent = '关闭体感';
+  else if (state === 'pending') gyroBtn.textContent = '请求权限…';
+  else if (state === 'denied') gyroBtn.textContent = '体感权限被拒';
+  else if (state === 'unavailable') gyroBtn.textContent = '体感不可用';
+  else gyroBtn.textContent = '开启体感';
+  gyroBtn.disabled = state === 'pending' || state === 'unavailable' || state === 'denied';
+  if (hint != null) gyroHint.textContent = hint;
+}
+
+function orientationSupported() {
+  return typeof window.DeviceOrientationEvent !== 'undefined';
+}
+
+function needsOrientationPermission() {
+  return typeof DeviceOrientationEvent !== 'undefined'
+    && typeof DeviceOrientationEvent.requestPermission === 'function';
+}
+
+function mapOrientation(beta, gamma) {
+  // 相对零点；限幅后再映射到与指针相同的 rx/ry/px/py
+  const dBeta = clampTilt(((beta - gyro.zeroBeta) / CONFIG.gyroRange) * CONFIG.maxTilt);
+  const dGamma = clampTilt(((gamma - gyro.zeroGamma) / CONFIG.gyroRange) * CONFIG.maxTilt);
+  // gamma 左右 → rotateY(rx)；beta 前后 → rotateX(ry)
+  const rx = dGamma;
+  const ry = dBeta;
+  const px = clamp(50 - (rx / CONFIG.maxTilt) * 50);
+  const py = clamp(50 + (ry / CONFIG.maxTilt) * 50);
+  return { rx, ry, px, py };
+}
+
+function onDeviceOrientation(e) {
+  if (!gyro.enabled) return;
+  // 部分桌面会触发但 beta/gamma 为 null
+  if (e.beta == null || e.gamma == null) return;
+
+  const rawBeta = e.beta;
+  const rawGamma = e.gamma;
+
+  if (!gyro.calibrated) {
+    gyro.zeroBeta = rawBeta;
+    gyro.zeroGamma = rawGamma;
+    gyro.filtBeta = rawBeta;
+    gyro.filtGamma = rawGamma;
+    gyro.calibrated = true;
+    setGyroUi('on', '体感已开启 · 保持握姿晃动即可，点按钮可关闭');
+    return; // 零点帧不驱动，避免跳一下
+  }
+
+  // 低通：α 越大越跟手；噪声大时可略降
+  const alpha = 0.18;
+  gyro.filtBeta += (rawBeta - gyro.filtBeta) * alpha;
+  gyro.filtGamma += (rawGamma - gyro.filtGamma) * alpha;
+
+  const pose = mapOrientation(gyro.filtBeta, gyro.filtGamma);
+  for (const c of cards) c.applyGyro(pose.rx, pose.ry, pose.px, pose.py);
+}
+
+function startListening() {
+  if (gyro.listening) return;
+  gyro.handler = onDeviceOrientation;
+  window.addEventListener('deviceorientation', gyro.handler, { passive: true });
+  gyro.listening = true;
+}
+
+function stopListening() {
+  if (!gyro.listening) return;
+  window.removeEventListener('deviceorientation', gyro.handler);
+  gyro.listening = false;
+  gyro.handler = null;
+}
+
+function disableGyro(settleCards = true) {
+  gyro.enabled = false;
+  gyro.calibrated = false;
+  stopListening();
+  if (settleCards) for (const c of cards) c.settleGyro();
+  setGyroUi('off', '手机上效果更好 · 桌面也可点开试权限流程');
+}
+
+async function enableGyro() {
+  if (reduceMotion.matches) {
+    setGyroUi('unavailable', '已开启「减少动态效果」，不启用体感倾斜');
+    return;
+  }
+  if (!orientationSupported()) {
+    setGyroUi('unavailable', '当前环境不支持 DeviceOrientationEvent');
+    return;
+  }
+
+  setGyroUi('pending', '正在请求体感权限…');
+
+  try {
+    if (needsOrientationPermission()) {
+      // 必须在用户点击手势的调用栈里请求（iOS）
+      const permission = await DeviceOrientationEvent.requestPermission();
+      if (permission !== 'granted') {
+        setGyroUi('denied', '请在系统设置里允许此站点使用运动与方向，然后刷新重试');
+        return;
+      }
+    }
+  } catch (err) {
+    setGyroUi('denied', '权限请求失败：' + (err && err.message ? err.message : String(err)));
+    return;
+  }
+
+  gyro.enabled = true;
+  gyro.calibrated = false;
+  startListening();
+  setGyroUi('on', '等待传感器数据… · 请轻晃设备完成零点校准');
+}
+
+gyroBtn.addEventListener('click', () => {
+  if (gyro.enabled) disableGyro(true);
+  else enableGyro();
+});
+
+// 初始可用性提示（不自动开；统一 UX，全部走按钮）
+if (reduceMotion.matches) {
+  setGyroUi('unavailable', '已开启「减少动态效果」，不启用体感倾斜');
+} else if (!orientationSupported()) {
+  setGyroUi('unavailable', '当前浏览器不支持体感方向事件');
+} else {
+  setGyroUi('off', '手机上效果更好 · 点「开启体感」后以当前握姿为零点');
+}
+
+// 供无头/自测脚本调用（不改变生产行为）
+window.__holoCardTest = {
+  CONFIG,
+  cards,
+  gyro,
+  mapOrientation,
+  enableGyro,
+  disableGyro,
+  needsOrientationPermission,
+  orientationSupported,
+  simulateOrientation(beta, gamma) {
+    onDeviceOrientation({ beta, gamma });
+  },
+};
 </script>
 </body>
 </html>
