@@ -2,455 +2,114 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>全息闪卡 · Holo Card Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>全息闪卡 · WebGL 旗舰版</title>
 <style>
-/* =========================================================
-   全局可调参数
-   ========================================================= */
-:root {
-  --card-w: min(280px, 70vw);   /* 卡片宽度（手机上留出两侧空白方便滚动页面） */
-  --card-ratio: 63 / 88;        /* 卡片宽高比（标准 TCG 卡尺寸） */
-  --card-radius: 4.5% / 3.2%;   /* 圆角 */
-  --perspective: 800px;         /* 透视距离：越小 3D 感越夸张 */
-
-  /* 彩虹镭射色板（略降饱和，避免“霓虹灯”感） */
-  --c-red: #ec4a6a;
-  --c-yellow: #e8dc4a;
-  --c-green: #4ce0a0;
-  --c-blue: #3fbde8;
-  --c-violet: #b45ef0;
-}
-
 * { box-sizing: border-box; }
-html { scrollbar-gutter: stable; }  /* 预留滚动条位置，避免布局跳动 */
-html, body { margin: 0; min-height: 100%; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
 body {
   font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   color: #e8e8f0;
   background: radial-gradient(ellipse at 50% 0%, #2a2440 0%, #121019 60%, #0a0910 100%) fixed;
-  display: flex; flex-direction: column; align-items: center;
-  padding: 32px 16px 48px;
 }
-h1 { font-size: 22px; font-weight: 600; letter-spacing: .05em; margin: 0 0 6px; }
-p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
-
-.stage { display: flex; flex-wrap: wrap; justify-content: center; gap: 48px; }
-.label { text-align: center; margin-top: 14px; font-size: 13px; opacity: .7; }
-
-/* =========================================================
-   卡片骨架
-   JS 每帧写入（均经过弹簧平滑）：
-     --rx / --ry : 倾斜角（度，无单位数字）
-     --px / --py : 指针在卡面上的位置 0~100（无单位数字）
-     --o         : 特效强度 0~1（悬停时 1，移出淡出到 0）
-     --dist      : 指针离卡片中心的距离 0~1（越靠边反光越强）
-   层级（从下到上）：
-     卡框底色 → 卡框箔层(.foil--frame) → 插画/文字 → 插画箔层(.foil--art，在插画框内部) → 高光(.card__glare)
-   ========================================================= */
-.card {
-  --rx: 0; --ry: 0; --px: 50; --py: 50; --o: 0; --dist: 0;
-  width: var(--card-w);
-  aspect-ratio: var(--card-ratio);
-  perspective: var(--perspective);
-  touch-action: none;           /* 在卡片上拖动时不滚动页面 */
-  -webkit-tap-highlight-color: transparent;
-  user-select: none; -webkit-user-select: none;
+#gl {
+  position: fixed; inset: 0; width: 100%; height: 100%; display: block;
+  touch-action: none;                   /* 在画布上拖动 = 旋转卡片，不滚动页面 */
+  -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
+  outline: none;
 }
-.card__rotator {
-  position: relative;
-  width: 100%; height: 100%;
-  border-radius: var(--card-radius);
-  transform: rotateY(calc(var(--rx) * 1deg)) rotateX(calc(var(--ry) * 1deg))
-             scale(calc(1 + var(--o) * 0.03));
-  will-change: transform;
-  box-shadow:
-    calc(var(--rx) * -0.5px) calc(var(--ry) * 0.5px + 12px) 28px rgba(0,0,0,.5),
-    0 0 calc(var(--o) * 28px) rgba(170,150,255, calc(var(--o) * .22));
-  overflow: hidden;
-  isolation: isolate;           /* 混合模式只作用在卡片内部 */
+#gl.dragging { cursor: grabbing !important; }
+header {
+  position: fixed; top: 0; left: 0; right: 0; padding: max(18px, env(safe-area-inset-top)) 16px 0;
+  text-align: center; pointer-events: none; z-index: 1;   /* 画布在 DOM 里更靠后，标题要显式压在它上面 */
 }
-.card__front {
-  position: absolute; inset: 0;
-  padding: 5.5%;
-  display: flex; flex-direction: column;
-  background: var(--frame);
-  color: #1b1b22;
-  isolation: isolate;
+h1 { font-size: 20px; font-weight: 600; letter-spacing: .05em; margin: 0 0 4px; }
+p.tip { margin: 0; opacity: .6; font-size: 13px; }
+a.back {
+  position: fixed; left: 14px; top: max(14px, env(safe-area-inset-top)); z-index: 2;
+  color: #cfc8ff; font-size: 13px; text-decoration: none; opacity: .75; padding: 6px 8px; border-radius: 8px;
 }
-/* 内容在卡框箔层之上，保证文字清晰 */
-.card__front > :not(.foil) { position: relative; z-index: 1; }
-
-/* 所有箔层/高光的公共属性 */
-.foil, .card__glare {
-  position: absolute; inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
+a.back:hover, a.back:focus-visible { opacity: 1; background: rgba(255,255,255,.06); }
+nav {
+  position: fixed; left: 0; right: 0; bottom: max(18px, env(safe-area-inset-bottom));
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 0 12px;
 }
-.foil--frame { z-index: 0; }
-.foil--art { z-index: 2; }
-
-/* ---------- 高光：跟随指针的柔和光斑（克制版） ---------- */
-.card__glare {
-  --glare-strength: .55;  /* 中心亮度 */
-  --glare-size: 45%;      /* 光斑半径（超过后逐渐变暗） */
-  z-index: 3;
-  background: radial-gradient(
-    farthest-corner circle at calc(var(--px) * 1%) calc(var(--py) * 1%),
-    rgba(255,255,255, var(--glare-strength)) 0%,
-    rgba(255,255,255, calc(var(--glare-strength) * .6)) calc(var(--glare-size) * .25),
-    rgba(255,255,255, calc(var(--glare-strength) * .25)) calc(var(--glare-size) * .55),
-    rgba(255,255,255, 0) var(--glare-size),
-    rgba(0,0,0, .08) 100%);   /* 多段缓降，没有可见的光圈边缘 */
-  mix-blend-mode: overlay;
-  opacity: var(--o);
+nav button {
+  font: inherit; font-size: 13px; color: #e8e8f0; cursor: pointer;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px; padding: 7px 14px; transition: background .2s, border-color .2s;
 }
-
-/* ---------- 卡面绘制（CSS 渐变 + 内联 SVG，无外链图片） ---------- */
-.card__head {
-  display: flex; justify-content: space-between; align-items: baseline;
-  font-weight: 800; font-size: 15px; padding: 0 2% 3%;
+nav button:hover { background: rgba(255,255,255,.13); }
+nav button[aria-pressed="true"] { background: rgba(180,160,255,.25); border-color: rgba(200,185,255,.55); }
+nav .sep { width: 1px; background: rgba(255,255,255,.15); margin: 4px 4px; }
+#msg {
+  position: fixed; inset: 0; display: none; place-items: center; padding: 24px; text-align: center;
 }
-.card__head small { font-size: 11px; font-weight: 700; }
-.card__art {
-  position: relative;
-  height: 46%;
-  border: 3px solid rgba(0,0,0,.28);
-  border-radius: 3px;
-  background: var(--art-bg);
-  display: grid; place-items: center;
-  overflow: hidden;              /* 插画箔层被裁在插画框内，绝不错位 */
-  isolation: isolate;
-}
-.card__art svg { width: 62%; height: auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,.35)); }
-.card__art .foil { border-radius: 0; }
-.card__body {
-  flex: 1; margin-top: 5%;
-  background: var(--panel, rgba(255,255,255,.82));
-  border-radius: 3px;
-  padding: 6% 7%;
-  font-size: 11px; line-height: 1.55;
-}
-.card__body b { display: block; font-size: 12.5px; margin-bottom: 4px; }
-.card__foot { font-size: 9px; padding-top: 4%; display: flex; justify-content: space-between; opacity: .75; }
-
-/* 指针附近才明显、远处很淡的遮罩（三种效果共用）
-   多段色标做成近似 smoothstep 的缓降，避免出现一圈“光的边缘” */
-.foil {
-  --reach: 60%;          /* 指针周围的“受光”半径 */
-  --far: .15;            /* 远离指针处保留的强度 */
-  --pointer-mask: radial-gradient(circle at calc(var(--px) * 1%) calc(var(--py) * 1%),
-    #000 0%,
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .85)) calc(var(--reach) * .25),
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .5))  calc(var(--reach) * .5),
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .15)) calc(var(--reach) * .75),
-    rgba(0,0,0, var(--far)) var(--reach));
-  -webkit-mask-image: var(--pointer-mask);
-          mask-image: var(--pointer-mask);
-}
-/* 插画框内的箔层：再叠一层四边羽化遮罩，光不会在边框处“一刀切” */
-.foil--art {
-  --feather: 10%;        /* 四边羽化宽度 */
-  --edge-mask-x: linear-gradient(90deg, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
-  --edge-mask-y: linear-gradient(180deg, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
-  -webkit-mask-image: var(--pointer-mask), var(--edge-mask-x), var(--edge-mask-y);
-          mask-image: var(--pointer-mask), var(--edge-mask-x), var(--edge-mask-y);
-  -webkit-mask-composite: source-in, source-in;   /* Safari：多层遮罩取交集 */
-          mask-composite: intersect;
-}
-
-/* =========================================================
-   效果 1：普通彩虹镭射（只在插画框内）
-   放大 400% 的彩虹渐变随指针反向平移 + 极细扫描线；
-   color-dodge 叠在插画上，靠边倾斜时更亮（--dist）。
-   ========================================================= */
-.card[data-effect="rainbow"] {
-  --frame: linear-gradient(160deg, #eef1f6, #a7b1c2);
-  --art-bg: radial-gradient(circle at 50% 40%, #6f7c99 0%, #3a4260 55%, #1a1d2c 100%);
-}
-.card[data-effect="rainbow"] .foil--art {
-  --holo-angle: 115deg;     /* 彩虹条纹角度 */
-  --holo-speed-x: 1;        /* 彩虹带移动倍率（≤1：背景位置保持在 0~100%，否则会露出平铺接缝） */
-  --holo-speed-y: 1;
-  --band: 4%;               /* 每条色带宽度（相对 400% 渐变），越小越密 */
-  --scan: 1px;              /* 扫描线粗细 */
-  --holo-max: .85;          /* 最大不透明度 */
-  background-image:
-    repeating-linear-gradient(90deg,
-      #3a3a3a 0, #6a6a6a var(--scan), #3a3a3a calc(var(--scan) * 2)),   /* 首尾同色、无硬边 */
-    repeating-linear-gradient(var(--holo-angle),
-      var(--c-violet) 0%, var(--c-blue) calc(var(--band) * 1),
-      var(--c-green) calc(var(--band) * 2), var(--c-yellow) calc(var(--band) * 3),
-      var(--c-red) calc(var(--band) * 4), var(--c-violet) calc(var(--band) * 5));
-  background-size: auto, 400% 400%;
-  background-position:
-    0 0,
-    clamp(0%, calc((50 - var(--px)) * var(--holo-speed-x) * 1% + 50%), 100%)
-    clamp(0%, calc((50 - var(--py)) * var(--holo-speed-y) * 1% + 50%), 100%);
-  background-blend-mode: soft-light;
-  filter: brightness(calc(.6 + var(--dist) * .25)) contrast(1.1) saturate(1.15);
-  mix-blend-mode: color-dodge;
-  opacity: calc(var(--o) * var(--holo-max));
-}
-
-/* =========================================================
-   效果 2：闪光星点（卡框 + 插画）
-   两层细小的 SVG 噪点亮片，随指针以不同方向/速度移动，
-   只在指针附近显现 → 像转动卡片时亮片一颗颗闪起来。
-   ========================================================= */
-.card[data-effect="sparkle"] {
-  --frame: linear-gradient(160deg, #3b2a5c, #120c22);
-  --art-bg: radial-gradient(circle at 30% 30%, #ff9ad5 0%, #7a3cff 45%, #1a0b3d 100%);
-  --panel: rgba(18,12,36,.82);
-}
-.card[data-effect="sparkle"] .card__front { color: #f2eaff; }
-.card[data-effect="sparkle"] .foil {
-  --reach: 55%;
-  --far: .05;
-  --glitter-max: 1;        /* 最大亮度 */
-  /* 亮片纹理：两块内联 SVG 平铺图，里面是随机分布的柔边光点 + 少量四芒星
-     （由脚本固定种子生成后内联；两块尺寸互质，平铺后看不出重复） */
-  --glitter-a: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='130' height='130'><defs><radialGradient id='g0'><stop offset='0' stop-color='%23ffffff'/><stop offset='.35' stop-color='%23ffffff' stop-opacity='.7'/><stop offset='1' stop-color='%23ffffff' stop-opacity='0'/></radialGradient><radialGradient id='g1'><stop offset='0' stop-color='%23ffd6f5'/><stop offset='.35' stop-color='%23ffd6f5' stop-opacity='.7'/><stop offset='1' stop-color='%23ffd6f5' stop-opacity='0'/></radialGradient><radialGradient id='g2'><stop offset='0' stop-color='%23d6f0ff'/><stop offset='.35' stop-color='%23d6f0ff' stop-opacity='.7'/><stop offset='1' stop-color='%23d6f0ff' stop-opacity='0'/></radialGradient></defs><circle cx='42.1' cy='19.6' r='1.2' fill='url(%23g0)'/><circle cx='106.8' cy='12.2' r='2.6' fill='url(%23g0)'/><circle cx='118.3' cy='27.9' r='1.2' fill='url(%23g1)'/><circle cx='54.4' cy='31.3' r='2.6' fill='url(%23g1)'/><circle cx='7.7' cy='73.5' r='1.5' fill='url(%23g2)'/><circle cx='81.6' cy='123.2' r='2.6' fill='url(%23g2)'/><circle cx='51.6' cy='126.9' r='1.2' fill='url(%23g2)'/><circle cx='111.6' cy='37.6' r='1.5' fill='url(%23g2)'/><circle cx='15.3' cy='40.1' r='1.5' fill='url(%23g0)'/><circle cx='75.6' cy='83.1' r='1.8' fill='url(%23g0)'/><circle cx='71.2' cy='8.2' r='1.2' fill='url(%23g2)'/><circle cx='26.8' cy='88.5' r='2.2' fill='url(%23g1)'/><circle cx='60.5' cy='120.0' r='1.8' fill='url(%23g1)'/><circle cx='32.3' cy='23.4' r='1.5' fill='url(%23g0)'/><circle cx='74.7' cy='68.3' r='1.8' fill='url(%23g2)'/><circle cx='58.3' cy='79.2' r='1.2' fill='url(%23g0)'/><circle cx='66.6' cy='21.4' r='1.8' fill='url(%23g0)'/><circle cx='121.3' cy='54.8' r='1.2' fill='url(%23g2)'/><circle cx='74.5' cy='113.8' r='1.8' fill='url(%23g1)'/><circle cx='90.4' cy='77.3' r='2.6' fill='url(%23g1)'/><circle cx='8.9' cy='12.2' r='1.8' fill='url(%23g1)'/><circle cx='90.6' cy='8.4' r='1.8' fill='url(%23g2)'/><path d='M73.9 80.5Q73.9 85.7 79.0 85.7Q73.9 85.7 73.9 90.8Q73.9 85.7 68.8 85.7Q73.9 85.7 73.9 80.5Z' fill='%23fff'/><path d='M89.7 104.3Q89.7 109.1 94.6 109.1Q89.7 109.1 89.7 114.0Q89.7 109.1 84.8 109.1Q89.7 109.1 89.7 104.3Z' fill='%23fff'/></svg>");
-  --glitter-b: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='97' height='97'><defs><radialGradient id='g0'><stop offset='0' stop-color='%23ffffff'/><stop offset='.35' stop-color='%23ffffff' stop-opacity='.7'/><stop offset='1' stop-color='%23ffffff' stop-opacity='0'/></radialGradient><radialGradient id='g1'><stop offset='0' stop-color='%23fff1c2'/><stop offset='.35' stop-color='%23fff1c2' stop-opacity='.7'/><stop offset='1' stop-color='%23fff1c2' stop-opacity='0'/></radialGradient><radialGradient id='g2'><stop offset='0' stop-color='%23e4d6ff'/><stop offset='.35' stop-color='%23e4d6ff' stop-opacity='.7'/><stop offset='1' stop-color='%23e4d6ff' stop-opacity='0'/></radialGradient></defs><circle cx='65.7' cy='76.1' r='2.6' fill='url(%23g0)'/><circle cx='49.6' cy='38.2' r='2.6' fill='url(%23g1)'/><circle cx='56.7' cy='57.7' r='1.2' fill='url(%23g1)'/><circle cx='40.0' cy='93.9' r='1.2' fill='url(%23g1)'/><circle cx='87.0' cy='2.2' r='2.6' fill='url(%23g0)'/><circle cx='85.3' cy='89.3' r='1.2' fill='url(%23g2)'/><circle cx='44.2' cy='84.0' r='1.2' fill='url(%23g0)'/><circle cx='40.2' cy='9.6' r='2.2' fill='url(%23g1)'/><circle cx='42.7' cy='96.0' r='2.6' fill='url(%23g2)'/><circle cx='80.9' cy='76.8' r='2.2' fill='url(%23g0)'/><circle cx='75.1' cy='55.9' r='1.2' fill='url(%23g0)'/><circle cx='37.9' cy='13.4' r='2.2' fill='url(%23g0)'/><circle cx='53.1' cy='44.4' r='2.2' fill='url(%23g1)'/><circle cx='57.6' cy='50.5' r='2.6' fill='url(%23g1)'/><path d='M37.9 74.4Q37.9 80.6 44.1 80.6Q37.9 80.6 37.9 86.8Q37.9 80.6 31.7 80.6Q37.9 80.6 37.9 74.4Z' fill='%23fff'/></svg>");
-  background-image:
-    var(--glitter-a), var(--glitter-b),
-    linear-gradient(125deg, hsla(300,90%,70%,.22), hsla(200,90%,70%,.22), hsla(50,90%,70%,.22));
-  background-size: 130px 130px, 97px 97px, 300% 300%;
-  background-position:
-    calc(var(--px) * -0.5px) calc(var(--py) * -0.5px),
-    calc(var(--px) * 0.7px) calc(var(--py) * 0.6px),
-    calc(var(--px) * 1%) calc(var(--py) * 1%);
-  mix-blend-mode: color-dodge;
-  opacity: calc(var(--o) * var(--glitter-max));
-}
-.card[data-effect="sparkle"] .foil--art { opacity: calc(var(--o) * var(--glitter-max)); }  /* 与卡框同强度，避免插画框边缘出现亮度断层 */
-
-/* =========================================================
-   效果 3：金属拉丝 / 渐变镭射（卡框 + 插画）
-   纯 CSS 拉丝纹理（两组不同周期的细横线，无平铺接缝）
-   + 随指针滑动的柔和金色反光带，用 soft-light 混合避免过曝。
-   ========================================================= */
-.card[data-effect="metal"] {
-  --frame: linear-gradient(160deg, #d9b45a, #8a6420 45%, #e3c77a 70%, #7a5616);
-  --art-bg: linear-gradient(160deg, #3a2a10, #a57a28 50%, #2a1d08);
-  --panel: rgba(255,247,222,.86);
-}
-.card[data-effect="metal"] .foil {
-  --metal-angle: 115deg;    /* 反光带角度 */
-  --metal-speed: 1;         /* 反光带移动倍率（≤1，避免露出平铺接缝） */
-  --metal-idle: .25;        /* 静止时保留的金属感（0 = 完全哑光） */
-  --metal-max: 1;
-  --reach: 70%;
-  --far: .35;
-  background-image:
-    /* 拉丝：两组质数周期的细线叠加，看起来不规则 */
-    repeating-linear-gradient(0deg, rgba(255,255,255,0) 0, rgba(255,255,255,.10) 1px, rgba(255,255,255,0) 2.5px,
-      rgba(0,0,0,.08) 4px, rgba(255,255,255,0) 5.5px, rgba(255,255,255,0) 7px),
-    repeating-linear-gradient(0deg, rgba(255,255,255,0) 0, rgba(255,255,255,.07) 1.5px, rgba(255,255,255,0) 3.5px,
-      rgba(0,0,0,.06) 6px, rgba(255,255,255,0) 8.5px, rgba(255,255,255,0) 11px),
-    /* 反光带：明暗过渡平缓，避免硬边 */
-    linear-gradient(var(--metal-angle),
-      #4a360c 0%, #f6e2a4 20%, #7a5a18 36%, #fff6d6 50%,
-      #6e5016 64%, #f3da94 80%, #4a360c 100%);
-  background-size: auto, auto, 300% 300%;
-  background-position:
-    0 0, 0 0,
-    clamp(0%, calc((50 - var(--px)) * var(--metal-speed) * 1% + 50%), 100%)
-    clamp(0%, calc((50 - var(--py)) * var(--metal-speed) * 1% + 50%), 100%);
-  mix-blend-mode: soft-light;
-  opacity: calc(var(--metal-idle) + var(--o) * (var(--metal-max) - var(--metal-idle)));
-}
-
-/* ---------- 无障碍：减少动态效果 ---------- */
-@media (prefers-reduced-motion: reduce) {
-  .card__rotator { transform: none !important; }
-}
+#msg.show { display: grid; }
+#msg div { max-width: 360px; background: rgba(20,18,32,.92); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 22px 22px 18px; line-height: 1.7; font-size: 14px; }
+#msg a { color: #c9b8ff; }
+.loading #gl { opacity: 0; }
+#gl { transition: opacity .4s ease; }
+@media (prefers-reduced-motion: reduce) { #gl { transition: none; } }
 </style>
+<!-- Three.js：vendor 到仓库里的摇树精简版（r186，MIT），全部相对路径，GitHub Pages 子路径 /webgl/ 下可用，不依赖 CDN -->
+<script type="importmap">
+{ "imports": { "three": "./vendor/three-holo.min.js" } }
+</script>
 </head>
-<body>
-  <h1>全息闪卡 Holo Card</h1>
-  <p class="tip">鼠标悬停 / 手指拖动卡片，看倾斜和镭射反光</p>
+<body class="loading">
+  <a class="back" href="../">← CSS 版</a>
+  <header>
+    <h1>全息闪卡 · WebGL 旗舰版</h1>
+    <p class="tip">悬停倾斜 · 按住拖动旋转看背面 · 双击翻面</p>
+  </header>
+  <canvas id="gl" aria-label="可交互的 3D 全息闪卡"></canvas>
+  <nav aria-label="选择卡面">
+    <button type="button" data-card="frost" aria-pressed="true">霜晶龙 · 彩虹镭射</button>
+    <button type="button" data-card="star" aria-pressed="false">星尘狐 · 亮片箔</button>
+    <button type="button" data-card="sun" aria-pressed="false">金曜狮王 · 反闪金箔</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button type="button" id="flip">翻面</button>
+  </nav>
+  <div id="msg" role="alert"><div></div></div>
+  <noscript><p style="text-align:center;margin-top:40vh">需要开启 JavaScript。<a href="../" style="color:#c9b8ff">返回 CSS 版</a></p></noscript>
 
-  <div class="stage">
-    <!-- 卡 1：普通彩虹镭射 -->
-    <div>
-      <div class="card" data-effect="rainbow">
-        <div class="card__rotator">
-          <div class="card__front">
-            <div class="card__head"><span>霜晶龙</span><small>HP 120</small></div>
-            <div class="card__art">
-              <svg viewBox="0 0 100 100" aria-hidden="true">
-                <g fill="none" stroke="#e8f8ff" stroke-width="5" stroke-linecap="round">
-                  <path d="M50 8v84M14 29l72 42M14 71l72-42"/>
-                  <path d="M50 20l-9-9M50 20l9-9M50 80l-9 9M50 80l9 9M24 35l-12 3M24 35l-3-12M76 65l12-3M76 65l3 12M24 65l-3 12M24 65l-12-3M76 35l3-12M76 35l12 3"/>
-                </g>
-                <circle cx="50" cy="50" r="9" fill="#bfefff"/>
-              </svg>
-              <div class="foil foil--art"></div>
-            </div>
-            <div class="card__body"><b>冰棱吐息 · 60</b>令对手的下一回合无法撤退。镭射只出现在插画窗口，就像真正的 Holo 稀有卡。</div>
-            <div class="card__foot"><span>Rainbow Holo</span><span>001/003 ★</span></div>
-          </div>
-          <div class="card__glare"></div>
-        </div>
-      </div>
-      <div class="label">① 普通彩虹镭射</div>
-    </div>
+<script type="module">
+const msg = document.getElementById('msg');
+const fail = (html) => { msg.firstElementChild.innerHTML = html; msg.classList.add('show'); document.body.classList.remove('loading'); };
+const backLink = '<a href="../">返回 CSS 版（不需要 WebGL）</a>';
 
-    <!-- 卡 2：闪光星点 -->
-    <div>
-      <div class="card" data-effect="sparkle">
-        <div class="card__rotator">
-          <div class="card__front">
-            <div class="foil foil--frame"></div>
-            <div class="card__head"><span>星尘狐</span><small>HP 90</small></div>
-            <div class="card__art">
-              <svg viewBox="0 0 100 100" aria-hidden="true">
-                <path d="M50 4 C54 38 62 46 96 50 C62 54 54 62 50 96 C46 62 38 54 4 50 C38 46 46 38 50 4Z" fill="#fff6d8"/>
-                <path d="M80 14 C81 22 84 24 92 25 C84 26 81 28 80 36 C79 28 76 26 68 25 C76 24 79 22 80 14Z" fill="#ffd1f0"/>
-                <circle cx="22" cy="78" r="4" fill="#cfe7ff"/>
-              </svg>
-              <div class="foil foil--art"></div>
-            </div>
-            <div class="card__body"><b>流星雨 · 40×</b>掷 3 次硬币，每次正面造成 40 点伤害。卡框和插画里洒满了会闪的亮片。</div>
-            <div class="card__foot"><span>Sparkle / Glitter</span><span>002/003 ★★</span></div>
-          </div>
-          <div class="card__glare"></div>
-        </div>
-      </div>
-      <div class="label">② 闪光星点</div>
-    </div>
-
-    <!-- 卡 3：金属拉丝 / 渐变镭射 -->
-    <div>
-      <div class="card" data-effect="metal">
-        <div class="card__rotator">
-          <div class="card__front">
-            <div class="foil foil--frame"></div>
-            <div class="card__head"><span>金曜狮王</span><small>HP 250</small></div>
-            <div class="card__art">
-              <svg viewBox="0 0 100 100" aria-hidden="true">
-                <g fill="#ffe9a6">
-                  <circle cx="50" cy="50" r="20"/>
-                  <g id="ray"><path d="M50 4l5 18h-10z"/></g>
-                  <use href="#ray" transform="rotate(45 50 50)"/><use href="#ray" transform="rotate(90 50 50)"/>
-                  <use href="#ray" transform="rotate(135 50 50)"/><use href="#ray" transform="rotate(180 50 50)"/>
-                  <use href="#ray" transform="rotate(225 50 50)"/><use href="#ray" transform="rotate(270 50 50)"/>
-                  <use href="#ray" transform="rotate(315 50 50)"/>
-                </g>
-                <circle cx="50" cy="50" r="12" fill="#b0801f"/>
-              </svg>
-              <div class="foil foil--art"></div>
-            </div>
-            <div class="card__body"><b>王者咆哮 · 200</b>弃掉 2 张能量。拉丝金属纹理 + 随角度滑动的金色反光带，类似秘密稀有金卡。</div>
-            <div class="card__foot"><span>Brushed Metal Foil</span><span>003/003 ★★★</span></div>
-          </div>
-          <div class="card__glare"></div>
-        </div>
-      </div>
-      <div class="label">③ 金属拉丝 / 渐变镭射</div>
-    </div>
-  </div>
-
-<script>
-/* =========================================================
-   交互：指针 → 目标值 → 物理弹簧（按真实时间积分，与屏幕刷新率无关）→ CSS 变量
-   ========================================================= */
-const CONFIG = {
-  maxTilt: 14,                          // 最大倾斜角（度）
-  follow: { stiffness: 260, damping: 30 },  // 跟手：接近临界阻尼，不拖泥带水
-  settle: { stiffness: 140, damping: 22 },  // 移出回正：约 0.6s 回正，几乎不过冲
-  fade:   { stiffness: 220, damping: 32 },  // 光泽淡出：约 0.3s 消失
-};
-
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-const clamp = (v, min = 0, max = 100) => Math.min(max, Math.max(min, v));
-
-/** 物理弹簧：a = k·(目标 - 当前) - c·速度，固定小步长积分保证稳定 */
-class Spring {
-  constructor(init, params) {
-    this.value = { ...init }; this.target = { ...init };
-    this.vel = Object.fromEntries(Object.keys(init).map(k => [k, 0]));
-    this.params = params;
-  }
-  set(target, params) { Object.assign(this.target, target); if (params) this.params = params; }
-  jump() { Object.assign(this.value, this.target); for (const k in this.vel) this.vel[k] = 0; }
-  /** 推进 dt 秒，返回是否仍在运动 */
-  step(dt) {
-    const { stiffness: k, damping: c } = this.params;
-    const h = 1 / 240;                        // 子步长
-    for (let t = 0; t < dt; t += h) {
-      const s = Math.min(h, dt - t);
-      for (const key in this.value) {
-        const a = k * (this.target[key] - this.value[key]) - c * this.vel[key];
-        this.vel[key] += a * s;
-        this.value[key] += this.vel[key] * s;
-      }
-    }
-    let moving = false;
-    for (const key in this.value) {
-      if (Math.abs(this.vel[key]) > 0.01 || Math.abs(this.target[key] - this.value[key]) > 0.01) moving = true;
-      else { this.value[key] = this.target[key]; this.vel[key] = 0; }
-    }
-    return moving;
+// 1) WebGL2 检测：不支持时直接提示，不下载 Three.js
+const probe = document.createElement('canvas').getContext('webgl2');
+if (!probe) {
+  fail(`你的浏览器或设备不支持 <b>WebGL2</b>（也可能被禁用了硬件加速），无法显示 3D 旗舰版。<br>${backLink}`);
+} else {
+  probe.getExtension('WEBGL_lose_context')?.loseContext();
+  try {
+    const { start, CONFIG } = await import('./js/holo.js');
+    const cards = [...document.querySelectorAll('nav [data-card]')];
+    const fromHash = location.hash.slice(1);
+    const initial = cards.some(b => b.dataset.card === fromHash) ? fromHash : 'frost';
+    const api = start({
+      canvas: document.getElementById('gl'),
+      initialCard: initial,
+      onReady: (r) => { if (r?.lost) fail(`WebGL 上下文丢失（可能是显卡资源不足）。请刷新页面重试，或${backLink}`); },
+    });
+    const select = (key) => {
+      api.setCard(key);
+      cards.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.card === key)));
+      history.replaceState(null, '', '#' + key);
+    };
+    cards.forEach(b => b.addEventListener('click', () => select(b.dataset.card)));
+    select(initial);
+    document.getElementById('flip').addEventListener('click', () => api.flipOver());
+    window.__holo = api;          // 调试 / 自动化截图用
+    requestAnimationFrame(() => document.body.classList.remove('loading'));
+  } catch (err) {
+    console.error(err);
+    fail(`3D 版加载失败：${String(err.message || err).replace(/</g, '&lt;')}<br>${backLink}`);
   }
 }
-
-function setupCard(card) {
-  const rotator = card.querySelector('.card__rotator');
-  const motion = new Spring({ rx: 0, ry: 0, px: 50, py: 50 }, CONFIG.follow); // 倾斜 + 光点位置
-  const glow = new Spring({ o: 0 }, CONFIG.fade);                              // 光泽强度
-  let raf = 0, last = 0;
-
-  const render = () => {
-    const v = motion.value, s = card.style;
-    s.setProperty('--rx', v.rx.toFixed(2));
-    s.setProperty('--ry', v.ry.toFixed(2));
-    s.setProperty('--px', v.px.toFixed(2));
-    s.setProperty('--py', v.py.toFixed(2));
-    s.setProperty('--o', clamp(glow.value.o, 0, 1).toFixed(3));
-    s.setProperty('--dist', Math.min(1, Math.hypot(v.px - 50, v.py - 50) / 50).toFixed(3));
-  };
-  const loop = (now) => {
-    const dt = Math.min(0.05, (now - last) / 1000 || 0.016);  // 切后台回来时防止大步长
-    last = now;
-    const a = motion.step(dt), b = glow.step(dt);
-    render();
-    raf = (a || b) ? requestAnimationFrame(loop) : 0;
-  };
-  const kick = () => {
-    if (reduceMotion.matches) { motion.jump(); glow.jump(); render(); return; }
-    if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); }
-  };
-
-  const onMove = (e) => {
-    const r = rotator.getBoundingClientRect();
-    const px = clamp(((e.clientX - r.left) / r.width) * 100);
-    const py = clamp(((e.clientY - r.top) / r.height) * 100);
-    const tilt = reduceMotion.matches ? 0 : CONFIG.maxTilt;
-    // 指针所在一侧抬向观众：rotateY 负值 → 右边缘靠近；rotateX 正值 → 下边缘靠近
-    motion.set({ rx: -((px - 50) / 50) * tilt, ry: ((py - 50) / 50) * tilt, px, py }, CONFIG.follow);
-    glow.set({ o: 1 });
-    kick();
-  };
-  const onLeave = () => {
-    motion.set({ rx: 0, ry: 0, px: 50, py: 50 }, CONFIG.settle);
-    glow.set({ o: 0 });
-    kick();
-  };
-
-  card.addEventListener('pointermove', onMove);
-  card.addEventListener('pointerdown', (e) => {
-    if (e.pointerType !== 'mouse') card.setPointerCapture(e.pointerId); // 手指滑出卡片也继续跟踪
-    onMove(e);
-  });
-  card.addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') onLeave(); });
-  card.addEventListener('pointercancel', onLeave);
-  card.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') onLeave(); });
-  render();
-}
-
-document.querySelectorAll('.card').forEach(setupCard);
 </script>
 </body>
 </html>
