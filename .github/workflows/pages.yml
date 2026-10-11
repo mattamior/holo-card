@@ -1,0 +1,84 @@
+# 多版本预览站：把 main 和每个 feature/* 分支组装到 GitHub Pages 的不同路径下
+#   /            版本总览首页
+#   /classic/    main
+#   /gyro/  /foil-mask/  /parallax/  /webgl/  …  对应 feature/<名字> 分支
+#
+# 触发方式（同一个文件同时放在 main 和每个 feature 分支上）：
+#   - push 到 main                → 直接在 main 上构建并部署
+#   - push 到任意 feature/** 分支 → 只做一件事：在 main 上触发本 workflow（workflow_dispatch），
+#                                   由 main 统一组装并部署。这样 github-pages 环境只允许 main 部署的保护规则不用放开，
+#                                   组装逻辑也始终以 main 上的 .github/pages/build.mjs 为准。
+#   - 手动：Actions 页面点 Run workflow，或 `gh workflow run pages.yml --ref main`
+#
+# 注意：push 事件用的是“被推送分支上的” workflow 文件，所以 feature 分支上也必须有这个文件才会触发。
+#       从 main（或现有 feature 分支）切出的新分支会自动带上它。
+name: Pages 多版本预览站
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 触发原因（feature 分支推送时自动填写）
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+# main 上的部署排队执行（最多一个在跑、一个在等，等待中的会被更新的替换——反正每次都会重新拉取全部分支）
+concurrency:
+  group: ${{ github.ref == 'refs/heads/main' && 'pages-deploy' || format('pages-trigger-{0}', github.ref) }}
+  cancel-in-progress: false
+
+jobs:
+  # feature 分支推送 → 在 main 上触发部署
+  trigger-main:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: 在 main 上触发部署
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REASON: ${{ github.event_name }} ${{ github.ref_name }}@${{ github.sha }}
+        run: |
+          gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main -f reason="${REASON:0:80}"
+          echo "已在 main 上触发 Pages 部署（来源：$REASON）" >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取全部分支
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: 组装站点
+        env:
+          REASON: ${{ inputs.reason || github.event_name }}
+        run: |
+          echo "触发原因：$REASON"
+          node .github/pages/build.mjs _site | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

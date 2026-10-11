@@ -1,0 +1,49 @@
+{
+  "repo": "mattamior/holo-card",
+  "versions": [
+    {
+      "route": "classic",
+      "branch": "main",
+      "title": "经典 CSS 版",
+      "short": "经典版",
+      "desc": "最初的纯 CSS 实现：彩虹镭射、闪光星点、金属拉丝三张卡，指针驱动 3D 倾斜、高光与镭射流光。",
+      "thumb": "screenshots/shot-hover.png"
+    },
+    {
+      "route": "gyro",
+      "branch": "feature/gyro",
+      "title": "陀螺仪体感",
+      "short": "陀螺仪",
+      "desc": "在经典版上加入手机陀螺仪：点「开启体感」后轻晃手机，卡片跟着倾斜反光；手指拖动时以手指为准。",
+      "thumb": "screenshots/shot-gyro-btn.png"
+    },
+    {
+      "route": "foil-mask",
+      "branch": "feature/foil-mask",
+      "title": "局部镭射 + 蚀刻压纹",
+      "short": "局部镭射",
+      "desc": "镭射只出现在插画、边框或反闪区域，叠加蚀刻压纹、随角度变亮的边缘光和纸张厚度。",
+      "thumb": "screenshots/foil-mask-hover.png",
+      "thumbStyle": "width:101.3%"
+    },
+    {
+      "route": "parallax",
+      "branch": "feature/parallax",
+      "title": "多层视差 · 角色破框",
+      "short": "视差破框",
+      "desc": "插画拆成远景、中景、角色、粒子、文字五层 3D 平面，倾斜时有景深，龙头和狐耳探出卡框。",
+      "thumb": "screenshots/parallax-hover.png",
+      "thumbStyle": "width:101.8%"
+    },
+    {
+      "route": "webgl",
+      "branch": "feature/webgl",
+      "title": "WebGL 旗舰版",
+      "short": "WebGL",
+      "desc": "Three.js 着色器渲染：随视角变化的镭射、独立箔面材质与泛光，可拖动旋转看背面、双击翻面。",
+      "thumb": "screenshots/webgl-star.png",
+      "thumbStyle": "object-position:50% 38%"
+    }
+  ],
+  "_note": "thumbStyle：缩略图 <img> 的内联样式。foil-mask / parallax 的截图右侧有 15px 白色滚动条槽，把图片放宽一点让容器裁掉它。"
+}
