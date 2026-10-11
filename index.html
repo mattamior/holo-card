@@ -3,16 +3,36 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>全息闪卡 · Holo Card Demo</title>
+<title>全息闪卡 · Holo Card Demo · Parallax 破框立体卡</title>
 <style>
 /* =========================================================
    全局可调参数
+   feature/parallax：多层视差 + 角色破框（纯 CSS 3D，零依赖）
    ========================================================= */
 :root {
   --card-w: min(280px, 70vw);   /* 卡片宽度（手机上留出两侧空白方便滚动页面） */
-  --card-ratio: 63 / 88;        /* 卡片宽高比（标准 TCG 卡尺寸） */
+  --card-h: calc(var(--card-w) * 88 / 63);  /* 卡片高度（标准 TCG 卡 63:88） */
   --card-radius: 4.5% / 3.2%;   /* 圆角 */
-  --perspective: 800px;         /* 透视距离：越小 3D 感越夸张 */
+  --persp: 800;                 /* 透视距离（px，无单位）：越小 3D 感越夸张 */
+
+  /* ---- 各层深度（px，无单位；负数在卡面后方，正数浮在卡面前方） ---- */
+  --z-bg: -90;                  /* 远景（天空、月亮/夕阳）+ 箔光（窗口内，等效深度） */
+  --z-mid: -40;                 /* 中景（山脉 / 森林）（窗口内，等效深度） */
+  --z-text: 16;                 /* 文字层（名称、技能面板） */
+  --z-char: 44;                 /* 角色层 */
+  --z-fg: 80;                   /* 前景粒子（雪花 / 火星） */
+  --depth: 1;                   /* 总深度倍率：0 = 完全扁平，1.5 = 更夸张 */
+
+  /* ---- 插画窗口位置（占卡片宽/高的比例，无单位） ---- */
+  --win-l: .06;
+  --win-t: .12;
+  --win-w: .88;
+  --win-h: .46;
+  --bleed: 28px;                /* 远景/中景超出窗口的出血量：须 ≥ |z-bg|×sin(最大倾斜角)×depth，倾斜时窗口里看不到它们的边 */
+
+  /* ---- 破框 ---- */
+  --breakout: .24;              /* 角色层向上超出窗口上沿的高度（占卡高比例），越大头部越“探出”卡外 */
+  --char-fade: 14%;             /* 角色底部渐隐长度（融进窗口，没有硬切边） */
 
   /* 彩虹镭射色板（略降饱和，避免“霓虹灯”感） */
   --c-red: #ec4a6a;
@@ -33,10 +53,17 @@ body {
   padding: 32px 16px 48px;
 }
 h1 { font-size: 22px; font-weight: 600; letter-spacing: .05em; margin: 0 0 6px; }
-p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
+p.tip { margin: 0 0 10px; opacity: .6; font-size: 13px; text-align: center; }
+p.sub { margin: 0; opacity: .45; font-size: 12px; text-align: center; max-width: 36em; line-height: 1.45; }
 
-.stage { display: flex; flex-wrap: wrap; justify-content: center; gap: 48px; }
-.label { text-align: center; margin-top: 14px; font-size: 13px; opacity: .7; }
+/* 上方留出角色探出卡外的空间 */
+.stage {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: calc(var(--card-h) * var(--breakout) + 24px) 56px;
+  padding-top: calc(var(--card-h) * (var(--breakout) - var(--win-t)) + 28px);
+}
+.label { text-align: center; margin-top: 18px; font-size: 13px; opacity: .7; }
+.label small { display: block; margin-top: 4px; font-size: 11px; opacity: .65; }
 
 /* =========================================================
    卡片骨架
@@ -45,14 +72,33 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
      --px / --py : 指针在卡面上的位置 0~100（无单位数字）
      --o         : 特效强度 0~1（悬停时 1，移出淡出到 0）
      --dist      : 指针离卡片中心的距离 0~1（越靠边反光越强）
-   层级（从下到上）：
-     卡框底色 → 卡框箔层(.foil--frame) → 插画/文字 → 插画箔层(.foil--art，在插画框内部) → 高光(.card__glare)
+
+   3D 结构（.card__rotator 是唯一的 preserve-3d 容器，各层都是它的直接子元素）：
+     z= -1 投影层 .layer--shadow（只画 box-shadow）
+     z=  0 卡框层 .layer--frame，内含插画窗口 .win（overflow:hidden 裁剪）：
+             └ 远景 .win__bg  等效 z=-90  ← 箔光只在这里（与远景在同一平面内混合）
+             └ 中景 .win__mid 等效 z=-40
+     z= 16 文字层 .layer--text
+     z= 44 角色层 .layer--char（窗口外；向上超出窗口和卡片上沿 = 破框）
+     z= 80 前景层 .layer--fg（粒子）
+
+   ⚠ 压平陷阱：overflow / opacity<1 / filter / mask / clip-path / mix-blend-mode / isolation
+     只要出现在 .card__rotator 上，整个 3D 就会被压成一张平面图。
+     所以这些属性全部只放在“各层自己”或层内部的子元素上——
+     它们只会压平该层自己的子树（本来就是一张平面），不影响层与层之间的景深。
+
+   为什么远景/中景不用真 translateZ？
+     overflow:hidden 的窗口会压平其内部 3D；若把远景做成卡片后方的独立平面（卡框挖洞），
+     倾斜时它会从卡片侧边露出来（卡框挡不到卡片轮廓以外）。
+     所以窗口内的层改用 translate(z·sin(倾斜角)) —— 这正是该深度的平面在旋转后
+     相对卡面的位移量，视觉上等价于 translateZ，同时被窗口干净地裁剪。
    ========================================================= */
 .card {
   --rx: 0; --ry: 0; --px: 50; --py: 50; --o: 0; --dist: 0;
+  position: relative;
   width: var(--card-w);
-  aspect-ratio: var(--card-ratio);
-  perspective: var(--perspective);
+  height: var(--card-h);
+  perspective: calc(var(--persp) * 1px);
   touch-action: none;           /* 在卡片上拖动时不滚动页面 */
   -webkit-tap-highlight-color: transparent;
   user-select: none; -webkit-user-select: none;
@@ -60,121 +106,208 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
 .card__rotator {
   position: relative;
   width: 100%; height: 100%;
-  border-radius: var(--card-radius);
+  transform-style: preserve-3d;
   transform: rotateY(calc(var(--rx) * 1deg)) rotateX(calc(var(--ry) * 1deg))
              scale(calc(1 + var(--o) * 0.03));
   will-change: transform;
-  box-shadow:
-    calc(var(--rx) * -0.5px) calc(var(--ry) * 0.5px + 12px) 28px rgba(0,0,0,.5),
-    0 0 calc(var(--o) * 28px) rgba(170,150,255, calc(var(--o) * .22));
-  overflow: hidden;
-  isolation: isolate;           /* 混合模式只作用在卡片内部 */
+  /* 不能有 overflow / isolation / opacity / filter，否则 3D 被压平 */
 }
-.card__front {
-  position: absolute; inset: 0;
-  padding: 5.5%;
-  display: flex; flex-direction: column;
-  background: var(--frame);
-  color: #1b1b22;
-  isolation: isolate;
-}
-/* 内容在卡框箔层之上，保证文字清晰 */
-.card__front > :not(.foil) { position: relative; z-index: 1; }
 
-/* 所有箔层/高光的公共属性 */
-.foil, .card__glare {
-  position: absolute; inset: 0;
+/* 每一层：一张位于 translateZ(z) 的平面。
+   scale(1 - z/透视) 抵消透视带来的近大远小，保证静止时与设计稿尺寸一致，
+   只在倾斜时才出现层间错位（= 视差）。 */
+.layer {
+  --z: 0;
+  position: absolute;
   pointer-events: none;
+  transform: translateZ(calc(var(--z) * var(--depth) * 1px))
+             scale(calc(1 - var(--z) * var(--depth) / var(--persp)));
+  backface-visibility: hidden;
+}
+
+/* ---------- 投影层：只负责卡片下方阴影与悬停辉光 ---------- */
+.layer--shadow {
+  --z: -1;
+  inset: 0;
+  border-radius: var(--card-radius);
+  box-shadow:
+    calc(var(--rx) * -0.5px) calc(var(--ry) * 0.5px + 14px) 30px rgba(0,0,0,.55),
+    0 0 calc(var(--o) * 30px) rgba(170,150,255, calc(var(--o) * .22));
+}
+
+/* ---------- 卡框层：整张卡面（含插画窗口） ---------- */
+.layer--frame {
+  --z: 0;
+  inset: 0;
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--frame);
+}
+/* 卡框上的细纹理（静态，不发光） */
+.layer--frame::before {
+  content: ""; position: absolute; inset: 0;
+  background: var(--frame-pattern, none);
+  opacity: .5;
+}
+
+/* ---------- 插画窗口：裁剪远景与中景 ---------- */
+.win {
+  position: absolute;
+  left:   calc(var(--win-l) * 100%);
+  top:    calc(var(--win-t) * 100%);
+  width:  calc(var(--win-w) * 100%);
+  height: calc(var(--win-h) * 100%);
+  border-radius: 3px;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--win-fill, #10142a);
+}
+/* 窗口描边 + 内阴影：让窗口有“凹进卡里”的感觉（盖在远景/中景之上） */
+.win::after {
+  content: ""; position: absolute; inset: 0;
   border-radius: inherit;
+  border: 3px solid var(--ring, rgba(0,0,0,.35));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.12),
+    inset 0 6px 14px rgba(0,0,0,.45),
+    inset 0 0 22px rgba(0,0,0,.25);
+  pointer-events: none;
+  z-index: 5;
 }
-.foil--frame { z-index: 0; }
-.foil--art { z-index: 2; }
-
-/* ---------- 高光：跟随指针的柔和光斑（克制版） ---------- */
-.card__glare {
-  --glare-strength: .55;  /* 中心亮度 */
-  --glare-size: 45%;      /* 光斑半径（超过后逐渐变暗） */
-  z-index: 3;
-  background: radial-gradient(
-    farthest-corner circle at calc(var(--px) * 1%) calc(var(--py) * 1%),
-    rgba(255,255,255, var(--glare-strength)) 0%,
-    rgba(255,255,255, calc(var(--glare-strength) * .6)) calc(var(--glare-size) * .25),
-    rgba(255,255,255, calc(var(--glare-strength) * .25)) calc(var(--glare-size) * .55),
-    rgba(255,255,255, 0) var(--glare-size),
-    rgba(0,0,0, .08) 100%);   /* 多段缓降，没有可见的光圈边缘 */
-  mix-blend-mode: overlay;
-  opacity: var(--o);
+/* 窗口内的层：比窗口大一圈（出血），按等效深度随倾斜平移
+   位移 = z · sin(倾斜角)：与真实 translateZ 平面旋转后的位移一致
+   （不支持 CSS sin() 的旧浏览器会忽略这条 transform，远景/中景退化为静止，不会出错） */
+.win__bg, .win__mid {
+  --zz: calc(var(--z) * var(--depth));
+  position: absolute;
+  inset: calc(var(--bleed) * -1);
+  transform: translate(
+    calc(var(--zz) * sin(calc(var(--rx) * 1deg)) * 1px),
+    calc(var(--zz) * sin(calc(var(--ry) * -1deg)) * 1px));
 }
+.win__bg  { --z: var(--z-bg);  overflow: hidden; isolation: isolate; }   /* 箔光在本层内混合 */
+.win__mid { --z: var(--z-mid); }
+.win__bg > svg, .win__mid > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
-/* ---------- 卡面绘制（CSS 渐变 + 内联 SVG，无外链图片） ---------- */
+/* ---------- 文字层 ---------- */
+.layer--text {
+  --z: var(--z-text);
+  inset: 0;
+  color: var(--ink, #1b1b22);
+}
 .card__head {
+  position: absolute; left: 7%; right: 7%; top: 3.2%;
   display: flex; justify-content: space-between; align-items: baseline;
-  font-weight: 800; font-size: 15px; padding: 0 2% 3%;
+  font-weight: 800; font-size: 15px;
+  text-shadow: 0 1px 0 rgba(255,255,255,.25);
 }
 .card__head small { font-size: 11px; font-weight: 700; }
-.card__art {
-  position: relative;
-  height: 46%;
-  border: 3px solid rgba(0,0,0,.28);
-  border-radius: 3px;
-  background: var(--art-bg);
-  display: grid; place-items: center;
-  overflow: hidden;              /* 插画箔层被裁在插画框内，绝不错位 */
-  isolation: isolate;
-}
-.card__art svg { width: 62%; height: auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,.35)); }
-.card__art .foil { border-radius: 0; }
 .card__body {
-  flex: 1; margin-top: 5%;
+  position: absolute; left: 6%; right: 6%; top: 61%; bottom: 10%;
   background: var(--panel, rgba(255,255,255,.82));
-  border-radius: 3px;
-  padding: 6% 7%;
+  border-radius: 4px;
+  padding: 5.5% 7%;
   font-size: 11px; line-height: 1.55;
+  box-shadow: 0 6px 14px rgba(0,0,0,.28);   /* 浮起的面板在卡框上投下柔影 */
 }
 .card__body b { display: block; font-size: 12.5px; margin-bottom: 4px; }
-.card__foot { font-size: 9px; padding-top: 4%; display: flex; justify-content: space-between; opacity: .75; }
-
-/* 指针附近才明显、远处很淡的遮罩（三种效果共用）
-   多段色标做成近似 smoothstep 的缓降，避免出现一圈“光的边缘” */
-.foil {
-  --reach: 60%;          /* 指针周围的“受光”半径 */
-  --far: .15;            /* 远离指针处保留的强度 */
-  --pointer-mask: radial-gradient(circle at calc(var(--px) * 1%) calc(var(--py) * 1%),
-    #000 0%,
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .85)) calc(var(--reach) * .25),
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .5))  calc(var(--reach) * .5),
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .15)) calc(var(--reach) * .75),
-    rgba(0,0,0, var(--far)) var(--reach));
-  -webkit-mask-image: var(--pointer-mask);
-          mask-image: var(--pointer-mask);
+.card__foot {
+  position: absolute; left: 7%; right: 7%; bottom: 3.5%;
+  font-size: 9px; display: flex; justify-content: space-between; opacity: .75;
 }
-/* 插画框内的箔层：再叠一层四边羽化遮罩，光不会在边框处“一刀切” */
-.foil--art {
-  --feather: 10%;        /* 四边羽化宽度 */
-  --edge-mask-x: linear-gradient(90deg, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
-  --edge-mask-y: linear-gradient(180deg, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
-  -webkit-mask-image: var(--pointer-mask), var(--edge-mask-x), var(--edge-mask-y);
-          mask-image: var(--pointer-mask), var(--edge-mask-x), var(--edge-mask-y);
-  -webkit-mask-composite: source-in, source-in;   /* Safari：多层遮罩取交集 */
-          mask-composite: intersect;
+
+/* ---------- 角色层：窗口宽度，向上延伸 --breakout → 探出卡框上沿 ---------- */
+.layer--char {
+  --z: var(--z-char);
+  left:   calc(var(--win-l) * 100%);
+  width:  calc(var(--win-w) * 100%);
+  top:    calc((var(--win-t) - var(--breakout)) * 100%);
+  height: calc((var(--win-h) + var(--breakout)) * 100%);
+  /* 底部渐隐：角色“站”在窗口里，下沿柔和地融进中景，不出现切割直线 */
+  -webkit-mask-image: linear-gradient(to top, transparent 0, rgba(0,0,0,.35) calc(var(--char-fade) * .45), #000 var(--char-fade));
+          mask-image: linear-gradient(to top, transparent 0, rgba(0,0,0,.35) calc(var(--char-fade) * .45), #000 var(--char-fade));
+}
+.layer--char > svg {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  overflow: visible;
+  filter: drop-shadow(0 10px 10px rgba(0,0,0,.45));   /* 在层内部，不会压平整张卡 */
+}
+
+/* ---------- 前景粒子层：比卡片更大，粒子可以飘出卡外 ---------- */
+.layer--fg {
+  --z: var(--z-fg);
+  left: 0; width: 100%;
+  top: calc((var(--win-t) - var(--breakout)) * 100%);
+  height: calc((1 - var(--win-t) + var(--breakout)) * 100%);
+}
+.layer--fg > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.layer--fg .p { animation: twinkle var(--t, 3s) ease-in-out infinite; animation-delay: var(--d, 0s); transform-box: fill-box; transform-origin: center; }
+@keyframes twinkle {
+  0%, 100% { opacity: .35; transform: translateY(0) scale(.85); }
+  50%      { opacity: 1;   transform: translateY(-3px) scale(1); }
 }
 
 /* =========================================================
-   效果 1：普通彩虹镭射（只在插画框内）
-   放大 400% 的彩虹渐变随指针反向平移 + 极细扫描线；
-   color-dodge 叠在插画上，靠边倾斜时更亮（--dist）。
+   光：箔光只在远景层（窗口内）；高光在卡框层平面内，盖住卡框与窗口，但不盖文字/角色
+   ========================================================= */
+.foil, .glare {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+
+/* 指针在“远景层自身坐标”里的位置（远景层比卡片小、且偏上，需要换算） */
+.win__bg {
+  --lx: calc(var(--px) / 100 * var(--card-w) - (var(--win-l) * var(--card-w) - var(--bleed)));
+  --ly: calc(var(--py) / 100 * var(--card-h) - (var(--win-t) * var(--card-h) - var(--bleed)));
+}
+
+/* 指针附近才明显、远处很淡的遮罩（多段色标近似 smoothstep，没有一圈“光的边缘”） */
+.foil {
+  --reach: 170px;        /* 指针周围的“受光”半径 */
+  --far: .15;            /* 远离指针处保留的强度 */
+  -webkit-mask-image: radial-gradient(circle var(--reach) at var(--lx) var(--ly),
+    #000 0%,
+    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .85)) 25%,
+    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .5))  50%,
+    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .15)) 75%,
+    rgba(0,0,0, var(--far)) 100%);
+          mask-image: radial-gradient(circle var(--reach) at var(--lx) var(--ly),
+    #000 0%,
+    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .85)) 25%,
+    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .5))  50%,
+    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .15)) 75%,
+    rgba(0,0,0, var(--far)) 100%);
+}
+
+/* 高光：跟随指针的柔和光斑（克制版） */
+.glare {
+  --glare-strength: .5;
+  --glare-r: 190px;
+  background: radial-gradient(circle var(--glare-r) at var(--gx) var(--gy),
+    rgba(255,255,255, var(--glare-strength)) 0%,
+    rgba(255,255,255, calc(var(--glare-strength) * .6)) 25%,
+    rgba(255,255,255, calc(var(--glare-strength) * .25)) 55%,
+    rgba(255,255,255, calc(var(--glare-strength) * .07)) 80%,
+    rgba(255,255,255, 0) 100%);
+  mix-blend-mode: overlay;
+  opacity: var(--o);
+}
+.layer--frame > .glare { --gx: calc(var(--px) * 1%); --gy: calc(var(--py) * 1%); z-index: 6; }
+
+/* =========================================================
+   卡 1：霜晶龙 · 彩虹镭射（只在背景层）
    ========================================================= */
 .card[data-effect="rainbow"] {
   --frame: linear-gradient(160deg, #eef1f6, #a7b1c2);
-  --art-bg: radial-gradient(circle at 50% 40%, #6f7c99 0%, #3a4260 55%, #1a1d2c 100%);
+  --frame-pattern: repeating-linear-gradient(135deg, rgba(255,255,255,.0) 0 6px, rgba(255,255,255,.35) 6px 7px, rgba(255,255,255,0) 7px 13px);
 }
-.card[data-effect="rainbow"] .foil--art {
+.card[data-effect="rainbow"] .foil {
   --holo-angle: 115deg;     /* 彩虹条纹角度 */
-  --holo-speed-x: 1;        /* 彩虹带移动倍率（≤1：背景位置保持在 0~100%，否则会露出平铺接缝） */
-  --holo-speed-y: 1;
+  --holo-speed: 1;          /* 彩虹带移动倍率（≤1：背景位置保持在 0~100%，否则会露出平铺接缝） */
   --band: 4%;               /* 每条色带宽度（相对 400% 渐变），越小越密 */
   --scan: 1px;              /* 扫描线粗细 */
-  --holo-max: .85;          /* 最大不透明度 */
+  --holo-max: .8;           /* 最大不透明度 */
   background-image:
     repeating-linear-gradient(90deg,
       #3a3a3a 0, #6a6a6a var(--scan), #3a3a3a calc(var(--scan) * 2)),   /* 首尾同色、无硬边 */
@@ -185,8 +318,8 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
   background-size: auto, 400% 400%;
   background-position:
     0 0,
-    clamp(0%, calc((50 - var(--px)) * var(--holo-speed-x) * 1% + 50%), 100%)
-    clamp(0%, calc((50 - var(--py)) * var(--holo-speed-y) * 1% + 50%), 100%);
+    clamp(0%, calc((50 - var(--px)) * var(--holo-speed) * 1% + 50%), 100%)
+    clamp(0%, calc((50 - var(--py)) * var(--holo-speed) * 1% + 50%), 100%);
   background-blend-mode: soft-light;
   filter: brightness(calc(.6 + var(--dist) * .25)) contrast(1.1) saturate(1.15);
   mix-blend-mode: color-dodge;
@@ -194,22 +327,19 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
 }
 
 /* =========================================================
-   效果 2：闪光星点（卡框 + 插画）
-   两层细小的 SVG 噪点亮片，随指针以不同方向/速度移动，
-   只在指针附近显现 → 像转动卡片时亮片一颗颗闪起来。
+   卡 2：焰尾狐 · 闪光星点（只在背景层）
    ========================================================= */
 .card[data-effect="sparkle"] {
   --frame: linear-gradient(160deg, #3b2a5c, #120c22);
-  --art-bg: radial-gradient(circle at 30% 30%, #ff9ad5 0%, #7a3cff 45%, #1a0b3d 100%);
-  --panel: rgba(18,12,36,.82);
+  --frame-pattern: radial-gradient(circle at 50% 0%, rgba(255,170,120,.25), transparent 60%);
+  --panel: rgba(18,12,36,.84);
+  --ink: #f2eaff;
+  --ring: rgba(255,190,140,.35);
 }
-.card[data-effect="sparkle"] .card__front { color: #f2eaff; }
 .card[data-effect="sparkle"] .foil {
-  --reach: 55%;
-  --far: .05;
-  --glitter-max: 1;        /* 最大亮度 */
-  /* 亮片纹理：两块内联 SVG 平铺图，里面是随机分布的柔边光点 + 少量四芒星
-     （由脚本固定种子生成后内联；两块尺寸互质，平铺后看不出重复） */
+  --reach: 190px;
+  --far: .06;
+  --glitter-max: 1;
   --glitter-a: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='130' height='130'><defs><radialGradient id='g0'><stop offset='0' stop-color='%23ffffff'/><stop offset='.35' stop-color='%23ffffff' stop-opacity='.7'/><stop offset='1' stop-color='%23ffffff' stop-opacity='0'/></radialGradient><radialGradient id='g1'><stop offset='0' stop-color='%23ffd6f5'/><stop offset='.35' stop-color='%23ffd6f5' stop-opacity='.7'/><stop offset='1' stop-color='%23ffd6f5' stop-opacity='0'/></radialGradient><radialGradient id='g2'><stop offset='0' stop-color='%23d6f0ff'/><stop offset='.35' stop-color='%23d6f0ff' stop-opacity='.7'/><stop offset='1' stop-color='%23d6f0ff' stop-opacity='0'/></radialGradient></defs><circle cx='42.1' cy='19.6' r='1.2' fill='url(%23g0)'/><circle cx='106.8' cy='12.2' r='2.6' fill='url(%23g0)'/><circle cx='118.3' cy='27.9' r='1.2' fill='url(%23g1)'/><circle cx='54.4' cy='31.3' r='2.6' fill='url(%23g1)'/><circle cx='7.7' cy='73.5' r='1.5' fill='url(%23g2)'/><circle cx='81.6' cy='123.2' r='2.6' fill='url(%23g2)'/><circle cx='51.6' cy='126.9' r='1.2' fill='url(%23g2)'/><circle cx='111.6' cy='37.6' r='1.5' fill='url(%23g2)'/><circle cx='15.3' cy='40.1' r='1.5' fill='url(%23g0)'/><circle cx='75.6' cy='83.1' r='1.8' fill='url(%23g0)'/><circle cx='71.2' cy='8.2' r='1.2' fill='url(%23g2)'/><circle cx='26.8' cy='88.5' r='2.2' fill='url(%23g1)'/><circle cx='60.5' cy='120.0' r='1.8' fill='url(%23g1)'/><circle cx='32.3' cy='23.4' r='1.5' fill='url(%23g0)'/><circle cx='74.7' cy='68.3' r='1.8' fill='url(%23g2)'/><circle cx='58.3' cy='79.2' r='1.2' fill='url(%23g0)'/><circle cx='66.6' cy='21.4' r='1.8' fill='url(%23g0)'/><circle cx='121.3' cy='54.8' r='1.2' fill='url(%23g2)'/><circle cx='74.5' cy='113.8' r='1.8' fill='url(%23g1)'/><circle cx='90.4' cy='77.3' r='2.6' fill='url(%23g1)'/><circle cx='8.9' cy='12.2' r='1.8' fill='url(%23g1)'/><circle cx='90.6' cy='8.4' r='1.8' fill='url(%23g2)'/><path d='M73.9 80.5Q73.9 85.7 79.0 85.7Q73.9 85.7 73.9 90.8Q73.9 85.7 68.8 85.7Q73.9 85.7 73.9 80.5Z' fill='%23fff'/><path d='M89.7 104.3Q89.7 109.1 94.6 109.1Q89.7 109.1 89.7 114.0Q89.7 109.1 84.8 109.1Q89.7 109.1 89.7 104.3Z' fill='%23fff'/></svg>");
   --glitter-b: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='97' height='97'><defs><radialGradient id='g0'><stop offset='0' stop-color='%23ffffff'/><stop offset='.35' stop-color='%23ffffff' stop-opacity='.7'/><stop offset='1' stop-color='%23ffffff' stop-opacity='0'/></radialGradient><radialGradient id='g1'><stop offset='0' stop-color='%23fff1c2'/><stop offset='.35' stop-color='%23fff1c2' stop-opacity='.7'/><stop offset='1' stop-color='%23fff1c2' stop-opacity='0'/></radialGradient><radialGradient id='g2'><stop offset='0' stop-color='%23e4d6ff'/><stop offset='.35' stop-color='%23e4d6ff' stop-opacity='.7'/><stop offset='1' stop-color='%23e4d6ff' stop-opacity='0'/></radialGradient></defs><circle cx='65.7' cy='76.1' r='2.6' fill='url(%23g0)'/><circle cx='49.6' cy='38.2' r='2.6' fill='url(%23g1)'/><circle cx='56.7' cy='57.7' r='1.2' fill='url(%23g1)'/><circle cx='40.0' cy='93.9' r='1.2' fill='url(%23g1)'/><circle cx='87.0' cy='2.2' r='2.6' fill='url(%23g0)'/><circle cx='85.3' cy='89.3' r='1.2' fill='url(%23g2)'/><circle cx='44.2' cy='84.0' r='1.2' fill='url(%23g0)'/><circle cx='40.2' cy='9.6' r='2.2' fill='url(%23g1)'/><circle cx='42.7' cy='96.0' r='2.6' fill='url(%23g2)'/><circle cx='80.9' cy='76.8' r='2.2' fill='url(%23g0)'/><circle cx='75.1' cy='55.9' r='1.2' fill='url(%23g0)'/><circle cx='37.9' cy='13.4' r='2.2' fill='url(%23g0)'/><circle cx='53.1' cy='44.4' r='2.2' fill='url(%23g1)'/><circle cx='57.6' cy='50.5' r='2.6' fill='url(%23g1)'/><path d='M37.9 74.4Q37.9 80.6 44.1 80.6Q37.9 80.6 37.9 86.8Q37.9 80.6 31.7 80.6Q37.9 80.6 37.9 74.4Z' fill='%23fff'/></svg>");
   background-image:
@@ -223,132 +353,257 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
   mix-blend-mode: color-dodge;
   opacity: calc(var(--o) * var(--glitter-max));
 }
-.card[data-effect="sparkle"] .foil--art { opacity: calc(var(--o) * var(--glitter-max)); }  /* 与卡框同强度，避免插画框边缘出现亮度断层 */
 
-/* =========================================================
-   效果 3：金属拉丝 / 渐变镭射（卡框 + 插画）
-   纯 CSS 拉丝纹理（两组不同周期的细横线，无平铺接缝）
-   + 随指针滑动的柔和金色反光带，用 soft-light 混合避免过曝。
-   ========================================================= */
-.card[data-effect="metal"] {
-  --frame: linear-gradient(160deg, #d9b45a, #8a6420 45%, #e3c77a 70%, #7a5616);
-  --art-bg: linear-gradient(160deg, #3a2a10, #a57a28 50%, #2a1d08);
-  --panel: rgba(255,247,222,.86);
-}
-.card[data-effect="metal"] .foil {
-  --metal-angle: 115deg;    /* 反光带角度 */
-  --metal-speed: 1;         /* 反光带移动倍率（≤1，避免露出平铺接缝） */
-  --metal-idle: .25;        /* 静止时保留的金属感（0 = 完全哑光） */
-  --metal-max: 1;
-  --reach: 70%;
-  --far: .35;
-  background-image:
-    /* 拉丝：两组质数周期的细线叠加，看起来不规则 */
-    repeating-linear-gradient(0deg, rgba(255,255,255,0) 0, rgba(255,255,255,.10) 1px, rgba(255,255,255,0) 2.5px,
-      rgba(0,0,0,.08) 4px, rgba(255,255,255,0) 5.5px, rgba(255,255,255,0) 7px),
-    repeating-linear-gradient(0deg, rgba(255,255,255,0) 0, rgba(255,255,255,.07) 1.5px, rgba(255,255,255,0) 3.5px,
-      rgba(0,0,0,.06) 6px, rgba(255,255,255,0) 8.5px, rgba(255,255,255,0) 11px),
-    /* 反光带：明暗过渡平缓，避免硬边 */
-    linear-gradient(var(--metal-angle),
-      #4a360c 0%, #f6e2a4 20%, #7a5a18 36%, #fff6d6 50%,
-      #6e5016 64%, #f3da94 80%, #4a360c 100%);
-  background-size: auto, auto, 300% 300%;
-  background-position:
-    0 0, 0 0,
-    clamp(0%, calc((50 - var(--px)) * var(--metal-speed) * 1% + 50%), 100%)
-    clamp(0%, calc((50 - var(--py)) * var(--metal-speed) * 1% + 50%), 100%);
-  mix-blend-mode: soft-light;
-  opacity: calc(var(--metal-idle) + var(--o) * (var(--metal-max) - var(--metal-idle)));
-}
-
-/* ---------- 无障碍：减少动态效果 ---------- */
+/* ---------- 无障碍：减少动态效果（不倾斜、粒子不动；分层静态构图仍保留） ---------- */
 @media (prefers-reduced-motion: reduce) {
   .card__rotator { transform: none !important; }
+  .layer--fg .p { animation: none; }
 }
 </style>
 </head>
 <body>
   <h1>全息闪卡 Holo Card</h1>
-  <p class="tip">鼠标悬停 / 手指拖动卡片，看倾斜和镭射反光</p>
+  <p class="tip">鼠标悬停 / 手指拖动卡片 · 多层视差 + 角色破框</p>
+  <p class="sub">本分支（feature/parallax）：插画拆成远景、中景、角色、前景粒子、文字 5 个 3D 平面，倾斜时近处移动得多、远处移动得少；角色探出卡框上沿。镭射只在最远的背景层。</p>
 
   <div class="stage">
-    <!-- 卡 1：普通彩虹镭射 -->
+    <!-- ================= 卡 1：霜晶龙 ================= -->
     <div>
       <div class="card" data-effect="rainbow">
         <div class="card__rotator">
-          <div class="card__front">
-            <div class="card__head"><span>霜晶龙</span><small>HP 120</small></div>
-            <div class="card__art">
-              <svg viewBox="0 0 100 100" aria-hidden="true">
-                <g fill="none" stroke="#e8f8ff" stroke-width="5" stroke-linecap="round">
-                  <path d="M50 8v84M14 29l72 42M14 71l72-42"/>
-                  <path d="M50 20l-9-9M50 20l9-9M50 80l-9 9M50 80l9 9M24 35l-12 3M24 35l-3-12M76 65l12-3M76 65l3 12M24 65l-3 12M24 65l-12-3M76 35l3-12M76 35l12 3"/>
-                </g>
-                <circle cx="50" cy="50" r="9" fill="#bfefff"/>
-              </svg>
-              <div class="foil foil--art"></div>
+          <div class="layer layer--shadow"></div>
+
+          <!-- 卡框（z=0）+ 插画窗口：远景、中景在窗口内被 overflow:hidden 裁剪 -->
+          <div class="layer layer--frame">
+            <div class="win">
+              <!-- 远景：极光夜空 + 月亮 + 星星；彩虹箔光只在本层内 -->
+              <div class="win__bg">
+                <svg viewBox="0 0 320 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="d-sky" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#0a1230"/><stop offset=".55" stop-color="#1d3566"/><stop offset="1" stop-color="#3f73a6"/>
+                    </linearGradient>
+                    <linearGradient id="d-aur" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0" stop-color="#5cf2c2" stop-opacity="0"/><stop offset=".3" stop-color="#5cf2c2" stop-opacity=".75"/>
+                      <stop offset=".7" stop-color="#79b8ff" stop-opacity=".6"/><stop offset="1" stop-color="#b98cff" stop-opacity="0"/>
+                    </linearGradient>
+                    <radialGradient id="d-moon"><stop offset="0" stop-color="#fffbe8"/><stop offset=".45" stop-color="#fff3c4" stop-opacity=".9"/><stop offset="1" stop-color="#fff3c4" stop-opacity="0"/></radialGradient>
+                    <filter id="d-blur" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+                  </defs>
+                  <rect width="320" height="260" fill="url(#d-sky)"/>
+                  <g filter="url(#d-blur)">
+                    <path d="M-10 92 C60 50 120 110 180 70 S290 40 330 80 L330 104 C280 70 230 108 180 96 S60 84 -10 120Z" fill="url(#d-aur)"/>
+                    <path d="M-10 60 C80 30 140 70 210 44 S300 30 330 50 L330 64 C290 52 240 74 200 66 S80 50 -10 78Z" fill="url(#d-aur)" opacity=".6"/>
+                  </g>
+                  <circle cx="238" cy="78" r="34" fill="url(#d-moon)"/>
+                  <circle cx="238" cy="78" r="15" fill="#fffaf0"/>
+                  <g fill="#fff">
+                    <circle cx="40" cy="40" r="1.1"/><circle cx="76" cy="62" r=".8"/><circle cx="112" cy="30" r="1.3"/><circle cx="150" cy="58" r=".8"/>
+                    <circle cx="186" cy="26" r="1"/><circle cx="280" cy="40" r="1.2"/><circle cx="300" cy="110" r=".8"/><circle cx="58" cy="118" r=".9"/>
+                    <circle cx="128" cy="104" r=".7"/><circle cx="20" cy="88" r="1"/><circle cx="268" cy="132" r=".8"/>
+                  </g>
+                </svg>
+                <div class="foil"></div>
+              </div>
+
+              <!-- 中景：冰川山脉（下沿一直画到层底，没有缺口） -->
+              <div class="win__mid">
+                <svg viewBox="0 0 320 260" preserveAspectRatio="none" aria-hidden="true">
+                  <path d="M0 170 L40 128 L70 150 L112 104 L150 146 L186 118 L232 158 L270 120 L320 152 L320 260 L0 260Z" fill="#5d86b8" opacity=".85"/>
+                  <path d="M112 104 L126 120 L116 118 L106 126 L100 117Z M270 120 L284 134 L272 132 L262 140 L258 131Z M40 128 L52 140 L42 139 L34 144Z" fill="#e6f4ff" opacity=".9"/>
+                  <path d="M0 206 L30 176 L60 192 L100 160 L140 196 L180 168 L220 200 L262 172 L320 204 L320 260 L0 260Z" fill="#2c4a78"/>
+                  <path d="M100 160 L116 176 L104 174 L94 182 L88 172Z M262 172 L276 186 L264 184 L254 192 L250 183Z M180 168 L190 178 L182 177 L174 182Z" fill="#cfe6ff"/>
+                  <path d="M0 236 C60 222 120 230 180 220 S280 226 320 218 L320 260 L0 260Z" fill="#18294a"/>
+                </svg>
+              </div>
             </div>
-            <div class="card__body"><b>冰棱吐息 · 60</b>令对手的下一回合无法撤退。镭射只出现在插画窗口，就像真正的 Holo 稀有卡。</div>
-            <div class="card__foot"><span>Rainbow Holo</span><span>001/003 ★</span></div>
+            <div class="glare"></div>
           </div>
-          <div class="card__glare"></div>
+
+          <!-- 文字 -->
+          <div class="layer layer--text">
+            <div class="card__head"><span>霜晶龙</span><small>HP 120</small></div>
+            <div class="card__body"><b>冰棱吐息 · 60</b>令对手的下一回合无法撤退。龙头探出卡框，镭射只留在最远的极光夜空里。</div>
+            <div class="card__foot"><span>Parallax · Rainbow</span><span>001/002 ★★</span></div>
+          </div>
+
+          <!-- 角色：冰晶龙（深色描边 + 分块明暗，轮廓清晰） -->
+          <div class="layer layer--char">
+            <svg viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+              <defs>
+                <linearGradient id="d-body" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#bfe9ff"/><stop offset=".55" stop-color="#5fa8e0"/><stop offset="1" stop-color="#2d5f9e"/>
+                </linearGradient>
+                <linearGradient id="d-wing" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#8fd3ff" stop-opacity=".95"/><stop offset="1" stop-color="#3b6fb0" stop-opacity=".9"/>
+                </linearGradient>
+                <linearGradient id="d-belly" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#f4fbff"/><stop offset="1" stop-color="#bcd8f0"/>
+                </linearGradient>
+              </defs>
+              <g stroke="#0e1838" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+                <!-- 翅膀（身后） -->
+                <path d="M86 150 C70 128 44 108 12 96 C18 112 16 124 8 136 C22 134 30 140 32 152 C42 146 52 150 56 162 C66 156 76 160 80 172Z" fill="url(#d-wing)"/>
+                <path d="M118 146 C134 122 160 102 194 88 C188 106 190 118 198 130 C184 130 176 136 174 148 C164 142 154 146 150 158 C140 152 130 156 126 168Z" fill="url(#d-wing)"/>
+                <path d="M84 150 L30 116 M80 160 L38 148 M118 146 L172 110 M124 156 L170 142" fill="none" stroke-width="1.6" opacity=".7"/>
+                <!-- 身体 + 脖子 -->
+                <path d="M58 252 C56 214 66 182 82 156 C92 138 90 112 84 92 C80 80 82 66 90 58 L118 62 C114 80 112 98 118 120 C126 146 142 178 144 252Z" fill="url(#d-body)"/>
+                <!-- 腹甲 -->
+                <path d="M86 252 C84 214 92 186 102 160 C108 142 106 118 104 100 L114 100 C114 122 118 146 126 168 C132 196 130 226 128 252Z" fill="url(#d-belly)" stroke-width="1.6"/>
+                <path d="M92 230 H128 M95 208 H127 M99 188 H124 M103 170 H121 M106 152 H118 M107 134 H115 M106 117 H114" fill="none" stroke-width="1.2" opacity=".55"/>
+                <!-- 背脊冰刺 -->
+                <path d="M84 96 L70 92 L82 106Z M82 122 L66 120 L82 132Z M80 146 L64 148 L78 158Z" fill="#dff4ff"/>
+                <!-- 头 -->
+                <path d="M86 70 C78 56 80 38 94 30 C106 24 122 26 132 34 L164 44 C172 47 174 55 168 59 L150 64 C144 70 134 74 124 74 L118 80 C108 80 94 78 86 70Z" fill="url(#d-body)"/>
+                <!-- 下颌 -->
+                <path d="M124 74 L150 64 L146 72 L122 82Z" fill="#9fd0f2" stroke-width="2"/>
+                <!-- 角 -->
+                <path d="M94 32 C84 20 74 8 58 2 C68 14 74 26 84 40Z" fill="#eaf8ff"/>
+                <path d="M110 27 C106 14 100 4 88 -6 C94 8 96 20 100 30Z" fill="#eaf8ff"/>
+                <!-- 眼睛 / 鼻孔 -->
+                <path d="M120 42 C126 38 134 40 136 46 C130 48 124 48 120 42Z" fill="#fff6c2" stroke-width="1.6"/>
+                <circle cx="130" cy="44.5" r="1.8" fill="#0e1838" stroke="none"/>
+                <circle cx="162" cy="50" r="1.3" fill="#0e1838" stroke="none"/>
+              </g>
+              <!-- 高光 -->
+              <path d="M98 34 C104 30 116 30 124 34" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+              <path d="M70 200 C70 180 76 166 84 154" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity=".35"/>
+            </svg>
+          </div>
+
+          <!-- 前景粒子：冰晶雪花（部分飘到卡外） -->
+          <div class="layer layer--fg">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <defs><radialGradient id="d-p"><stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#d8f3ff" stop-opacity=".8"/><stop offset="1" stop-color="#bfe9ff" stop-opacity="0"/></radialGradient></defs>
+              <g fill="url(#d-p)">
+                <ellipse class="p" cx="6"  cy="22" rx="2.2" ry="1.6" style="--t:3.4s;--d:-.4s"/>
+                <ellipse class="p" cx="94" cy="12" rx="1.8" ry="1.3" style="--t:2.8s;--d:-1.2s"/>
+                <ellipse class="p" cx="88" cy="44" rx="2.6" ry="1.9" style="--t:3.9s;--d:-2s"/>
+                <ellipse class="p" cx="12" cy="56" rx="1.6" ry="1.2" style="--t:3.1s;--d:-.8s"/>
+                <ellipse class="p" cx="26" cy="8"  rx="1.4" ry="1"   style="--t:2.6s;--d:-1.6s"/>
+                <ellipse class="p" cx="72" cy="58" rx="1.5" ry="1.1" style="--t:3.6s;--d:-2.6s"/>
+                <ellipse class="p" cx="36" cy="50" rx="1.2" ry=".9"  style="--t:2.9s;--d:-.2s"/>
+              </g>
+            </svg>
+          </div>
         </div>
       </div>
-      <div class="label">① 普通彩虹镭射</div>
+      <div class="label">① 霜晶龙<small>彩虹镭射（仅远景）· 龙头破框</small></div>
     </div>
 
-    <!-- 卡 2：闪光星点 -->
+    <!-- ================= 卡 2：焰尾狐 ================= -->
     <div>
       <div class="card" data-effect="sparkle">
         <div class="card__rotator">
-          <div class="card__front">
-            <div class="foil foil--frame"></div>
-            <div class="card__head"><span>星尘狐</span><small>HP 90</small></div>
-            <div class="card__art">
-              <svg viewBox="0 0 100 100" aria-hidden="true">
-                <path d="M50 4 C54 38 62 46 96 50 C62 54 54 62 50 96 C46 62 38 54 4 50 C38 46 46 38 50 4Z" fill="#fff6d8"/>
-                <path d="M80 14 C81 22 84 24 92 25 C84 26 81 28 80 36 C79 28 76 26 68 25 C76 24 79 22 80 14Z" fill="#ffd1f0"/>
-                <circle cx="22" cy="78" r="4" fill="#cfe7ff"/>
-              </svg>
-              <div class="foil foil--art"></div>
-            </div>
-            <div class="card__body"><b>流星雨 · 40×</b>掷 3 次硬币，每次正面造成 40 点伤害。卡框和插画里洒满了会闪的亮片。</div>
-            <div class="card__foot"><span>Sparkle / Glitter</span><span>002/003 ★★</span></div>
-          </div>
-          <div class="card__glare"></div>
-        </div>
-      </div>
-      <div class="label">② 闪光星点</div>
-    </div>
+          <div class="layer layer--shadow"></div>
 
-    <!-- 卡 3：金属拉丝 / 渐变镭射 -->
-    <div>
-      <div class="card" data-effect="metal">
-        <div class="card__rotator">
-          <div class="card__front">
-            <div class="foil foil--frame"></div>
-            <div class="card__head"><span>金曜狮王</span><small>HP 250</small></div>
-            <div class="card__art">
-              <svg viewBox="0 0 100 100" aria-hidden="true">
-                <g fill="#ffe9a6">
-                  <circle cx="50" cy="50" r="20"/>
-                  <g id="ray"><path d="M50 4l5 18h-10z"/></g>
-                  <use href="#ray" transform="rotate(45 50 50)"/><use href="#ray" transform="rotate(90 50 50)"/>
-                  <use href="#ray" transform="rotate(135 50 50)"/><use href="#ray" transform="rotate(180 50 50)"/>
-                  <use href="#ray" transform="rotate(225 50 50)"/><use href="#ray" transform="rotate(270 50 50)"/>
-                  <use href="#ray" transform="rotate(315 50 50)"/>
-                </g>
-                <circle cx="50" cy="50" r="12" fill="#b0801f"/>
-              </svg>
-              <div class="foil foil--art"></div>
+          <!-- 卡框（z=0）+ 插画窗口：远景、中景在窗口内被 overflow:hidden 裁剪 -->
+          <div class="layer layer--frame">
+            <div class="win">
+              <!-- 远景：晚霞 + 落日；星点箔光只在本层内 -->
+              <div class="win__bg">
+                <svg viewBox="0 0 320 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="f-sky" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#241046"/><stop offset=".45" stop-color="#7a2a78"/><stop offset=".75" stop-color="#e0606a"/><stop offset="1" stop-color="#f6b46a"/>
+                    </linearGradient>
+                    <radialGradient id="f-sun"><stop offset="0" stop-color="#fff2c8"/><stop offset=".35" stop-color="#ffc46e" stop-opacity=".95"/><stop offset="1" stop-color="#ff7a5a" stop-opacity="0"/></radialGradient>
+                    <filter id="f-blur" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="4"/></filter>
+                  </defs>
+                  <rect width="320" height="260" fill="url(#f-sky)"/>
+                  <circle cx="86" cy="160" r="64" fill="url(#f-sun)"/>
+                  <circle cx="86" cy="160" r="22" fill="#fff0c4"/>
+                  <g fill="#ffd6e8" opacity=".55" filter="url(#f-blur)">
+                    <ellipse cx="70" cy="96" rx="60" ry="7"/><ellipse cx="250" cy="120" rx="70" ry="8"/><ellipse cx="200" cy="70" rx="40" ry="5"/>
+                  </g>
+                  <g fill="#fff" opacity=".8">
+                    <circle cx="40" cy="36" r="1"/><circle cx="96" cy="22" r=".8"/><circle cx="268" cy="30" r="1.1"/><circle cx="300" cy="62" r=".7"/><circle cx="150" cy="40" r=".7"/>
+                  </g>
+                </svg>
+                <div class="foil"></div>
+              </div>
+
+              <!-- 中景：山丘 + 松林剪影 -->
+              <div class="win__mid">
+                <svg viewBox="0 0 320 260" preserveAspectRatio="none" aria-hidden="true">
+                  <path d="M0 196 C50 170 100 182 150 176 S260 160 320 184 L320 260 L0 260Z" fill="#5a2a5e"/>
+                  <g fill="#3a1840">
+                    <path d="M30 200 L42 160 L54 200Z M48 204 L62 150 L76 204Z M250 196 L264 146 L278 196Z M270 200 L282 164 L294 200Z M290 204 L302 158 L316 204Z"/>
+                  </g>
+                  <path d="M0 222 C70 204 140 220 200 210 S290 206 320 214 L320 260 L0 260Z" fill="#2a1030"/>
+                </svg>
+              </div>
             </div>
-            <div class="card__body"><b>王者咆哮 · 200</b>弃掉 2 张能量。拉丝金属纹理 + 随角度滑动的金色反光带，类似秘密稀有金卡。</div>
-            <div class="card__foot"><span>Brushed Metal Foil</span><span>003/003 ★★★</span></div>
+            <div class="glare"></div>
           </div>
-          <div class="card__glare"></div>
+
+          <div class="layer layer--text">
+            <div class="card__head"><span>焰尾狐</span><small>HP 90</small></div>
+            <div class="card__body"><b>流星焰 · 40×</b>掷 3 次硬币，每次正面造成 40 点伤害。狐耳探出卡框，亮片只在晚霞里闪。</div>
+            <div class="card__foot"><span>Parallax · Sparkle</span><span>002/002 ★★★</span></div>
+          </div>
+
+          <!-- 角色：坐姿狐狸（正面，对称构图，耳朵与头顶破框） -->
+          <div class="layer layer--char">
+            <svg viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+              <defs>
+                <linearGradient id="f-fur" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#ffb055"/><stop offset=".6" stop-color="#f0742e"/><stop offset="1" stop-color="#b8441c"/>
+                </linearGradient>
+                <linearGradient id="f-tail" x1="0" y1="1" x2="1" y2="0">
+                  <stop offset="0" stop-color="#c24a1c"/><stop offset=".7" stop-color="#ff8a3a"/><stop offset="1" stop-color="#ffd27a"/>
+                </linearGradient>
+              </defs>
+              <g stroke="#2a0f1e" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+                <!-- 尾巴（身后右侧，向上卷起） -->
+                <path d="M128 250 C160 240 190 212 192 170 C194 136 178 112 160 108 C170 128 170 150 160 170 C150 192 132 206 112 214Z" fill="url(#f-tail)"/>
+                <path d="M160 108 C176 114 190 134 192 160 C184 146 172 138 164 136 C168 126 166 116 160 108Z" fill="#fff4e4"/>
+                <!-- 身体 -->
+                <path d="M56 252 C52 206 60 150 76 104 L124 104 C140 150 148 206 144 252Z" fill="url(#f-fur)"/>
+                <!-- 胸口白毛 -->
+                <path d="M78 252 C76 210 82 160 100 128 C118 160 124 210 122 252Z" fill="#fff4e4" stroke-width="2"/>
+                <path d="M88 176 L100 190 L112 176 M90 200 L100 212 L110 200" fill="none" stroke-width="1.4" opacity=".45"/>
+                <!-- 前爪 -->
+                <path d="M74 252 C72 236 76 226 84 222 C92 226 94 238 92 252Z M108 252 C106 238 108 226 116 222 C124 226 128 236 126 252Z" fill="#3a1620" stroke-width="2"/>
+                <!-- 耳朵 -->
+                <path d="M64 70 L52 0 L96 46Z" fill="url(#f-fur)"/>
+                <path d="M136 70 L148 0 L104 46Z" fill="url(#f-fur)"/>
+                <path d="M66 58 L59 16 L86 46Z M134 58 L141 16 L114 46Z" fill="#3a1620" stroke-width="1.6"/>
+                <!-- 头 + 两腮蓬毛 -->
+                <path d="M62 78 C60 56 78 40 100 40 C122 40 140 56 138 78 L156 96 L132 102 C124 120 112 132 100 134 C88 132 76 120 68 102 L44 96Z" fill="url(#f-fur)"/>
+                <!-- 白色口鼻 -->
+                <path d="M68 102 L84 98 C90 104 94 110 100 112 C106 110 110 104 116 98 L132 102 C124 120 112 132 100 134 C88 132 76 120 68 102Z" fill="#fff4e4" stroke-width="2"/>
+                <!-- 眼睛 -->
+                <path d="M74 80 C80 72 90 72 94 82 C88 86 80 86 74 80Z M126 80 C120 72 110 72 106 82 C112 86 120 86 126 80Z" fill="#ffe27a" stroke-width="1.8"/>
+                <ellipse cx="86" cy="80" rx="2" ry="3.6" fill="#2a0f1e" stroke="none"/>
+                <ellipse cx="114" cy="80" rx="2" ry="3.6" fill="#2a0f1e" stroke="none"/>
+                <!-- 鼻子 -->
+                <path d="M94 118 C96 114 104 114 106 118 C104 122 96 122 94 118Z" fill="#2a0f1e" stroke-width="1.4"/>
+              </g>
+              <!-- 高光 -->
+              <path d="M78 50 C88 44 112 44 122 50" fill="none" stroke="#fff3d0" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+              <path d="M66 210 C66 190 72 170 82 156" fill="none" stroke="#ffe0b0" stroke-width="2" stroke-linecap="round" opacity=".45"/>
+            </svg>
+          </div>
+
+          <!-- 前景粒子：飞舞的火星 -->
+          <div class="layer layer--fg">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <defs><radialGradient id="f-p"><stop offset="0" stop-color="#fff6d0"/><stop offset=".4" stop-color="#ffb35a" stop-opacity=".85"/><stop offset="1" stop-color="#ff6a3a" stop-opacity="0"/></radialGradient></defs>
+              <g fill="url(#f-p)">
+                <ellipse class="p" cx="8"  cy="30" rx="2"   ry="1.4" style="--t:2.7s;--d:-.6s"/>
+                <ellipse class="p" cx="92" cy="20" rx="2.4" ry="1.7" style="--t:3.3s;--d:-1.4s"/>
+                <ellipse class="p" cx="84" cy="52" rx="1.6" ry="1.2" style="--t:2.9s;--d:-2.2s"/>
+                <ellipse class="p" cx="16" cy="60" rx="2.2" ry="1.6" style="--t:3.7s;--d:-1s"/>
+                <ellipse class="p" cx="22" cy="6"  rx="1.3" ry=".9"  style="--t:2.5s;--d:-1.8s"/>
+                <ellipse class="p" cx="76" cy="4"  rx="1.5" ry="1.1" style="--t:3.2s;--d:-.3s"/>
+                <ellipse class="p" cx="64" cy="56" rx="1.2" ry=".9"  style="--t:2.8s;--d:-2.8s"/>
+              </g>
+            </svg>
+          </div>
         </div>
       </div>
-      <div class="label">③ 金属拉丝 / 渐变镭射</div>
+      <div class="label">② 焰尾狐<small>闪光星点（仅远景）· 狐耳破框</small></div>
     </div>
   </div>
 
@@ -397,7 +652,6 @@ class Spring {
 }
 
 function setupCard(card) {
-  const rotator = card.querySelector('.card__rotator');
   const motion = new Spring({ rx: 0, ry: 0, px: 50, py: 50 }, CONFIG.follow); // 倾斜 + 光点位置
   const glow = new Spring({ o: 0 }, CONFIG.fade);                              // 光泽强度
   let raf = 0, last = 0;
@@ -424,7 +678,8 @@ function setupCard(card) {
   };
 
   const onMove = (e) => {
-    const r = rotator.getBoundingClientRect();
+    // 用 .card（未旋转的外框）测量：倾斜和破框角色都不会让坐标跳动
+    const r = card.getBoundingClientRect();
     const px = clamp(((e.clientX - r.left) / r.width) * 100);
     const py = clamp(((e.clientY - r.top) / r.height) * 100);
     const tilt = reduceMotion.matches ? 0 : CONFIG.maxTilt;
