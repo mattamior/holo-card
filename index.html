@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>全息闪卡 · Holo Card Demo</title>
+<title>全息闪卡 · Holo Card Demo · Foil Mask</title>
 <style>
 /* =========================================================
    全局可调参数
+   feature/foil-mask：局部镭射 mask + 蚀刻压纹 + 边缘光
    ========================================================= */
 :root {
   --card-w: min(280px, 70vw);   /* 卡片宽度（手机上留出两侧空白方便滚动页面） */
@@ -20,6 +21,19 @@
   --c-green: #4ce0a0;
   --c-blue: #3fbde8;
   --c-violet: #b45ef0;
+
+  /* ---- foil-mask 新增 ---- */
+  --etch-size: 72px;            /* 蚀刻纹理平铺尺寸，越小越密 */
+  --etch-boost: .9;             /* 压纹处箔光加强倍率相关不透明度 */
+  --etch-idle: .18;             /* 静止时蚀刻浮雕可见度 */
+  --rim-idle: .1;               /* 静止边缘光 */
+  --rim-max: .55;               /* 大幅倾斜时边缘光 */
+  --thickness: 1.6px;           /* 纸张侧面伪厚度 */
+  --border-ring: 5%;            /* 仅文档注释：边框 mask 实际由 SVG 控制 */
+
+  /* 程序化 mask（内联 SVG，无外部版权图） */
+  --mask-etch: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='80' height='80' fill='%23555555'/><g fill='none' stroke='%23ffffff' stroke-width='0.7' opacity='0.95'><path d='M0 10H80M0 30H80M0 50H80M0 70H80'/><path d='M10 0V80M30 0V80M50 0V80M70 0V80' opacity='0.55'/><path d='M0 0L80 80M0 40L40 80M40 0L80 40' stroke-width='0.45' opacity='0.7'/></g><g fill='%23ffffff' opacity='0.85'><circle cx='20' cy='20' r='1.1'/><circle cx='60' cy='20' r='1.1'/><circle cx='20' cy='60' r='1.1'/><circle cx='60' cy='60' r='1.1'/><circle cx='40' cy='40' r='1.4'/></g><g fill='none' stroke='%23ffffff' stroke-width='0.9' opacity='0.8'><path d='M40 12l4 8h-8z'/><path d='M40 68l4-8h-8z'/><path d='M12 40l8 4v-8z'/><path d='M68 40l-8 4v-8z'/></g></svg>");
+  --mask-border: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 63 88' preserveAspectRatio='none'><rect width='63' height='88' fill='white'/><rect x='3.2' y='2.8' width='56.6' height='82.4' rx='2.2' fill='black'/></svg>");
 }
 
 * { box-sizing: border-box; }
@@ -33,10 +47,12 @@ body {
   padding: 32px 16px 48px;
 }
 h1 { font-size: 22px; font-weight: 600; letter-spacing: .05em; margin: 0 0 6px; }
-p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
+p.tip { margin: 0 0 10px; opacity: .6; font-size: 13px; text-align: center; }
+p.sub { margin: 0 0 28px; opacity: .45; font-size: 12px; text-align: center; max-width: 36em; line-height: 1.45; }
 
 .stage { display: flex; flex-wrap: wrap; justify-content: center; gap: 48px; }
 .label { text-align: center; margin-top: 14px; font-size: 13px; opacity: .7; }
+.label small { display: block; margin-top: 4px; font-size: 11px; opacity: .65; }
 
 /* =========================================================
    卡片骨架
@@ -45,11 +61,17 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
      --px / --py : 指针在卡面上的位置 0~100（无单位数字）
      --o         : 特效强度 0~1（悬停时 1，移出淡出到 0）
      --dist      : 指针离卡片中心的距离 0~1（越靠边反光越强）
+     --tilt      : 倾斜幅度 0~1（|倾斜|/maxTilt，驱动边缘光 / 厚度）
    层级（从下到上）：
-     卡框底色 → 卡框箔层(.foil--frame) → 插画/文字 → 插画箔层(.foil--art，在插画框内部) → 高光(.card__glare)
+     卡框底色 → 卡框箔层(.foil--frame) → 插画/文字 → 插画箔层(.foil--art)
+     → 蚀刻加强层(.card__etch) → 高光(.card__glare) → 边缘光(.card__rim)
+   data-mask：
+     art     = 只闪插画（隐藏 frame 箔）
+     border  = 只闪边框环（frame 箔 + 环形 mask，隐藏 art 箔）
+     inverse = 反闪非插画区（仅 frame 箔；插画不透明底挡住，文字区半透可见）
    ========================================================= */
 .card {
-  --rx: 0; --ry: 0; --px: 50; --py: 50; --o: 0; --dist: 0;
+  --rx: 0; --ry: 0; --px: 50; --py: 50; --o: 0; --dist: 0; --tilt: 0;
   width: var(--card-w);
   aspect-ratio: var(--card-ratio);
   perspective: var(--perspective);
@@ -64,9 +86,12 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
   transform: rotateY(calc(var(--rx) * 1deg)) rotateX(calc(var(--ry) * 1deg))
              scale(calc(1 + var(--o) * 0.03));
   will-change: transform;
+  /* 投影 + 随倾斜偏移的极薄侧面（假纸张厚度；box-shadow 不被 overflow 裁切） */
   box-shadow:
     calc(var(--rx) * -0.5px) calc(var(--ry) * 0.5px + 12px) 28px rgba(0,0,0,.5),
-    0 0 calc(var(--o) * 28px) rgba(170,150,255, calc(var(--o) * .22));
+    0 0 calc(var(--o) * 28px) rgba(170,150,255, calc(var(--o) * .22)),
+    calc(var(--rx) * 0.45px) calc(var(--ry) * -0.45px) 0 var(--thickness) rgba(28, 24, 40, calc(0.55 + var(--tilt) * 0.35)),
+    calc(var(--rx) * -0.2px) calc(var(--ry) * 0.2px) 0 0.6px rgba(255,255,255, calc(0.12 + var(--tilt) * 0.25));
   overflow: hidden;
   isolation: isolate;           /* 混合模式只作用在卡片内部 */
 }
@@ -81,20 +106,22 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
 /* 内容在卡框箔层之上，保证文字清晰 */
 .card__front > :not(.foil) { position: relative; z-index: 1; }
 
-/* 所有箔层/高光的公共属性 */
-.foil, .card__glare {
+/* 所有箔层/高光/蚀刻/边缘光的公共属性 */
+.foil, .card__glare, .card__etch, .card__rim {
   position: absolute; inset: 0;
   pointer-events: none;
   border-radius: inherit;
 }
 .foil--frame { z-index: 0; }
 .foil--art { z-index: 2; }
+.card__etch { z-index: 3; }
+.card__glare { z-index: 4; }
+.card__rim { z-index: 5; }
 
 /* ---------- 高光：跟随指针的柔和光斑（克制版） ---------- */
 .card__glare {
   --glare-strength: .55;  /* 中心亮度 */
   --glare-size: 45%;      /* 光斑半径（超过后逐渐变暗） */
-  z-index: 3;
   background: radial-gradient(
     farthest-corner circle at calc(var(--px) * 1%) calc(var(--py) * 1%),
     rgba(255,255,255, var(--glare-strength)) 0%,
@@ -104,6 +131,33 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
     rgba(0,0,0, .08) 100%);   /* 多段缓降，没有可见的光圈边缘 */
   mix-blend-mode: overlay;
   opacity: var(--o);
+}
+
+/* ---------- 边缘光（假菲涅尔）：倾斜越大，卡缘越亮 ---------- */
+.card__rim {
+  /* 一圈 inset 描边 + 朝向“光源”一侧的柔边高光 */
+  box-shadow:
+    inset 0 0 0 1.25px rgba(255,255,255, calc(var(--rim-idle) + var(--tilt) * (var(--rim-max) - var(--rim-idle)))),
+    inset 0 0 calc(10px + var(--tilt) * 14px) rgba(255,255,255, calc(var(--tilt) * .14));
+  background: linear-gradient(
+    calc(180deg - var(--rx) * 2.5deg + var(--ry) * 0.5deg),
+    rgba(255,255,255, calc(var(--tilt) * .28)) 0%,
+    transparent 22%,
+    transparent 78%,
+    rgba(255,255,255, calc(var(--tilt) * .12)) 100%);
+  mix-blend-mode: soft-light;
+  opacity: calc(0.35 + var(--o) * 0.65);
+}
+
+/* ---------- 蚀刻压纹浮雕（静止也可见的细线几何；悬停时被 etch 加强层点亮） ---------- */
+.card__etch {
+  background-image: var(--mask-etch);
+  background-size: var(--etch-size) var(--etch-size);
+  background-position:
+    calc(var(--px) * -0.15%) calc(var(--py) * -0.15%);
+  mix-blend-mode: overlay;
+  opacity: calc(var(--etch-idle) + var(--o) * (var(--etch-boost) - var(--etch-idle)) * (0.35 + var(--tilt) * 0.65));
+  filter: contrast(1.15);
 }
 
 /* ---------- 卡面绘制（CSS 渐变 + 内联 SVG，无外链图片） ---------- */
@@ -145,24 +199,65 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
     rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .5))  calc(var(--reach) * .5),
     rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .15)) calc(var(--reach) * .75),
     rgba(0,0,0, var(--far)) var(--reach));
-  -webkit-mask-image: var(--pointer-mask);
-          mask-image: var(--pointer-mask);
+  /* 默认：指针 mask × 蚀刻 luminance（压纹处更亮） */
+  -webkit-mask-image: var(--pointer-mask), var(--mask-etch);
+          mask-image: var(--pointer-mask), var(--mask-etch);
+  -webkit-mask-size: auto, var(--etch-size) var(--etch-size);
+          mask-size: auto, var(--etch-size) var(--etch-size);
+  -webkit-mask-position: center, calc(var(--px) * -0.2%) calc(var(--py) * -0.2%);
+          mask-position: center, calc(var(--px) * -0.2%) calc(var(--py) * -0.2%);
+  -webkit-mask-composite: source-in;
+          mask-composite: intersect;
 }
+
 /* 插画框内的箔层：再叠一层四边羽化遮罩，光不会在边框处“一刀切” */
 .foil--art {
   --feather: 10%;        /* 四边羽化宽度 */
   --edge-mask-x: linear-gradient(90deg, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
   --edge-mask-y: linear-gradient(180deg, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
-  -webkit-mask-image: var(--pointer-mask), var(--edge-mask-x), var(--edge-mask-y);
-          mask-image: var(--pointer-mask), var(--edge-mask-x), var(--edge-mask-y);
-  -webkit-mask-composite: source-in, source-in;   /* Safari：多层遮罩取交集 */
+  -webkit-mask-image: var(--pointer-mask), var(--mask-etch), var(--edge-mask-x), var(--edge-mask-y);
+          mask-image: var(--pointer-mask), var(--mask-etch), var(--edge-mask-x), var(--edge-mask-y);
+  -webkit-mask-size: auto, var(--etch-size) var(--etch-size), auto, auto;
+          mask-size: auto, var(--etch-size) var(--etch-size), auto, auto;
+  -webkit-mask-position: center, calc(var(--px) * -0.2%) calc(var(--py) * -0.2%), center, center;
+          mask-position: center, calc(var(--px) * -0.2%) calc(var(--py) * -0.2%), center, center;
+  -webkit-mask-composite: source-in, source-in, source-in;
           mask-composite: intersect;
 }
 
+/* ---------- 局部镭射 mask 变体 ---------- */
+/* 只闪插画：关掉卡框箔 */
+.card[data-mask="art"] .foil--frame { display: none; }
+
+/* 只闪边框：环形 mask，关掉插画箔 */
+.card[data-mask="border"] .foil--art { display: none; }
+.card[data-mask="border"] .foil--frame {
+  -webkit-mask-image: var(--pointer-mask), var(--mask-etch), var(--mask-border);
+          mask-image: var(--pointer-mask), var(--mask-etch), var(--mask-border);
+  -webkit-mask-size: auto, var(--etch-size) var(--etch-size), 100% 100%;
+          mask-size: auto, var(--etch-size) var(--etch-size), 100% 100%;
+  -webkit-mask-position: center, calc(var(--px) * -0.2%) calc(var(--py) * -0.2%), center;
+          mask-position: center, calc(var(--px) * -0.2%) calc(var(--py) * -0.2%), center;
+  -webkit-mask-repeat: no-repeat, repeat, no-repeat;
+          mask-repeat: no-repeat, repeat, no-repeat;
+  -webkit-mask-composite: source-in, source-in;
+          mask-composite: intersect;
+}
+
+/* 反闪非插画：只用卡框箔（插画不透明底挡住；文字面板半透明透出箔光），关掉插画箔 */
+.card[data-mask="inverse"] .foil--art { display: none; }
+.card[data-mask="inverse"] .card__art {
+  /* 确保插画区完全挡住下方箔层，形成干净的“反闪” */
+  background: var(--art-bg);
+  isolation: isolate;
+}
+.card[data-mask="inverse"] .card__body {
+  /* 略提高透明度，让非插画区的箔 + 蚀刻更可读 */
+  background: var(--panel, rgba(255,255,255,.72));
+}
+
 /* =========================================================
-   效果 1：普通彩虹镭射（只在插画框内）
-   放大 400% 的彩虹渐变随指针反向平移 + 极细扫描线；
-   color-dodge 叠在插画上，靠边倾斜时更亮（--dist）。
+   效果 1：普通彩虹镭射（只在插画框内）+ mask=art
    ========================================================= */
 .card[data-effect="rainbow"] {
   --frame: linear-gradient(160deg, #eef1f6, #a7b1c2);
@@ -194,9 +289,7 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
 }
 
 /* =========================================================
-   效果 2：闪光星点（卡框 + 插画）
-   两层细小的 SVG 噪点亮片，随指针以不同方向/速度移动，
-   只在指针附近显现 → 像转动卡片时亮片一颗颗闪起来。
+   效果 2：闪光星点 + mask=border（只闪边框环）
    ========================================================= */
 .card[data-effect="sparkle"] {
   --frame: linear-gradient(160deg, #3b2a5c, #120c22);
@@ -205,11 +298,10 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
 }
 .card[data-effect="sparkle"] .card__front { color: #f2eaff; }
 .card[data-effect="sparkle"] .foil {
-  --reach: 55%;
-  --far: .05;
+  --reach: 70%;
+  --far: .08;
   --glitter-max: 1;        /* 最大亮度 */
-  /* 亮片纹理：两块内联 SVG 平铺图，里面是随机分布的柔边光点 + 少量四芒星
-     （由脚本固定种子生成后内联；两块尺寸互质，平铺后看不出重复） */
+  /* 亮片纹理：两块内联 SVG 平铺图，里面是随机分布的柔边光点 + 少量四芒星 */
   --glitter-a: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='130' height='130'><defs><radialGradient id='g0'><stop offset='0' stop-color='%23ffffff'/><stop offset='.35' stop-color='%23ffffff' stop-opacity='.7'/><stop offset='1' stop-color='%23ffffff' stop-opacity='0'/></radialGradient><radialGradient id='g1'><stop offset='0' stop-color='%23ffd6f5'/><stop offset='.35' stop-color='%23ffd6f5' stop-opacity='.7'/><stop offset='1' stop-color='%23ffd6f5' stop-opacity='0'/></radialGradient><radialGradient id='g2'><stop offset='0' stop-color='%23d6f0ff'/><stop offset='.35' stop-color='%23d6f0ff' stop-opacity='.7'/><stop offset='1' stop-color='%23d6f0ff' stop-opacity='0'/></radialGradient></defs><circle cx='42.1' cy='19.6' r='1.2' fill='url(%23g0)'/><circle cx='106.8' cy='12.2' r='2.6' fill='url(%23g0)'/><circle cx='118.3' cy='27.9' r='1.2' fill='url(%23g1)'/><circle cx='54.4' cy='31.3' r='2.6' fill='url(%23g1)'/><circle cx='7.7' cy='73.5' r='1.5' fill='url(%23g2)'/><circle cx='81.6' cy='123.2' r='2.6' fill='url(%23g2)'/><circle cx='51.6' cy='126.9' r='1.2' fill='url(%23g2)'/><circle cx='111.6' cy='37.6' r='1.5' fill='url(%23g2)'/><circle cx='15.3' cy='40.1' r='1.5' fill='url(%23g0)'/><circle cx='75.6' cy='83.1' r='1.8' fill='url(%23g0)'/><circle cx='71.2' cy='8.2' r='1.2' fill='url(%23g2)'/><circle cx='26.8' cy='88.5' r='2.2' fill='url(%23g1)'/><circle cx='60.5' cy='120.0' r='1.8' fill='url(%23g1)'/><circle cx='32.3' cy='23.4' r='1.5' fill='url(%23g0)'/><circle cx='74.7' cy='68.3' r='1.8' fill='url(%23g2)'/><circle cx='58.3' cy='79.2' r='1.2' fill='url(%23g0)'/><circle cx='66.6' cy='21.4' r='1.8' fill='url(%23g0)'/><circle cx='121.3' cy='54.8' r='1.2' fill='url(%23g2)'/><circle cx='74.5' cy='113.8' r='1.8' fill='url(%23g1)'/><circle cx='90.4' cy='77.3' r='2.6' fill='url(%23g1)'/><circle cx='8.9' cy='12.2' r='1.8' fill='url(%23g1)'/><circle cx='90.6' cy='8.4' r='1.8' fill='url(%23g2)'/><path d='M73.9 80.5Q73.9 85.7 79.0 85.7Q73.9 85.7 73.9 90.8Q73.9 85.7 68.8 85.7Q73.9 85.7 73.9 80.5Z' fill='%23fff'/><path d='M89.7 104.3Q89.7 109.1 94.6 109.1Q89.7 109.1 89.7 114.0Q89.7 109.1 84.8 109.1Q89.7 109.1 89.7 104.3Z' fill='%23fff'/></svg>");
   --glitter-b: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='97' height='97'><defs><radialGradient id='g0'><stop offset='0' stop-color='%23ffffff'/><stop offset='.35' stop-color='%23ffffff' stop-opacity='.7'/><stop offset='1' stop-color='%23ffffff' stop-opacity='0'/></radialGradient><radialGradient id='g1'><stop offset='0' stop-color='%23fff1c2'/><stop offset='.35' stop-color='%23fff1c2' stop-opacity='.7'/><stop offset='1' stop-color='%23fff1c2' stop-opacity='0'/></radialGradient><radialGradient id='g2'><stop offset='0' stop-color='%23e4d6ff'/><stop offset='.35' stop-color='%23e4d6ff' stop-opacity='.7'/><stop offset='1' stop-color='%23e4d6ff' stop-opacity='0'/></radialGradient></defs><circle cx='65.7' cy='76.1' r='2.6' fill='url(%23g0)'/><circle cx='49.6' cy='38.2' r='2.6' fill='url(%23g1)'/><circle cx='56.7' cy='57.7' r='1.2' fill='url(%23g1)'/><circle cx='40.0' cy='93.9' r='1.2' fill='url(%23g1)'/><circle cx='87.0' cy='2.2' r='2.6' fill='url(%23g0)'/><circle cx='85.3' cy='89.3' r='1.2' fill='url(%23g2)'/><circle cx='44.2' cy='84.0' r='1.2' fill='url(%23g0)'/><circle cx='40.2' cy='9.6' r='2.2' fill='url(%23g1)'/><circle cx='42.7' cy='96.0' r='2.6' fill='url(%23g2)'/><circle cx='80.9' cy='76.8' r='2.2' fill='url(%23g0)'/><circle cx='75.1' cy='55.9' r='1.2' fill='url(%23g0)'/><circle cx='37.9' cy='13.4' r='2.2' fill='url(%23g0)'/><circle cx='53.1' cy='44.4' r='2.2' fill='url(%23g1)'/><circle cx='57.6' cy='50.5' r='2.6' fill='url(%23g1)'/><path d='M37.9 74.4Q37.9 80.6 44.1 80.6Q37.9 80.6 37.9 86.8Q37.9 80.6 31.7 80.6Q37.9 80.6 37.9 74.4Z' fill='%23fff'/></svg>");
   background-image:
@@ -223,25 +315,22 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
   mix-blend-mode: color-dodge;
   opacity: calc(var(--o) * var(--glitter-max));
 }
-.card[data-effect="sparkle"] .foil--art { opacity: calc(var(--o) * var(--glitter-max)); }  /* 与卡框同强度，避免插画框边缘出现亮度断层 */
 
 /* =========================================================
-   效果 3：金属拉丝 / 渐变镭射（卡框 + 插画）
-   纯 CSS 拉丝纹理（两组不同周期的细横线，无平铺接缝）
-   + 随指针滑动的柔和金色反光带，用 soft-light 混合避免过曝。
+   效果 3：金属拉丝 + mask=inverse（反闪非插画）
    ========================================================= */
 .card[data-effect="metal"] {
   --frame: linear-gradient(160deg, #d9b45a, #8a6420 45%, #e3c77a 70%, #7a5616);
   --art-bg: linear-gradient(160deg, #3a2a10, #a57a28 50%, #2a1d08);
-  --panel: rgba(255,247,222,.86);
+  --panel: rgba(255,247,222,.78);
 }
 .card[data-effect="metal"] .foil {
   --metal-angle: 115deg;    /* 反光带角度 */
   --metal-speed: 1;         /* 反光带移动倍率（≤1，避免露出平铺接缝） */
-  --metal-idle: .25;        /* 静止时保留的金属感（0 = 完全哑光） */
+  --metal-idle: .28;        /* 静止时保留的金属感（0 = 完全哑光） */
   --metal-max: 1;
-  --reach: 70%;
-  --far: .35;
+  --reach: 75%;
+  --far: .4;
   background-image:
     /* 拉丝：两组质数周期的细线叠加，看起来不规则 */
     repeating-linear-gradient(0deg, rgba(255,255,255,0) 0, rgba(255,255,255,.10) 1px, rgba(255,255,255,0) 2.5px,
@@ -269,14 +358,16 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
 </head>
 <body>
   <h1>全息闪卡 Holo Card</h1>
-  <p class="tip">鼠标悬停 / 手指拖动卡片，看倾斜和镭射反光</p>
+  <p class="tip">鼠标悬停 / 手指拖动卡片 · 局部镭射 mask + 蚀刻压纹 + 边缘光</p>
+  <p class="sub">本分支（feature/foil-mask）：三张卡分别演示「只闪插画 / 只闪边框 / 反闪非插画」，并共用 SIR 风格蚀刻与假菲涅尔卡缘。</p>
 
   <div class="stage">
-    <!-- 卡 1：普通彩虹镭射 -->
+    <!-- 卡 1：彩虹 + 只闪插画 -->
     <div>
-      <div class="card" data-effect="rainbow">
+      <div class="card" data-effect="rainbow" data-mask="art">
         <div class="card__rotator">
           <div class="card__front">
+            <div class="foil foil--frame"></div>
             <div class="card__head"><span>霜晶龙</span><small>HP 120</small></div>
             <div class="card__art">
               <svg viewBox="0 0 100 100" aria-hidden="true">
@@ -288,18 +379,20 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
               </svg>
               <div class="foil foil--art"></div>
             </div>
-            <div class="card__body"><b>冰棱吐息 · 60</b>令对手的下一回合无法撤退。镭射只出现在插画窗口，就像真正的 Holo 稀有卡。</div>
-            <div class="card__foot"><span>Rainbow Holo</span><span>001/003 ★</span></div>
+            <div class="card__body"><b>冰棱吐息 · 60</b>mask=art：镭射只出现在插画窗口，压纹处更亮，像真正的 Holo 稀有卡。</div>
+            <div class="card__foot"><span>Mask · Art only</span><span>001/003 ★</span></div>
           </div>
+          <div class="card__etch" aria-hidden="true"></div>
           <div class="card__glare"></div>
+          <div class="card__rim" aria-hidden="true"></div>
         </div>
       </div>
-      <div class="label">① 普通彩虹镭射</div>
+      <div class="label">① 只闪插画<small>彩虹镭射 · data-mask="art"</small></div>
     </div>
 
-    <!-- 卡 2：闪光星点 -->
+    <!-- 卡 2：星点 + 只闪边框 -->
     <div>
-      <div class="card" data-effect="sparkle">
+      <div class="card" data-effect="sparkle" data-mask="border">
         <div class="card__rotator">
           <div class="card__front">
             <div class="foil foil--frame"></div>
@@ -312,18 +405,20 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
               </svg>
               <div class="foil foil--art"></div>
             </div>
-            <div class="card__body"><b>流星雨 · 40×</b>掷 3 次硬币，每次正面造成 40 点伤害。卡框和插画里洒满了会闪的亮片。</div>
-            <div class="card__foot"><span>Sparkle / Glitter</span><span>002/003 ★★</span></div>
+            <div class="card__body"><b>流星雨 · 40×</b>mask=border：亮片只在卡缘一圈闪，插画保持哑光，像边框闪卡。</div>
+            <div class="card__foot"><span>Mask · Border ring</span><span>002/003 ★★</span></div>
           </div>
+          <div class="card__etch" aria-hidden="true"></div>
           <div class="card__glare"></div>
+          <div class="card__rim" aria-hidden="true"></div>
         </div>
       </div>
-      <div class="label">② 闪光星点</div>
+      <div class="label">② 只闪边框<small>闪光星点 · data-mask="border"</small></div>
     </div>
 
-    <!-- 卡 3：金属拉丝 / 渐变镭射 -->
+    <!-- 卡 3：金属 + 反闪非插画 -->
     <div>
-      <div class="card" data-effect="metal">
+      <div class="card" data-effect="metal" data-mask="inverse">
         <div class="card__rotator">
           <div class="card__front">
             <div class="foil foil--frame"></div>
@@ -342,13 +437,15 @@ p.tip { margin: 0 0 32px; opacity: .6; font-size: 13px; text-align: center; }
               </svg>
               <div class="foil foil--art"></div>
             </div>
-            <div class="card__body"><b>王者咆哮 · 200</b>弃掉 2 张能量。拉丝金属纹理 + 随角度滑动的金色反光带，类似秘密稀有金卡。</div>
-            <div class="card__foot"><span>Brushed Metal Foil</span><span>003/003 ★★★</span></div>
+            <div class="card__body"><b>王者咆哮 · 200</b>mask=inverse：卡框与文字区拉丝反光，插画反而不闪，类似反向箔面。</div>
+            <div class="card__foot"><span>Mask · Inverse</span><span>003/003 ★★★</span></div>
           </div>
+          <div class="card__etch" aria-hidden="true"></div>
           <div class="card__glare"></div>
+          <div class="card__rim" aria-hidden="true"></div>
         </div>
       </div>
-      <div class="label">③ 金属拉丝 / 渐变镭射</div>
+      <div class="label">③ 反闪非插画<small>金属拉丝 · data-mask="inverse"</small></div>
     </div>
   </div>
 
@@ -410,6 +507,8 @@ function setupCard(card) {
     s.setProperty('--py', v.py.toFixed(2));
     s.setProperty('--o', clamp(glow.value.o, 0, 1).toFixed(3));
     s.setProperty('--dist', Math.min(1, Math.hypot(v.px - 50, v.py - 50) / 50).toFixed(3));
+    // 倾斜幅度 0~1，供边缘光 / 厚度使用
+    s.setProperty('--tilt', Math.min(1, Math.hypot(v.rx, v.ry) / CONFIG.maxTilt).toFixed(3));
   };
   const loop = (now) => {
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016);  // 切后台回来时防止大步长
