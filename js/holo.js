@@ -287,7 +287,7 @@ function studioEnvironment() {
 }
 
 /* ---------------- 主程序 ---------------- */
-export function start({ canvas, onReady, initialCard = 'dragon', embedded = false, effects = {}, layers: layerSvgs = {} }) {
+export function start({ canvas, onReady, onLayout, onFrame, initialCard = 'dragon', embedded = false, effects = {}, layers: layerSvgs = {} }) {
   // 特效开关（与汇总页控制面板同步）：镭射 / 压纹 / 边缘光 / 高光
   const fx = { foil: true, etch: true, rim: true, glare: true, depth: true, ...effects };
   let active = true;           // false：不渲染、不响应指针（CSS 模式下或画布不可见时）
@@ -637,6 +637,7 @@ export function start({ canvas, onReady, initialCard = 'dragon', embedded = fals
     const L = cards[current]?.layers;
     rest.hotTop = (L?.breakout && fx.depth) ? proj(0, WIN.top + CONFIG.breakout * H)[1] : y0;
     layoutLayers();
+    onLayout?.({ ...rest }, w, h);   // 嵌入页用来对齐画布后面的 DOM 光效层（稀有光效）
     if (!embedded) {
       bgTex?.dispose();
       bgTex = new CanvasTexture(drawBackground(Math.max(64, Math.round(w / 3)), Math.max(64, Math.round(h / 3))));
@@ -662,6 +663,7 @@ export function start({ canvas, onReady, initialCard = 'dragon', embedded = fals
     shadow.position.x = -tilt.value.y * 0.02; shadow.position.y = -0.2 + tilt.value.x * 0.016;
     shadow.scale.x = 0.25 + 0.75 * Math.abs(Math.cos(flip.value.y * DEG));
     composer.render();
+    onFrame?.(tilt.value.x, tilt.value.y, o);   // 嵌入页：画布后面的光效层跟随倾斜
     frames++;
   };
   const loop = (now) => {

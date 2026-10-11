@@ -650,6 +650,121 @@ body.pk-open .stage .layer--fg .p { animation-play-state: paused; }
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* =========================================================
+   稀有光效（面板「稀有光效」开关）：卡片页常驻的稀有 / 传说氛围，复用开包结果页的配色与做法
+   · 光效元素 .aura 是 .card 的兄弟节点（在 .card__rotator 之外）→ 不会压平 3D，也不会盖住卡面文字
+   · 只动 transform / opacity；视口外（.is-off）、开包时暂停；关掉开关时整个节点被移除
+   · 倾斜时整体朝倾斜方向偏移、略微增强（JS 写 --ax / --ay / --ao）
+   ========================================================= */
+.stage { position: relative; z-index: 0;              /* 光晕用 z-index:-1 垫在所有卡片后面 */
+  align-self: stretch; margin-inline: -16px; overflow-x: clip; }   /* 铺满到视口两边再裁：光晕不会撑出横向滚动条，裁切处就是屏幕边缘 */
+.stage > div { position: relative; }
+.gl { position: relative; z-index: 0; overflow-x: clip; }
+.aura {
+  --c1: 150,165,255; --c2: 195,160,255;               /* 稀有：蓝紫 */
+  --pw: min(calc(var(--card-w) * .36), max(24px, calc((100vw - var(--card-w)) / 2 - 6px)));
+  --ph: calc(var(--card-w) * .34);
+  position: absolute; z-index: -1; pointer-events: none;
+  left: 50%; top: calc(var(--card-h) / 2);
+  width: calc(var(--card-w) + 2 * var(--pw)); height: calc(var(--card-h) + 2 * var(--ph));
+  transform: translate(-50%, -50%) translate3d(calc(var(--ax, 0) * 1px), calc(var(--ay, 0) * 1px), 0);
+  overflow: hidden;                                   /* 光芒旋转时方形的角不撑大页面；被裁掉的地方本来就已透明 */
+  contain: layout paint;
+}
+.aura--gl { left: var(--cx); top: var(--cy); }
+.aura[data-theme="fox"]  { --c1: 255,140,70;  --c2: 255,190,110; }   /* 传说 · 火焰橙 */
+.aura[data-theme="lion"] { --c1: 255,200,90;  --c2: 255,232,160; }   /* 传说 · 太阳金 */
+/* 柔光：椭圆径向渐变，多段色标一路降到 0（没有可见的边） */
+.aura__glow, .aura__boost {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%,
+    rgba(var(--c1),.44) 0%, rgba(var(--c1),.4) 55%, rgba(var(--c2),.29) 64%, rgba(var(--c2),.16) 74%,
+    rgba(var(--c2),.065) 85%, rgba(var(--c2),.015) 94%, rgba(var(--c2),0) 100%);
+}
+/* 贴着卡缘的一圈柔光：实心圆角矩形整体高斯模糊（没有“空心”，倾斜错位时也不会露出一块暗矩形）；只栅格化一次，之后只做合成 */
+.aura__glow::before {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: calc(var(--card-w) * 1.02); height: calc(var(--card-h) * 1.02); transform: translate(-50%, -50%);
+  border-radius: 6% / 4.3%;
+  background: rgba(var(--c1),.5);
+  filter: blur(calc(var(--card-w) * .06));
+}
+.aura__glow { animation: au-breathe 4.2s ease-in-out infinite; }
+.aura[data-r="ur"] .aura__glow { animation-duration: 3.2s;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%,
+    rgba(var(--c1),.52) 0%, rgba(var(--c1),.48) 55%, rgba(var(--c2),.36) 64%, rgba(var(--c2),.2) 74%,
+    rgba(var(--c2),.08) 85%, rgba(var(--c2),.02) 94%, rgba(var(--c2),0) 100%); }
+/* 悬停 / 倾斜时叠加的一层（只改 opacity） */
+.aura__boost { opacity: calc(var(--ao, 0) * .75); transform: scale(.94); }
+@keyframes au-breathe { 0%, 100% { opacity: .66; transform: scale(.97); } 50% { opacity: 1; transform: scale(1.015); } }
+/* 传说：缓慢旋转的淡光芒（截面近似正弦，没有亮脊线；径向遮罩两端都淡出） */
+.aura__rays {
+  position: absolute; left: 50%; top: 50%;
+  width: calc(var(--card-w) + 2 * var(--pw)); aspect-ratio: 1;
+  margin-left: calc((var(--card-w) + 2 * var(--pw)) / -2); margin-top: calc((var(--card-w) + 2 * var(--pw)) / -2);
+  background: repeating-conic-gradient(from 0deg,
+    rgba(var(--c2),0) 0deg, rgba(var(--c2),.03) 3deg, rgba(var(--c2),.1) 6deg, rgba(var(--c2),.18) 9deg,
+    rgba(var(--c2),.22) 11.5deg, rgba(var(--c2),.18) 14deg, rgba(var(--c2),.1) 17deg, rgba(var(--c2),.03) 20deg, rgba(var(--c2),0) 23deg,
+    rgba(var(--c2),0) 30deg);
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 40%, rgba(0,0,0,.6) 62%, #000 74%, rgba(0,0,0,.45) 88%, transparent 100%);
+          mask-image: radial-gradient(circle closest-side, transparent 40%, rgba(0,0,0,.6) 62%, #000 74%, rgba(0,0,0,.45) 88%, transparent 100%);
+  animation: au-spin 48s linear infinite;
+  opacity: calc(.75 + var(--ao, 0) * .25);
+}
+@keyframes au-spin { to { transform: rotate(360deg); } }
+/* 粒子（动画只改 transform / opacity） */
+.aura i {
+  position: absolute; left: var(--x); top: var(--y); width: 16px; height: 16px; margin: -8px 0 0 -8px;
+  opacity: 0;
+}
+.aura i::before { content: ""; position: absolute; inset: 0; border-radius: 50%; }
+.aura[data-r="ur"] i { top: 0; height: 100%; margin-top: 0; }   /* 传说：与光效同高的透明竖条，点画在 ::before 上 */
+.aura[data-r="ur"] i::before { top: var(--y); bottom: auto; height: 8px; width: 8px; left: 4px; }
+/* 稀有：水晶 / 星形微光（十字两道柔椭圆 + 亮芯），原地闪烁 */
+.aura[data-r="r"] i::before {
+  background:
+    radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(255,255,255,0) 22%),
+    radial-gradient(ellipse 50% 15% at 50% 50%, rgba(235,240,255,.85) 0%, rgba(var(--c2),.3) 55%, rgba(var(--c2),0) 100%),
+    radial-gradient(ellipse 15% 50% at 50% 50%, rgba(235,240,255,.85) 0%, rgba(var(--c2),.3) 55%, rgba(var(--c2),0) 100%),
+    radial-gradient(circle, rgba(var(--c1),.45) 0%, rgba(var(--c1),0) 70%);
+}
+.aura[data-r="r"] i { animation: au-twinkle var(--d, 3.2s) ease-in-out var(--dl, 0s) infinite; }
+@keyframes au-twinkle { 0%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); } 45% { opacity: .95; transform: scale(1) rotate(20deg); } 70% { opacity: .2; } }
+/* 传说：缓缓下落的光尘 */
+.aura[data-r="ur"] i::before {
+  background: radial-gradient(circle, rgba(255,250,235,.95) 0%, rgba(var(--c2),.6) 35%, rgba(var(--c1),0) 72%);
+}
+.aura[data-r="ur"] i { animation: au-fall var(--d, 7s) linear var(--dl, 0s) infinite; }
+@keyframes au-fall {
+  0%   { opacity: 0;   transform: translate3d(0, 0, 0); }
+  15%  { opacity: .85; }
+  70%  { opacity: .6; }
+  100% { opacity: 0;   transform: translate3d(var(--dx, 10px), 62%, 0); }
+}
+@media (max-width: 619px) { .aura i:nth-of-type(n+6) { display: none; } }   /* 手机：粒子再少一点 */
+/* 暂停：视口外 / 开包覆盖层打开时 */
+.aura.is-off { display: none; }                      /* 视口外：连合成层一起释放（IntersectionObserver 有 120px 提前量，进视口前就恢复） */
+body.pk-open .aura * { animation-play-state: paused !important; }   /* !important：压过各粒子 animation 简写里隐含的 running */
+.gl.loading .aura { display: none; }
+#gl { position: relative; }
+/* 稀有度徽章（标签里、WebGL 卡面选择按钮里） */
+.rbadge {
+  display: inline-block; vertical-align: 1px; margin-left: 6px;
+  font-size: 10.5px; font-weight: 500; letter-spacing: .06em; line-height: 1.5;
+  padding: 0 7px; border-radius: 999px; border: 1px solid rgba(160,200,255,.45); color: #cfe6ff;
+}
+.rbadge[data-r="ur"] { color: #ffe6a8; border-color: rgba(255,214,130,.6); }
+.rbadge[data-theme="fox"] { color: #ffd2b0; border-color: rgba(255,160,100,.6); }
+body.no-rarity .rbadge { display: none; }
+/* 开包覆盖层打开时：隐藏 Pages 部署时注入的「⇄ 版本」按钮（关闭后恢复） */
+html.pk-open #hcv-nav { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .aura { transform: translate(-50%, -50%); }          /* 只留静态光晕 */
+  .aura__glow { animation: none; opacity: .85; }
+  .aura__rays, .aura i { display: none; }
+}
+
+
 /* ---------- 无障碍：减少动态效果（不倾斜、粒子不动；分层静态构图与光泽变化保留） ---------- */
 @media (prefers-reduced-motion: reduce) {
   .card__rotator { transform: none !important; }
@@ -1072,6 +1187,7 @@ body.pk-open .stage .layer--fg .p { animation-play-state: paused; }
         <button type="button" class="sw" data-fx="rim"   aria-pressed="true"><i></i>边缘光</button>
         <button type="button" class="sw" data-fx="depth" aria-pressed="true"><i></i>视差破框</button>
         <button type="button" class="sw" data-fx="glare" aria-pressed="true"><i></i>高光</button>
+        <button type="button" class="sw" data-fx="rarity" aria-pressed="true"><i></i>稀有光效</button>
         <button type="button" class="sw" data-fx="gyro"  aria-pressed="false" data-state="off"><i></i><span>体感</span></button>
         <button type="button" class="fx__reset" id="fx-reset">全部开启</button>
       </div>
@@ -1087,7 +1203,7 @@ body.pk-open .stage .layer--fg .p { animation-play-state: paused; }
   <main class="stage" id="css-view">
     <!-- ================= 卡 1：霜晶龙 · 彩虹镭射 · 只闪插画 · 龙头破框 ================= -->
     <div>
-      <div class="card" data-card="dragon" data-effect="rainbow" data-mask="art" data-break="top">
+      <div class="card" data-card="dragon" data-rarity="r" data-effect="rainbow" data-mask="art" data-break="top">
         <div class="card__rotator">
           <div class="layer layer--shadow"></div>
           <div class="layer layer--edge"></div>
@@ -1199,12 +1315,12 @@ body.pk-open .stage .layer--fg .p { animation-play-state: paused; }
           </div>
         </div>
       </div>
-      <div class="label">① 霜晶龙<small>彩虹镭射 · 只闪插画 · 龙头破框</small></div>
+      <div class="label">① 霜晶龙<b class="rbadge" data-r="r">稀有</b><small>彩虹镭射 · 只闪插画 · 龙头破框</small></div>
     </div>
 
     <!-- ================= 卡 2：焰尾狐 · 闪光星点 · 只闪插画 · 狐耳破框 ================= -->
     <div>
-      <div class="card" data-card="fox" data-effect="sparkle" data-mask="art" data-break="top">
+      <div class="card" data-card="fox" data-rarity="ur" data-effect="sparkle" data-mask="art" data-break="top">
         <div class="card__rotator">
           <div class="layer layer--shadow"></div>
           <div class="layer layer--edge"></div>
@@ -1308,12 +1424,12 @@ body.pk-open .stage .layer--fg .p { animation-play-state: paused; }
           </div>
         </div>
       </div>
-      <div class="label">② 焰尾狐<small>闪光星点 · 只闪插画 · 狐耳破框</small></div>
+      <div class="label">② 焰尾狐<b class="rbadge" data-r="ur" data-theme="fox">传说</b><small>闪光星点 · 只闪插画 · 狐耳破框</small></div>
     </div>
 
     <!-- ================= 卡 3：星尘狐 · 闪光星点 · 只闪边框 · 徽记浮层 ================= -->
     <div>
-      <div class="card" data-card="stardust" data-effect="sparkle" data-mask="border" data-break="none">
+      <div class="card" data-card="stardust" data-rarity="r" data-effect="sparkle" data-mask="border" data-break="none">
         <div class="card__rotator">
           <div class="layer layer--shadow"></div>
           <div class="layer layer--edge"></div>
@@ -1376,12 +1492,12 @@ body.pk-open .stage .layer--fg .p { animation-play-state: paused; }
           </div>
         </div>
       </div>
-      <div class="label">③ 星尘狐<small>闪光星点 · 只闪边框 · 徽记浮层</small></div>
+      <div class="label">③ 星尘狐<b class="rbadge" data-r="r">稀有</b><small>闪光星点 · 只闪边框 · 徽记浮层</small></div>
     </div>
 
     <!-- ================= 卡 4：金曜狮王 · 金属拉丝 · 反闪 · 徽记浮层 ================= -->
     <div>
-      <div class="card" data-card="lion" data-effect="metal" data-mask="inverse" data-break="none">
+      <div class="card" data-card="lion" data-rarity="ur" data-effect="metal" data-mask="inverse" data-break="none">
         <div class="card__rotator">
           <div class="layer layer--shadow"></div>
           <div class="layer layer--edge"></div>
@@ -1449,7 +1565,7 @@ body.pk-open .stage .layer--fg .p { animation-play-state: paused; }
           </div>
         </div>
       </div>
-      <div class="label">④ 金曜狮王<small>金属拉丝 · 反闪非插画 · 徽记浮层</small></div>
+      <div class="label">④ 金曜狮王<b class="rbadge" data-r="ur" data-theme="lion">传说</b><small>金属拉丝 · 反闪非插画 · 徽记浮层</small></div>
     </div>
   </main>
 
@@ -1458,10 +1574,10 @@ body.pk-open .stage .layer--fg .p { animation-play-state: paused; }
     <canvas id="gl" aria-label="可交互的 3D 全息闪卡（WebGL）"></canvas>
     <p class="gl__status" id="gl-status">正在加载 WebGL 渲染器…</p>
     <nav class="gl__pick" aria-label="选择卡面">
-      <button type="button" data-card="dragon" aria-pressed="true">霜晶龙 · 破框</button>
-      <button type="button" data-card="fox" aria-pressed="false">焰尾狐 · 破框</button>
-      <button type="button" data-card="star" aria-pressed="false">星尘狐 · 边框箔</button>
-      <button type="button" data-card="sun" aria-pressed="false">金曜狮王 · 反闪金箔</button>
+      <button type="button" data-card="dragon" aria-pressed="true">霜晶龙 · 破框<b class="rbadge" data-r="r">稀有</b></button>
+      <button type="button" data-card="fox" aria-pressed="false">焰尾狐 · 破框<b class="rbadge" data-r="ur" data-theme="fox">传说</b></button>
+      <button type="button" data-card="star" aria-pressed="false">星尘狐 · 边框箔<b class="rbadge" data-r="r">稀有</b></button>
+      <button type="button" data-card="sun" aria-pressed="false">金曜狮王 · 反闪金箔<b class="rbadge" data-r="ur" data-theme="lion">传说</b></button>
       <span class="sep" aria-hidden="true"></span>
       <button type="button" id="gl-flip">翻面</button>
     </nav>
@@ -1489,8 +1605,8 @@ const CONFIG = {
   pointerPriorityMs: 400,                   // 指针活动后这段时间内忽略陀螺仪（避免打架）
 };
 const STORE_KEY = 'holo-card:all-in-one:fx';   // 开关状态记在 localStorage（体感需要用户手势授权，不记）
-const FX_KEYS = ['foil', 'etch', 'rim', 'depth', 'glare'];
-const FX_NAMES = { foil: '镭射', etch: '压纹', rim: '边缘光', depth: '视差破框', glare: '高光', gyro: '体感' };
+const FX_KEYS = ['foil', 'etch', 'rim', 'depth', 'glare', 'rarity'];
+const FX_NAMES = { foil: '镭射', etch: '压纹', rim: '边缘光', depth: '视差破框', glare: '高光', rarity: '稀有光效', gyro: '体感' };
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const clamp = (v, min = 0, max = 100) => Math.min(max, Math.max(min, v));
@@ -1543,6 +1659,7 @@ function setupCard(card) {
     s.setProperty('--o', clamp(glow.value.o, 0, 1).toFixed(3));
     s.setProperty('--dist', Math.min(1, Math.hypot(v.px - 50, v.py - 50) / 50).toFixed(3));
     s.setProperty('--tilt', Math.min(1, Math.hypot(v.rx, v.ry) / CONFIG.maxTilt).toFixed(3));  // 边缘光 / 厚度
+    if (self.aura) auraPose(self.aura, v.rx, v.ry, glow.value.o);   // 稀有光效跟随倾斜
   };
   const loop = (now) => {
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016);  // 切后台回来时防止大步长
@@ -1601,6 +1718,7 @@ function setupCard(card) {
     applyPose(p.rx, p.ry, p.px, p.py, 1, CONFIG.follow);
   };
   self.settle = () => { if (!pointerActive) settle(); };
+  self.paint = render;
   return self;
 }
 
@@ -1667,7 +1785,7 @@ function disableGyro() {
 /* ---------- 控制面板 ---------- */
 const fxBtns = Object.fromEntries($$('.fx [data-fx]').map(b => [b.dataset.fx, b]));
 const hint = $('#fx-hint'), sum = $('#fx-sum');
-const fx = { foil: true, etch: true, rim: true, depth: true, glare: true };
+const fx = { foil: true, etch: true, rim: true, depth: true, glare: true, rarity: true };
 try { Object.assign(fx, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch { /* 隐私模式等读不到时用默认值 */ }
 let mode = 'css', glApi = null, glLoading = null, packOpen = false;
 const extraCards = new Set();   // 不在页面网格里、但也要跟随体感的卡（开包结果页的放大卡）
@@ -1696,6 +1814,7 @@ function applyFx() {
     fxBtns[k].setAttribute('aria-pressed', String(fx[k]));
   }
   glApi?.setEffects({ foil: fx.foil, etch: fx.etch, rim: fx.rim, glare: fx.glare, depth: fx.depth });
+  syncAuras();
   try { localStorage.setItem(STORE_KEY, JSON.stringify(fx)); } catch { /* 忽略 */ }
   updateSummary();
 }
@@ -1758,6 +1877,8 @@ async function setMode(m) {
         canvas, embedded: true, initialCard: initial,
         effects: { foil: fx.foil, etch: fx.etch, rim: fx.rim, glare: fx.glare, depth: fx.depth },
         layers: collectLayerSvgs(),   // 远景 / 中景 / 角色 / 粒子：直接用 CSS 模式里的同一份 SVG
+        onLayout: (rest) => { glRest = rest; placeGlAura(); },
+        onFrame: (tx, ty, o) => { if (glAura) auraPose(glAura, ty, -tx, o); },   // three 约定 → CSS 约定（rx = 绕 Y，ry = 绕 X）
         onReady: (r) => { if (r?.lost) { toast('WebGL 上下文丢失（可能是显卡资源不足），已切回 CSS 模式。'); setMode('css'); } },
       });
       window.__holo = glApi;          // 调试 / 自动化截图用
@@ -1789,9 +1910,71 @@ function collectLayerSvgs() {
 modeBtns.forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
 glPick.forEach(b => b.addEventListener('click', () => {
   glApi?.setCard(b.dataset.card);
+  setGlAura(b.dataset.card);
   glPick.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
 }));
 $('#gl-flip').addEventListener('click', () => glApi?.flipOver());
+
+/* ---------- 稀有光效（面板「稀有光效」开关）：卡片页常驻的稀有 / 传说氛围 ----------
+   与开包里的稀有度一致：霜晶龙、星尘狐 = 稀有（蓝紫柔光 + 星形微光）；焰尾狐、金曜狮王 = 传说（主题色光晕 + 慢转光芒 + 光尘）
+   全部是 CSS 动画（transform / opacity），不跑 JS 循环；关掉开关时节点被移除 */
+const RARITY = { dragon: ['r'], stardust: ['r'], fox: ['ur', 'fox'], lion: ['ur', 'lion'], star: ['r'], sun: ['ur', 'lion'] };
+const AURA_PTS = {
+  // 稀有：x%, y%, 周期 s, 延迟 s（卡框四周）
+  r: [[16, 19, 3.4, 0], [85, 27, 3, -1.1], [13, 71, 3.8, -2], [87, 79, 3.2, -0.6], [50, 8, 4, -1.6], [9, 45, 3.6, -2.6]],
+  // 传说：x%, 起始 y%, 周期 s, 延迟 s, 横向漂移 px
+  ur: [[12, 6, 7.5, -1, 10], [88, 10, 8.5, -4, -12], [30, 2, 9, -6.5, 8], [70, 4, 7, -2.5, -8], [50, 1, 9.5, -8, 12], [20, 14, 8, -5, -10], [80, 16, 9, -0.5, 10], [42, 12, 8.5, -3.5, -6]],
+};
+function makeAura([r, theme] = []) {
+  const el = document.createElement('div');
+  el.className = 'aura'; el.dataset.r = r; if (theme) el.dataset.theme = theme;
+  el.setAttribute('aria-hidden', 'true');
+  let html = '<div class="aura__glow"></div>' + (r === 'ur' ? '<div class="aura__rays"></div>' : '') + '<div class="aura__boost"></div>';
+  for (const [x, y, d, dl, dx] of AURA_PTS[r]) html += `<i style="--x:${x}%;--y:${y}%;--d:${d}s;--dl:${dl}s${dx != null ? `;--dx:${dx}px` : ''}"></i>`;
+  el.innerHTML = html;
+  return el;
+}
+/** 倾斜跟随：光晕朝远离指针（后退的那一侧）偏移，像卡后面的光从翘起的缝里透出来；悬停时略增强 */
+function auraPose(el, rx, ry, o) {
+  const s = el.style;
+  s.setProperty('--ax', rx.toFixed(1));
+  s.setProperty('--ay', (-ry).toFixed(1));
+  s.setProperty('--ao', clamp(o, 0, 1).toFixed(3));
+}
+let glAura = null, glRest = null, glAuraKey = null;
+const auraIO = 'IntersectionObserver' in window
+  ? new IntersectionObserver((es) => { for (const en of es) en.target.classList.toggle('is-off', !en.isIntersecting); }) : null;
+/** WebGL 模式：光效层放在画布后面（画布透明），按 holo.js 报告的卡片静止矩形对齐 */
+function placeGlAura() {
+  if (!glAura || !glRest || canvas.parentElement !== glView) return;   // 画布被临时搬进开包放大框时不动
+  const s = glAura.style;
+  s.setProperty('--card-w', glRest.w.toFixed(1) + 'px');
+  s.setProperty('--card-h', glRest.h.toFixed(1) + 'px');
+  s.setProperty('--cx', (canvas.offsetLeft + glRest.x + glRest.w / 2).toFixed(1) + 'px');
+  s.setProperty('--cy', (canvas.offsetTop + glRest.y + glRest.h / 2).toFixed(1) + 'px');
+}
+function setGlAura(key) {
+  glAuraKey = key;
+  if (glAura) { auraIO?.unobserve(glAura); glAura.remove(); glAura = null; }
+  if (!fx.rarity || !RARITY[key]) return;
+  glAura = makeAura(RARITY[key]);
+  glAura.classList.add('aura--gl');
+  glView.prepend(glAura);
+  auraIO?.observe(glAura);
+  placeGlAura();
+}
+function syncAuras() {
+  const on = !!fx.rarity;
+  for (const c of cards) {
+    if (on && !c.aura && RARITY[c.el.dataset.card]) {
+      c.aura = makeAura(RARITY[c.el.dataset.card]);
+      c.aura.classList.toggle('is-off', c.el.classList.contains('is-off'));
+      c.el.after(c.aura);
+      c.paint();
+    } else if (!on && c.aura) { c.aura.remove(); c.aura = null; }
+  }
+  if (on !== !!glAura) setGlAura(glAuraKey || glPick.find(b => b.getAttribute('aria-pressed') === 'true')?.dataset.card || 'dragon');
+}
 
 /* ---------- 初始化 ---------- */
 const cards = $$('.card').map(setupCard);
@@ -1802,6 +1985,7 @@ if ('IntersectionObserver' in window) {
       const c = cards.find(x => x.el === en.target);
       c.visible = en.isIntersecting;
       c.el.classList.toggle('is-off', !en.isIntersecting);
+      c.aura?.classList.toggle('is-off', !en.isIntersecting);
     }
   }, { rootMargin: '120px 0px' });
   cards.forEach(c => io.observe(c.el));
