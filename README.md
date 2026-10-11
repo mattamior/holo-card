@@ -25,10 +25,17 @@
 - `feature/gyro` 的体感逻辑改成同时服务两种模式：CSS 模式驱动视口里的卡，WebGL 模式驱动 3D 卡（指针优先，松手后回到体感姿态）。
 - `feature/webgl` 的 `js/holo.js`、`js/textures.js`、`vendor/three-holo.min.js` 带过来（three 子集未重新打包），`holo.js` 加了嵌入模式：画布按自身尺寸渲染、透明背景、`setActive` / `setGyro` / `setEffects` 接口，并扩展成四张卡的多层结构（见下）。
 
-**特效控制面板**（标题下方，跟着页面排版，不浮在卡片上；手机上默认收起成一行摘要）
-- 模式：CSS 模式 / WebGL 模式。WebGL 只在第一次切过去时才下载 three（gzip 约 147 KB）；没有 WebGL2 时弹出提示并留在 CSS 模式。地址加 `#webgl` 可直接打开 WebGL 模式。
+**特效控制面板**（桌面侧栏 / 手机顶部折叠）
+
+![桌面：右侧栏 + 大卡](screenshots/all-in-one-sidebar.png)
+
+![手机：顶部折叠面板](screenshots/all-in-one-sidebar-mobile.png)
+
+- **桌面（≥900px）**：右侧固定窄栏（约 268–280px）放特效控制；主区全宽放大卡牌（2×2，卡宽约 250–440px，随视口伸缩）。侧栏 `position: sticky`，滚动时跟着走、不挡卡；吸顶位置躲开预览站右上角的「⇄ 版本」按钮。
+- **手机 / 窄屏（&lt;900px）**：保持原来的顶部折叠面板（≤899px 默认收起成一行摘要），不要侧栏；卡牌 2 列 → 1 列。
+- 模式：CSS 模式 / WebGL 模式。WebGL 只在第一次切过去时才下载 three（gzip 约 147 KB）；没有 WebGL2 时弹出提示并留在 CSS 模式。地址加 `#webgl` 可直接打开 WebGL 模式。桌面 WebGL 画布随主区变高变宽，选卡按钮仍在主区底部。
 - 开关：镭射、压纹、边缘光（含纸张厚度）、视差破框（关掉后各层贴回卡面、角色收回窗口）、高光、稀有光效（见下）、体感。WebGL 模式下同样生效（镭射 = 箔面 / 亮片 / 薄膜干涉，压纹 = 法线贴图，边缘光 = 菲涅尔卡缘，高光 = 覆膜反光 + Bloom）；视差破框在 WebGL 模式下同样可用（见下）。
-- 开关状态记在 `localStorage`，「全部开启」一键恢复。体感需要用户点按钮授权，不记忆。
+- 开关状态记在 `localStorage`，「全部开启」一键恢复。体感需要用户点按钮授权，不记忆。开包仍是全屏覆盖层，布局改动不影响。
 
 ### 稀有光效（卡片页常驻，面板「稀有光效」开关，默认开）
 
@@ -151,7 +158,7 @@
 
 **本地预览**：WebGL 模式用的是 ES 模块，需要静态服务器（例如 `python3 -m http.server` 后打开 http://localhost:8000/ ）；CSS 模式直接双击 `index.html` 也能用。
 
-**自查截图**：`screenshots/all-in-one-*.png`（桌面三引擎、各角悬停、开关对比、体感、WebGL、WebGL 破框倾斜、360px 手机、无 WebGL2 降级；开包：撕包中 `pack-tearing`、堆叠 `pack-stack`、传说爆发 `pack-legend-burst`、传说展示 `pack-legend-show`、稀有 `pack-rare`、结果页 `pack-result`、手机 `pack-mobile-360`）。
+**自查截图**：`screenshots/all-in-one-*.png`（桌面侧栏 `sidebar`、手机顶部 `sidebar-mobile`、稀有光效 `rarity` / `rarity-webgl`、桌面三引擎、悬停、开关对比、体感、WebGL、破框倾斜、360px、无 WebGL2 降级；开包：撕包 / 堆叠 / 传说爆发与展示 / 稀有 / 结果 / 手机）。
 
 ---
 

@@ -77,22 +77,28 @@ body {
   background: radial-gradient(ellipse at 50% 0%, #2a2440 0%, #121019 60%, #0a0910 100%) fixed;
   background-color: #0a0910;
   display: flex; flex-direction: column; align-items: center;
-  padding: 32px 16px 48px;
+  padding: 28px 16px 48px;
   overflow-x: hidden;
 }
-h1 { font-size: 22px; font-weight: 600; letter-spacing: .05em; margin: 0 0 6px; text-align: center; }
-p.tip { margin: 0 0 14px; opacity: .6; font-size: 13px; text-align: center; max-width: 40em; line-height: 1.5; }
+.mast { width: min(100%, 1520px); text-align: center; margin: 0 0 10px; }
+h1 { font-size: 22px; font-weight: 600; letter-spacing: .05em; margin: 0 0 6px; }
+p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1.5; margin-inline: auto; }
 @media (max-width: 640px) {
   h1 { font-size: 19px; padding: 0 44px; }   /* 右上角是部署时注入的「⇄ 版本」圆钮（34px），标题两侧让出来 */
 }
 
+/* 页面骨架：窄屏上下排（面板在上、卡在下）；≥900px 主区 + 右侧 sticky 侧栏 */
+.shell { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.side { width: min(100%, 720px); }
+.main { width: 100%; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+
 /* =========================================================
-   特效控制面板：放在页面流里（标题下方、卡片上方），所以永远不会盖住卡片，
-   也不会和预览站注入的右上角「⇄ 版本」按钮重叠。手机上默认收起。
+   特效控制面板：窄屏在卡片上方折叠；桌面进右侧栏，滚动时 sticky，不挡卡。
+   也不会和预览站注入的右上角「⇄ 版本」按钮重叠（侧栏 sticky top 留出空位）。
    ========================================================= */
 .fx {
-  width: min(100%, 720px);
-  margin: 0 0 6px;
+  width: 100%;
+  margin: 0;
   border-radius: 16px;
   background: rgba(22,19,36,.62);
   border: 1px solid rgba(255,255,255,.12);
@@ -155,18 +161,63 @@ p.tip { margin: 0 0 14px; opacity: .6; font-size: 13px; text-align: center; max-
 }
 
 /* =========================================================
-   CSS 模式：卡片网格（桌面 4 列 → 平板 2 列 → 手机 1 列）
+   桌面 ≥900px：右侧固定窄栏 + 主区放大卡牌（2×2）
+   ========================================================= */
+@media (min-width: 900px) {
+  body { align-items: stretch; padding: 24px 20px 40px; }
+  .shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--side-w, 268px);
+    grid-template-areas: "main side";
+    gap: 20px 22px;
+    align-items: start;
+    max-width: 1520px;
+    margin-inline: auto;
+  }
+  .main { grid-area: main; align-items: stretch; }
+  .side {
+    grid-area: side; width: auto;
+    position: sticky;
+    /* 预览站「⇄ 版本」固定在右上角（约 34–40px 高），侧栏吸顶时躲开它 */
+    top: max(52px, calc(env(safe-area-inset-top, 0px) + 48px));
+    max-height: calc(100dvh - max(64px, env(safe-area-inset-top, 0px) + 60px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .fx { box-shadow: 0 10px 28px rgba(0,0,0,.35); }
+  .fx__body { padding: 0 12px 14px; gap: 12px; }
+  .fx__row { gap: 7px; }
+  .fx__label { width: 100%; min-width: 0; }
+  .fx__pack, .fx__reset { margin-left: 0; width: 100%; justify-content: center; }
+  .fx button { padding: 7px 11px; }
+  /* 主区两列大卡：侧栏约 268px，主区剩余宽度均分 */
+  :root {
+    --card-w: clamp(250px, calc((100vw - var(--side-w, 268px) - 64px - 56px) / 2), 440px);
+  }
+  .stage { --cols: 2; column-gap: 56px; row-gap: calc(var(--card-h) * var(--breakout) + 28px); }
+  #gl {
+    height: clamp(440px, calc(100dvh - 200px), 920px);
+    height: clamp(440px, calc(100vh - 200px), 920px);
+  }
+}
+@media (min-width: 1280px) {
+  :root { --side-w: 280px; }
+  .shell { gap: 24px 28px; }
+}
+
+/* =========================================================
+   CSS 模式：卡片网格（桌面侧栏时 2 列大卡；窄屏 2 列 → 手机 1 列）
    上方留出角色探出卡外的空间
    ========================================================= */
 .stage {
-  --cols: 4;
+  --cols: 2;
   display: grid; grid-template-columns: repeat(var(--cols), var(--card-w));
   justify-content: center;
   column-gap: 40px;
   row-gap: calc(var(--card-h) * var(--breakout) + 18px);
   padding-top: calc(var(--card-h) * (var(--breakout) - var(--win-t)) + 22px);
 }
-@media (max-width: 1199px) { .stage { --cols: 2; column-gap: 48px; } }
 @media (max-width: 619px)  { .stage { --cols: 1; } }
 .label { text-align: center; margin-top: 16px; font-size: 13px; opacity: .72; }
 .label small { display: block; margin-top: 4px; font-size: 11px; opacity: .65; line-height: 1.5; }
@@ -604,7 +655,7 @@ body.no-depth .layer--fg {
    ========================================================= */
 .gl {
   align-self: stretch;
-  margin: 0 -16px;
+  margin: 0;
   display: flex; flex-direction: column; align-items: center;
 }
 #gl {
@@ -657,13 +708,14 @@ body.pk-open .stage .layer--fg .p { animation-play-state: paused; }
    · 倾斜时整体朝倾斜方向偏移、略微增强（JS 写 --ax / --ay / --ao）
    ========================================================= */
 .stage { position: relative; z-index: 0;              /* 光晕用 z-index:-1 垫在所有卡片后面 */
-  align-self: stretch; margin-inline: -16px; overflow-x: clip; }   /* 铺满到视口两边再裁：光晕不会撑出横向滚动条，裁切处就是屏幕边缘 */
+  align-self: stretch; width: 100%; overflow-x: clip;  /* 在主区内裁切：侧栏布局时光晕不侵入右侧栏、也不撑横向滚动条 */
+  padding-inline: 8px; box-sizing: border-box; }
 .stage > div { position: relative; }
-.gl { position: relative; z-index: 0; overflow-x: clip; }
+.gl { position: relative; z-index: 0; overflow-x: clip; width: 100%; }
 .aura {
   --c1: 150,165,255; --c2: 195,160,255;               /* 稀有：蓝紫 */
-  --pw: min(calc(var(--card-w) * .36), max(24px, calc((100vw - var(--card-w)) / 2 - 6px)));
-  --ph: calc(var(--card-w) * .34);
+  --pw: calc(var(--card-w) * .32);                    /* 随卡放大；外溢由 .stage / .gl 的 overflow-x:clip 裁掉 */
+  --ph: calc(var(--card-w) * .30);
   position: absolute; z-index: -1; pointer-events: none;
   left: 50%; top: calc(var(--card-h) / 2);
   width: calc(var(--card-w) + 2 * var(--pw)); height: calc(var(--card-h) + 2 * var(--ph));
@@ -1168,9 +1220,13 @@ html.pk-open #hcv-nav { display: none !important; }
 </style>
 </head>
 <body>
-  <h1>全息闪卡 · 汇总版</h1>
-  <p class="tip">鼠标悬停 / 手指拖动卡片，或开启体感后轻晃手机。下面的面板可以逐层开关特效、切到 WebGL 渲染，还能「开包」抽卡。</p>
+  <header class="mast">
+    <h1>全息闪卡 · 汇总版</h1>
+    <p class="tip">鼠标悬停 / 手指拖动卡片，或开启体感后轻晃手机。电脑右边栏可以逐层开关特效、切到 WebGL 渲染，还能「开包」抽卡；手机上面板在卡片上方。</p>
+  </header>
 
+  <div class="shell">
+  <aside class="side">
   <details class="fx" id="fx" open>
     <summary><span class="fx__title">⚙ 特效控制</span><span class="fx__sum" id="fx-sum">CSS 模式 · 全部开启</span><span class="fx__chev" aria-hidden="true">▾</span></summary>
     <div class="fx__body">
@@ -1194,11 +1250,13 @@ html.pk-open #hcv-nav { display: none !important; }
       <p class="fx__hint" id="fx-hint" aria-live="polite">体感：手机上点「体感」后以当前握姿为零点，轻晃手机。</p>
     </div>
   </details>
+  </aside>
   <script>
-    // 手机上面板默认收起（在首帧绘制前执行，不会闪一下）
-    if (matchMedia('(max-width: 640px)').matches) document.getElementById('fx').open = false;
+    // 窄屏上面板默认收起（在首帧绘制前执行，不会闪一下）；≥900px 桌面侧栏保持展开
+    if (matchMedia('(max-width: 899px)').matches) document.getElementById('fx').open = false;
   </script>
 
+  <div class="main">
   <!-- ===================== CSS 模式 ===================== -->
   <main class="stage" id="css-view">
     <!-- ================= 卡 1：霜晶龙 · 彩虹镭射 · 只闪插画 · 龙头破框 ================= -->
@@ -1583,6 +1641,8 @@ html.pk-open #hcv-nav { display: none !important; }
     </nav>
     <p class="gl__tip">悬停倾斜（窗口里的远景有真实景深）· 按住拖动旋转看背面 · 双击翻面</p>
   </section>
+  </div><!-- .main -->
+  </div><!-- .shell -->
 
   <div id="toast" role="status" aria-live="polite"></div>
 
