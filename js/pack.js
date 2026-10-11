@@ -573,7 +573,7 @@ export function createPack(host) {
     if (RM()) {
       // 减少动态效果：正反面交叉淡入淡出；无震动、无粒子
       c.front.hidden = false;
-      await Promise.all([anim(c.front, [{ opacity: 0 }, { opacity: 1 }], { duration: 320 }), anim(c.back, [{ opacity: 1 }, { opacity: 0 }], { duration: 320 })]);
+      await Promise.all([anim(c.front, [{ opacity: 0 }, { opacity: 1 }], { duration: 480 }), anim(c.back, [{ opacity: 1 }, { opacity: 0 }], { duration: 480 })]);
       c.back.hidden = true; c.flipped = true;
       showBadge(c);
       if (c.tier === 'ur') anim(beam, [{ opacity: 0 }, { opacity: 0.45 }], { duration: 400 });
@@ -602,7 +602,7 @@ export function createPack(host) {
       anim(rays, [{ opacity: 0 }, { opacity: 1 }], { duration: 900, easing: 'ease-out' });
       anim(leak, [{ opacity: 0.85, transform: 'translate(-50%,-50%) scale(.95)' }, { opacity: 0.55, transform: 'translate(-50%,-50%) scale(1.25)' }], { duration: 900, easing: 'ease-out' });
       await flipHalves(c, dir, 150, 260, [1, 1.24]);
-      await anim(c.flip, [{ transform: 'scale(1.24)' }, { transform: 'scale(.97)', offset: 0.6 }, { transform: 'scale(1)' }], { duration: 620, easing: 'cubic-bezier(.3,.7,.3,1)' });
+      await anim(c.flip, [{ transform: 'scale(1.24)' }, { transform: 'scale(.97)', offset: 0.6 }, { transform: 'scale(1)' }], { duration: 620 * 1.4, easing: 'cubic-bezier(.3,.7,.3,1)' });
       if (my !== run) return;
       showBadge(c);
       sheen(face, 1400);
@@ -616,7 +616,7 @@ export function createPack(host) {
         { duration: 1100, easing: 'ease-out' });
       buzz(20);
       await flipHalves(c, dir, 180, 260, [1, 1.06]);
-      anim(c.flip, [{ transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 300, easing: 'ease-out' });
+      anim(c.flip, [{ transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 300 * 1.6, easing: 'ease-out' });
       sound.play('rare');
       showBadge(c);
       sheen(face, 1100);
@@ -624,10 +624,13 @@ export function createPack(host) {
     }
     sound.play('flip');
     await flipHalves(c, dir, 170, 230, [1, 1.04]);
-    anim(c.flip, [{ transform: 'scale(1.04)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'ease-out' });
+    anim(c.flip, [{ transform: 'scale(1.04)' }, { transform: 'scale(1)' }], { duration: 220 * 1.6, easing: 'ease-out' });
     showBadge(c);
   }
+  // 翻牌节奏：数值越大翻得越慢（1 = 原速）。用户反馈原速太快，调到 2.2 倍时长
+  const FLIP_SLOW = 2.2;
   async function flipHalves(c, dir, t1, t2, [s0, s1]) {
+    t1 *= FLIP_SLOW; t2 *= FLIP_SLOW;
     const mid = (s0 + s1) / 2 + 0.04;
     await anim(c.flip, [{ transform: `rotateY(0deg) scale(${s0})` }, { transform: `rotateY(${90 * dir}deg) scale(${mid})` }], { duration: t1, easing: 'cubic-bezier(.5,0,1,.6)' });
     c.back.hidden = true; c.front.hidden = false; c.flipped = true;
@@ -665,7 +668,7 @@ export function createPack(host) {
     for (const n of [beam, rays, dim]) if (+getComputedStyle(n).opacity > 0.01) fades.push(anim(n, [{ opacity: getComputedStyle(n).opacity }, { opacity: 0 }], { duration: RM() ? 200 : 380 }));
     sound.play('whoosh');
     if (RM()) await anim(c.el, [{ opacity: 1 }, { opacity: 0 }], { duration: 220 });
-    else await anim(c.el, [{ transform: c.el.style.transform, opacity: 1 }, { transform: `translate(${dir * 75}vw, -4vh) rotate(${dir * 16}deg)`, opacity: 0 }], { duration: 380, easing: 'cubic-bezier(.4,0,.8,.6)' });
+    else await anim(c.el, [{ transform: c.el.style.transform, opacity: 1 }, { transform: `translate(${dir * 75}vw, -4vh) rotate(${dir * 16}deg)`, opacity: 0 }], { duration: 520, easing: 'cubic-bezier(.4,0,.8,.6)' });
     await Promise.all(fades);
     rays.classList.remove('spin');
     c.el.remove();
