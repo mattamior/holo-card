@@ -103,6 +103,18 @@ p.sub { margin: 0; opacity: .45; font-size: 12px; text-align: center; max-width:
   -webkit-tap-highlight-color: transparent;
   user-select: none; -webkit-user-select: none;
 }
+/* 破框热区：角色探出卡框上沿的那一截不在 .card 盒子里（各层都是 pointer-events:none），
+   用一个透明的伪元素把指针热区向上扩展到角色层的外层包围盒（左右/上方再留 8px 余量）。
+   它属于 .card 本身，所以从龙头/狐耳滑进卡面不会触发 pointerleave；
+   倾斜位置仍按 .card 本体测量并限幅到 0~100（见脚本 onMove）。 */
+.card::after {
+  content: "";
+  position: absolute;
+  left:  calc(var(--win-l) * 100% - 8px);
+  right: calc((1 - var(--win-l) - var(--win-w)) * 100% - 8px);
+  top:   calc((var(--win-t) - var(--breakout)) * 100% - 8px);
+  bottom: calc(100% - 2px);     /* 与卡片上沿重叠 2px，热区连续无缝 */
+}
 .card__rotator {
   position: relative;
   width: 100%; height: 100%;
@@ -592,7 +604,7 @@ p.sub { margin: 0; opacity: .45; font-size: 12px; text-align: center; max-width:
               <defs><radialGradient id="f-p"><stop offset="0" stop-color="#fff6d0"/><stop offset=".4" stop-color="#ffb35a" stop-opacity=".85"/><stop offset="1" stop-color="#ff6a3a" stop-opacity="0"/></radialGradient></defs>
               <g fill="url(#f-p)">
                 <ellipse class="p" cx="8"  cy="30" rx="2"   ry="1.4" style="--t:2.7s;--d:-.6s"/>
-                <ellipse class="p" cx="92" cy="20" rx="2.4" ry="1.7" style="--t:3.3s;--d:-1.4s"/>
+                <ellipse class="p" cx="95" cy="33" rx="2.4" ry="1.7" style="--t:3.3s;--d:-1.4s"/><!-- 避开右上角「HP 90」标题栏（窄屏时原位置 cy=20 会压字） -->
                 <ellipse class="p" cx="84" cy="52" rx="1.6" ry="1.2" style="--t:2.9s;--d:-2.2s"/>
                 <ellipse class="p" cx="16" cy="60" rx="2.2" ry="1.6" style="--t:3.7s;--d:-1s"/>
                 <ellipse class="p" cx="22" cy="6"  rx="1.3" ry=".9"  style="--t:2.5s;--d:-1.8s"/>
@@ -678,7 +690,8 @@ function setupCard(card) {
   };
 
   const onMove = (e) => {
-    // 用 .card（未旋转的外框）测量：倾斜和破框角色都不会让坐标跳动
+    // 用 .card（未旋转的外框）测量：倾斜和破框角色都不会让坐标跳动；
+    // 指针在破框热区（卡片上沿以上）时 py 被限幅为 0，相当于“按住卡片上沿”
     const r = card.getBoundingClientRect();
     const px = clamp(((e.clientX - r.left) / r.width) * 100);
     const py = clamp(((e.clientY - r.top) / r.height) * 100);

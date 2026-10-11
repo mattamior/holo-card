@@ -30,6 +30,8 @@
 - `.card` 提供 `perspective`，`.card__rotator` 设 `transform-style: preserve-3d` 并整体旋转；文字、角色、粒子是它的直接子元素，各自 `translateZ`，倾斜时近处层位移大、远处层位移小，形成景深。每层再乘 `scale(1 - z/透视)` 抵消近大远小，静止时与设计稿一致。
 - **压平陷阱**：`overflow`、`opacity<1`、`filter`、`mask`、`mix-blend-mode`、`isolation` 出现在旋转容器上会把整个 3D 压成一张图。所以这些属性只放在各层自己身上或层内部（只压平该层自己的子树），箔光的 `color-dodge` 混合放在远景层内部完成。
 - **窗口内为什么不用真 translateZ**：`overflow:hidden` 的窗口会压平内部 3D；若把远景做成卡后独立平面，倾斜时会从卡片侧边露出来。所以窗口内的远景/中景用 `translate(z·sin(倾斜角))` 位移——这正是该深度平面旋转后相对卡面的位移量，视觉等价于 translateZ，并且被窗口干净裁剪（需要 CSS `sin()`：Chrome 111+ / Firefox 108+ / Safari 15.4+；旧浏览器只是远景不动）。
+- **破框热区**：角色探出卡框的部分在 `.card` 盒子外，而各层都是 `pointer-events:none`。`.card::after` 是一个透明伪元素，把指针热区向上扩展到角色层的外层包围盒（另留 8px 余量），所以鼠标只停在龙头或狐耳上也会倾斜；倾斜位置仍按卡片本体计算并限幅（指针在卡片上沿以上时按上沿算）。
+- 前景粒子避开名称 / HP 标题栏，窄屏手机上也不会压到文字。
 - 所有光层用多段渐变缓降，出血量 `--bleed` 大于最大位移，倾斜到极限也看不到层边缘或硬直线。
 
 **可调参数**（`:root` 开头）
@@ -38,7 +40,7 @@
 - `--win-l/-t/-w/-h`：插画窗口位置；`--bleed`：远景/中景出血（须 ≥ |z-bg|×sin(最大倾斜角)×depth）
 - `--persp`：透视距离；倾斜角度与弹簧手感仍在脚本 `CONFIG` 里
 
-**自查截图**：`screenshots/parallax-idle.png`、`parallax-hover.png`，以及 Chromium / Firefox / WebKit 三内核的静止 + 左上 + 右上悬停对比：`parallax-chromium.png`、`parallax-firefox.png`、`parallax-webkit.png`。
+**自查截图**：`screenshots/parallax-idle.png`、`parallax-hover.png`，以及 Chromium / Firefox / WebKit 三内核的静止 + 左上 + 右上悬停对比：`parallax-chromium.png`、`parallax-firefox.png`、`parallax-webkit.png`。破框热区悬停：`parallax-breakout-hover.png`；窄屏（320 / 360 / 390px）标题栏：`parallax-mobile-header.png`。
 
 ## 原理
 指针位置经弹簧缓动后写入 CSS 变量，CSS 用这些变量驱动 `rotateX/Y` 倾斜、`radial-gradient` 高光，以及 `repeating-linear-gradient` + `color-dodge` 混合的镭射层。支持触摸（Pointer Events），并尊重 `prefers-reduced-motion`。
