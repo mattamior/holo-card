@@ -289,7 +289,7 @@ function studioEnvironment() {
 /* ---------------- 主程序 ---------------- */
 export function start({ canvas, onReady, onLayout, onFrame, initialCard = 'dragon', embedded = false, effects = {}, layers: layerSvgs = {} }) {
   // 特效开关（与汇总页控制面板同步）：镭射 / 压纹 / 边缘光 / 高光
-  const fx = { foil: true, etch: true, rim: true, glare: true, depth: true, ...effects };
+  const fx = { foil: true, etch: true, rim: true, glare: true, depth: true, tilt: true, anim: true, ...effects };
   let active = true;           // false：不渲染、不响应指针（CSS 模式下或画布不可见时）
   let inView = true;           // 画布是否在视口里（IntersectionObserver）
   const W = CONFIG.width, H = W * 88 / 63, T = CONFIG.thickness;
@@ -573,6 +573,8 @@ export function start({ canvas, onReady, onLayout, onFrame, initialCard = 'drago
       const z = T / 2 + it.z * k, s = (camDist - z) / camDist;
       it.mesh.position.set(it.cx * s, (it.cy - CONFIG.camY) * s + CONFIG.camY, z);
       it.mesh.scale.set(s, s, 1);
+      it.mesh.rotation.z = 0;
+      it.base = { x: it.mesh.position.x, y: it.mesh.position.y, s };   // 「动态画面」在这个静止位置上做轻微动画
     }
     // 关掉视差破框：角色裁回窗口（stencil = 2），粒子裁回卡面（stencil ≥ 1）
     const clip = (m, ref, func) => Object.assign(m.material, ref ? { stencilWrite: true, stencilRef: ref, stencilFunc: func, stencilZPass: KEEP } : { stencilWrite: false });
@@ -662,10 +664,34 @@ export function start({ canvas, onReady, onLayout, onFrame, initialCard = 'drago
     shared.uSpin.value = spin;
     shadow.position.x = -tilt.value.y * 0.02; shadow.position.y = -0.2 + tilt.value.x * 0.016;
     shadow.scale.x = 0.25 + 0.75 * Math.abs(Math.cos(flip.value.y * DEG));
+    if (animOn()) animateLayers(performance.now() / 1000);
     composer.render();
     onFrame?.(tilt.value.x, tilt.value.y, o);   // 嵌入页：画布后面的光效层跟随倾斜
     frames++;
   };
+  /* 3 级「动态画面」的 WebGL 轻量版：图层是光栅化好的整张贴图，做不到 CSS 版那样逐部件（尾巴 / 耳朵 / 眼睛）动，
+     这里只让角色平面整体呼吸 / 漂浮 / 摆动、前景粒子层缓慢漂移；约 30fps，视口外 / 隐藏 / 减少动态效果时停 */
+  const animOn = () => fx.anim && !reduceMotion.matches && !!cards[current]?.layers;
+  let animDrawn = 0;
+  function animateLayers(t) {
+    const L = cards[current].layers, TAU = Math.PI * 2;
+    const ch = L.items.find(i => i.mesh === L.charMesh), fg = L.items.find(i => i.mesh === L.fgMesh);
+    if (ch?.base) {
+      const m = ch.mesh, b = ch.base, h = m.geometry.parameters.height * b.s;
+      let sx = 1, sy = 1, dy = 0, rz = 0;
+      if (current === 'dragon') { sy = 1 + 0.014 * Math.sin(t * TAU / 4.6); sx = 1 + 0.005 * Math.sin(t * TAU / 4.6); }                 // 颈部呼吸（以底边为轴）
+      else if (current === 'fox') { dy = 0.012 * h * Math.sin(t * TAU / 3.4); rz = 0.012 * Math.sin(t * TAU / 3.4 + 1); }             // 轻轻起伏、摇摆
+      else if (current === 'star') { rz = 6 * DEG * Math.sin(t * TAU / 9); sx = sy = 1 + 0.03 * Math.sin(t * TAU / 4.5); }            // 星辰摆转 + 脉动
+      else if (current === 'sun') { sx = sy = 1 + 0.025 * Math.sin(t * TAU / 5); }                                                    // 烈日呼吸
+      m.scale.set(b.s * sx, b.s * sy, 1);
+      m.position.set(b.x, b.y + (sy - 1) * h / 2 + dy, m.position.z);
+      m.rotation.z = rz;
+    }
+    if (fg?.base) {   // 前景粒子层：缓慢漂移
+      const m = fg.mesh, b = fg.base, w = m.geometry.parameters.width * b.s;
+      m.position.set(b.x + 0.012 * w * Math.sin(t * TAU / 11), b.y + 0.016 * w * Math.sin(t * TAU / 7.5), m.position.z);
+    }
+  }
   const loop = (now) => {
     raf = 0;
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
@@ -675,8 +701,9 @@ export function start({ canvas, onReady, onLayout, onFrame, initialCard = 'drago
     spin += (Math.min(1, angVel / 240) - spin) * Math.min(1, dt * 10);
     const busy = a || b || c || dragging || spin > 0.01;
     if (!busy) spin = 0;
-    draw();
-    if (busy) schedule();                    // 静止后不再请求下一帧 → GPU 空闲
+    const anim = animOn();
+    if (busy || !anim || now - animDrawn > 32) { draw(); animDrawn = now; }   // 只有动态画面在动时约 30fps
+    if (busy || anim) schedule();            // 静止且没有动态画面时不再请求下一帧 → GPU 空闲
   };
   const schedule = () => { if (!raf && !document.hidden && active && inView) { last = performance.now(); raf = requestAnimationFrame(loop); } };
   function requestRender() { if (reduceMotion.matches) { tilt.jump(); flip.jump(); glow.jump(); } schedule(); }
@@ -691,9 +718,10 @@ export function start({ canvas, onReady, onLayout, onFrame, initialCard = 'drago
     lastPointerAt = performance.now();
     const [lx, ly] = loc(e);
     const px = MathUtils.clamp((lx - rest.x) / rest.w, 0, 1), py = MathUtils.clamp((ly - rest.y) / rest.h, 0, 1);
-    if (reduceMotion.matches) {
-      // 减少动态效果：卡片不动，只让光（彩虹相位 / 亮片角度）随指针变化
+    if (reduceMotion.matches || !fx.tilt) {
+      // 减少动态效果 / 关闭倾斜（1 级基础卡面）：卡片不动，只让光（彩虹相位 / 亮片角度）随指针变化
       shift.set((px - 0.5) * 0.5, (0.5 - py) * 0.5);
+      if (!fx.tilt && !reduceMotion.matches) glow.set({ o: 0.35 });   // 1 级：只留极轻的悬停放大反馈
       requestRender(); return;
     }
     // 与 CSS 版一致：指针所在一侧抬向观众
@@ -703,9 +731,9 @@ export function start({ canvas, onReady, onLayout, onFrame, initialCard = 'drago
   };
   const leave = () => {
     lastPointerAt = performance.now();
-    if (gyroPose && !reduceMotion.matches) { tilt.set(gyroPose, CONFIG.settle); glow.set({ o: 1 }); requestRender(); return; }  // 体感开着：回到体感姿态而不是归零
+    if (gyroPose && !reduceMotion.matches && fx.tilt) { tilt.set(gyroPose, CONFIG.settle); glow.set({ o: 1 }); requestRender(); return; }  // 体感开着：回到体感姿态而不是归零
     tilt.set({ x: 0, y: 0 }, CONFIG.settle); glow.set({ o: 0 });
-    if (reduceMotion.matches) shift.set(0, 0);
+    if (reduceMotion.matches || !fx.tilt) shift.set(0, 0);
     requestRender();
   };
   const snapFace = (bias = 0) => {
@@ -796,14 +824,17 @@ export function start({ canvas, onReady, onLayout, onFrame, initialCard = 'drago
   /** 陀螺仪姿态（度，CSS 约定：rx = rotateY，ry = rotateX）。指针在卡上或刚离开时忽略，指针优先 */
   const setGyro = (rx, ry) => {
     if (reduceMotion.matches) return;
-    gyroPose = { x: -ry, y: rx };       // CSS rotateX(+) 下沿靠近观众 = three rotation.x(−)
+    gyroPose = { x: -ry, y: rx };
+    if (!fx.tilt) return;                // 关闭倾斜：体感也不驱动       // CSS rotateX(+) 下沿靠近观众 = three rotation.x(−)
     if (!active || press || over || performance.now() - lastPointerAt < CONFIG.pointerPriorityMs) return;
     tilt.set(gyroPose, CONFIG.follow); glow.set({ o: 1 }); requestRender();
   };
   const clearGyro = () => { gyroPose = null; if (!press && !over) leave(); };
-  /** 特效开关：{ foil, etch, rim, glare, depth }，缺省的键保持原值 */
+  /** 特效开关：{ foil, etch, rim, glare, depth, tilt, anim }，缺省的键保持原值 */
   const setEffects = (next = {}) => {
+    const hadTilt = fx.tilt;
     Object.assign(fx, next);
+    if (hadTilt && !fx.tilt) { tilt.set({ x: 0, y: 0 }, CONFIG.settle); glow.set({ o: 0 }); }
     for (const face of [front, back]) if (face.look) applyLook(face, face.look, face.texs);
     for (const k in cards) {   // 远景层上的箔
       const bf = cards[k]?.layers?.bgFace;

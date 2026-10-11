@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>全息闪卡 · Holo Card · 汇总版（全部特效）</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect x=%223%22 y=%221%22 width=%2210%22 height=%2214%22 rx=%222%22 fill=%22%239a7bff%22/%3E%3C/svg%3E" />
 <meta name="description" content="全息闪卡汇总版：箔面镭射、局部 mask、蚀刻压纹、边缘光与纸张厚度、多层视差与角色破框、陀螺仪体感，可一键切到 WebGL 渲染（同样分层破框），还能开卡包。" />
 <!-- Three.js 只在切到 WebGL 模式时才会被 import()；importmap 本身不下载任何东西 -->
 <script type="importmap">
@@ -817,6 +818,208 @@ html.pk-open #hcv-nav { display: none !important; }
 }
 
 
+/* =========================================================
+   卡面等级（1 基础卡面 → 2 立体效果 → 3 动态画面 → 4 专属特效 → 5 镀闪卡面，逐级叠加）
+   等级 = 一组特效开关预设（脚本里的 LEVELS）；body.no-<key> 关掉对应的层
+   ========================================================= */
+/* ---------- 面板：等级选择器（侧栏主角） ---------- */
+.lv { display: grid; gap: 8px; }
+.lv__head { display: flex; align-items: center; gap: 8px; }
+.lv__title { font-weight: 600; letter-spacing: .06em; font-size: 12.5px; opacity: .85; }
+.lv__tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; color: #ffe3b0; background: rgba(255,190,110,.12); border: 1px solid rgba(255,200,130,.35); }
+.lv__list { display: grid; gap: 4px; }
+.fx .lv__row {
+  position: relative; display: grid; grid-template-columns: 3.1em 1fr auto; align-items: center; gap: 8px;
+  width: 100%; text-align: left; padding: 9px 12px; border-radius: 12px;
+  background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.07);
+  transition: background .25s, border-color .25s, box-shadow .25s, color .25s;
+  color: rgba(232,232,240,.72);
+}
+.fx .lv__row b { font-weight: 700; font-size: 13px; letter-spacing: .04em; }
+.fx .lv__row span { font-size: 13px; }
+.lv__pips { display: flex; gap: 3px; justify-self: end; }
+.lv__pips s { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.28); }
+.fx .lv__row:hover { background: rgba(255,255,255,.07); color: #eee; }
+/* 选中：柔光高亮（渐变底 + 外发光，没有实线描边） */
+.fx .lv__row[aria-checked="true"] {
+  color: #fff;
+  background: radial-gradient(120% 160% at 0% 50%, rgba(190,160,255,.34) 0%, rgba(160,130,255,.16) 45%, rgba(140,120,255,.06) 100%);
+  border-color: rgba(205,185,255,.32);
+  box-shadow: 0 0 18px rgba(170,140,255,.28), inset 0 0 14px rgba(200,180,255,.12);
+}
+.fx .lv__row[aria-checked="true"] .lv__pips s { background: #d9c8ff; box-shadow: 0 0 6px rgba(210,190,255,.9); }
+.fx .lv__row[data-lv="5"][aria-checked="true"] .lv__pips s { background: #ffe6a8; box-shadow: 0 0 6px rgba(255,220,150,.9); }
+.fx .lv__row:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(200,185,255,.55), 0 0 18px rgba(170,140,255,.3); }
+.lv.is-custom .lv__row[aria-checked="true"] { box-shadow: none; }
+.lv__desc { margin: 0; font-size: 12px; line-height: 1.55; opacity: .72; min-height: 3.1em; }
+@media (max-width: 899px) { .fx .lv__row { padding: 6px 12px; } .lv__desc { min-height: 0; } }
+/* 高级：单项开关折叠起来 */
+.fx__adv > summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px;
+  font-size: 12px; opacity: .7; padding: 4px 2px; border-radius: 8px; user-select: none; -webkit-user-select: none;
+}
+.fx__adv > summary::-webkit-details-marker { display: none; }
+.fx__adv > summary:hover { opacity: 1; }
+.fx__adv > summary:focus-visible { outline: 2px solid #b9a8ff; outline-offset: 2px; }
+.fx__adv[open] > summary .fx__chev { transform: rotate(180deg); }
+.fx__adv > .fx__row { margin-top: 8px; }
+@media (min-width: 900px) {
+  .fx__adv .sw { flex: 1 1 calc(50% - 4px); justify-content: flex-start; }
+}
+
+/* ---------- 3 级：动态画面（body.no-anim 时关闭） ----------
+   大面积的东西（极光、星云、光芒、雪、热浪、光晕）都是独立的 HTML/SVG 元素，只动 transform / opacity → 合成器上跑，不重绘；
+   静态版本（.st-*）在动画开启时隐藏，关闭时显示（WebGL 光栅化用的也是静态版本） */
+.an-ov { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: block; }
+body:not(.no-anim) .st-aur, body:not(.no-anim) .st-neb, body:not(.no-anim) .st-ray { display: none; }
+body.no-anim .an-ov, body.no-anim .an-split { display: none; }
+body.no-anim .layer--fg .p { animation: none; }
+/* 霜晶龙：极光流动、月光晃动、雪花飘落、龙颈呼吸 */
+.an-aur { animation: an-aur 16s ease-in-out infinite alternate; will-change: transform; }
+@keyframes an-aur { 0% { transform: translateX(-3.5%) scaleY(.96); opacity: .8; } 50% { opacity: 1; } 100% { transform: translateX(3.5%) scaleY(1.05); opacity: .85; } }
+.an-moon {
+  background: radial-gradient(circle at 74% 31%, rgba(255,250,225,.55) 0, rgba(255,243,196,.22) 6%, rgba(255,243,196,0) 15%);
+  animation: an-moon 5.5s ease-in-out infinite alternate; transform-origin: 74% 31%;
+}
+@keyframes an-moon { from { opacity: .35; transform: rotate(-2deg) scale(.96); } to { opacity: 1; transform: rotate(2deg) scale(1.06); } }
+.an-snow { overflow: hidden; }
+.an-snow i { position: absolute; top: -4%; left: var(--x); width: calc(var(--card-w) * .022); height: 100%; animation: an-fall var(--d) linear var(--dl) infinite; opacity: 0; }
+.an-snow i::before {
+  content: ""; position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 1; border-radius: 50%; transform: scale(var(--s, 1));
+  background: radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(230,245,255,.55) 40%, rgba(230,245,255,0) 72%);
+}
+@keyframes an-fall {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; } 12% { opacity: .9; }
+  50% { transform: translate3d(calc(var(--card-w) * .02), 48%, 0); }
+  85% { opacity: .75; } 100% { transform: translate3d(calc(var(--card-w) * -.01), 96%, 0); opacity: 0; }
+}
+body:not(.no-anim) .card[data-card="dragon"] .layer--char > svg { transform-origin: 50% 100%; animation: an-breathe 4.6s ease-in-out infinite alternate; }
+@keyframes an-breathe { from { transform: scale(1, 1); } to { transform: translateY(-.4%) scale(1.006, 1.022); } }
+/* 焰尾狐：拆层后尾巴摇摆、耳朵偶尔抖动、眨眼；夕阳光晕呼吸 */
+body:not(.no-anim) .card[data-card="fox"] .layer--char > svg:not(.fx-part) { display: none; }
+.an-split { position: absolute; inset: 0; }
+.layer--char .fx-part { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: block; filter: drop-shadow(0 10px 10px rgba(0,0,0,.45)); }
+.layer--char .fp-eyes { filter: none; }
+/* 原点按 viewBox 坐标换算到元素百分比（角色层宽高比固定：xMidYMax meet，纵向撑满） */
+.fp-tail { transform-origin: 63.3% 92.8%; animation: an-tail 3.4s ease-in-out infinite alternate; }
+@keyframes an-tail { from { transform: rotate(-3.5deg); } to { transform: rotate(4.5deg); } }
+.fp-ear--l { transform-origin: 41.1% 23.2%; animation: an-ear-l 6.4s ease-in-out infinite; }
+.fp-ear--r { transform-origin: 58.9% 23.2%; animation: an-ear-r 8.2s ease-in-out -3s infinite; }
+@keyframes an-ear-l { 0%, 84%, 100% { transform: rotate(0); } 87% { transform: rotate(-8deg); } 90% { transform: rotate(2.5deg); } 93% { transform: rotate(-3deg); } 96% { transform: rotate(0); } }
+@keyframes an-ear-r { 0%, 84%, 100% { transform: rotate(0); } 87% { transform: rotate(8deg); } 90% { transform: rotate(-2.5deg); } 93% { transform: rotate(3deg); } 96% { transform: rotate(0); } }
+.fp-eyes { transform-origin: 50% 32%; animation: an-blink 5.2s ease-in-out infinite; }
+@keyframes an-blink { 0%, 92%, 100% { transform: scaleY(1); } 94.5% { transform: scaleY(.08); } 97% { transform: scaleY(1); } }
+.an-sunglow {
+  background: radial-gradient(ellipse 34% 40% at 27% 62%, rgba(255,226,160,.55) 0%, rgba(255,170,110,.25) 45%, rgba(255,140,100,0) 100%);
+  animation: an-glow 4.2s ease-in-out infinite alternate; transform-origin: 27% 62%;
+}
+@keyframes an-glow { from { opacity: .3; transform: scale(.94); } to { opacity: .95; transform: scale(1.06); } }
+/* 星尘狐：星辰徽记缓慢摆转 / 脉动，星云漂移，星点闪烁 */
+body:not(.no-anim) .card[data-card="stardust"] .layer--char > svg { animation: an-star 7s ease-in-out infinite alternate; }
+@keyframes an-star { from { transform: rotate(-6deg) scale(.985); } to { transform: rotate(6deg) scale(1.04); } }
+.an-neb--a { animation: an-neb-a 19s ease-in-out infinite alternate; }
+.an-neb--b { animation: an-neb-b 23s ease-in-out infinite alternate; }
+@keyframes an-neb-a { from { transform: translate(-4%, 2%); opacity: .8; } to { transform: translate(4%, -2%); opacity: 1; } }
+@keyframes an-neb-b { from { transform: translate(4%, -1%); opacity: 1; } to { transform: translate(-4%, 2%); opacity: .75; } }
+.an-twk i { position: absolute; left: var(--x); top: var(--y); width: calc(var(--card-w) * .04); aspect-ratio: 1; margin: calc(var(--card-w) * -.02);
+  background: radial-gradient(circle, #fff 0%, rgba(255,230,250,.6) 25%, rgba(255,230,250,0) 65%); animation: an-twk var(--d) ease-in-out var(--dl) infinite; opacity: .2; }
+@keyframes an-twk { 0%, 100% { opacity: .15; transform: scale(.5); } 50% { opacity: 1; transform: scale(1); } }
+/* 金曜狮王：光芒旋转、光晕脉动、热浪微光上升；徽记轻微脉动 */
+.win__mid > svg.an-rays { inset: auto; left: 50%; top: 50%; width: 118.75%; height: auto; aspect-ratio: 1; animation: an-rays 60s linear infinite; transform: translate(-50%, -50%); }
+@keyframes an-rays { from { transform: translate(-50%, -50%) rotate(0); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+.an-halo { background: radial-gradient(circle at 50% 50%, rgba(255,236,170,.45) 0%, rgba(255,210,110,.18) 30%, rgba(255,210,110,0) 60%); animation: an-glow 4.5s ease-in-out infinite alternate; }
+.an-heat i { position: absolute; left: 8%; width: 84%; top: var(--y); height: 16%;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,246,214,.3) 0%, rgba(255,232,170,.12) 45%, rgba(255,232,170,0) 100%);
+  animation: an-heat var(--d) ease-in-out var(--dl) infinite; opacity: 0; }
+@keyframes an-heat { 0% { transform: translateY(0) scaleX(.9); opacity: 0; } 30% { opacity: .9; } 100% { transform: translateY(-300%) scaleX(1.12); opacity: 0; } }
+body:not(.no-anim) .card[data-card="lion"] .layer--char > svg { animation: an-pulse 4.5s ease-in-out infinite alternate; }
+@keyframes an-pulse { from { transform: scale(.985); } to { transform: scale(1.03); } }
+
+/* ---------- 4 级：专属特效（每张卡定制的粒子 / 环境光；整合「稀有光效」光晕与徽章；body.no-rarity 时整层移除） ---------- */
+.layer--sfx { --z: 60; inset: 0; }
+.sfx { position: absolute; inset: -10% -14%; pointer-events: none; }
+body.no-rarity .layer--sfx, body.no-rarity .sfx-gl { display: none; }
+.pk .card .layer--sfx { display: none; }              /* 开包流程里的卡不加（翻牌演出自己有特效）…… */
+.pk .pk__zoom .card .layer--sfx { display: block; }    /* ……放大查看时跟随当前等级 */
+body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
+.sfx > * { position: absolute; left: var(--x); top: var(--y); opacity: 0; will-change: transform, opacity; }
+/* 霜晶龙：冰晶碎片环绕 + 寒雾 */
+.sfx .sh { width: calc(var(--card-w) * .03 * var(--s, 1)); aspect-ratio: .55; margin: calc(var(--card-w) * -.02);
+  background: linear-gradient(160deg, rgba(255,255,255,.95) 0%, rgba(200,236,255,.75) 40%, rgba(140,200,255,.25) 100%);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  animation: sfx-shard var(--d) ease-in-out var(--dl) infinite; }
+@keyframes sfx-shard {
+  0% { transform: translate(0, 0) rotate(var(--r, 0deg)) scale(.6); opacity: 0; }
+  20% { opacity: .9; } 70% { opacity: .7; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(calc(var(--r, 0deg) + 160deg)) scale(1); opacity: 0; }
+}
+.sfx .mist { width: 62%; height: 24%; margin: -12% 0 0 -31%;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(205,232,255,.34) 0%, rgba(190,220,255,.16) 45%, rgba(190,220,255,0) 100%);
+  animation: sfx-mist var(--d) ease-in-out var(--dl) infinite alternate; }
+@keyframes sfx-mist { from { transform: translateX(-8%) scale(.95); opacity: .5; } to { transform: translateX(8%) scale(1.08); opacity: 1; } }
+/* 焰尾狐：火星上飘 + 暖光 */
+.sfx .em { width: calc(var(--card-w) * .022 * var(--s, 1)); aspect-ratio: 1; border-radius: 50%; margin: calc(var(--card-w) * -.011);
+  background: radial-gradient(circle, rgba(255,248,220,1) 0%, rgba(255,190,90,.85) 35%, rgba(255,110,50,0) 72%);
+  animation: sfx-rise var(--d) ease-in var(--dl) infinite; }
+@keyframes sfx-rise {
+  0% { transform: translate(0, 0) scale(1); opacity: 0; } 15% { opacity: 1; }
+  50% { transform: translate(calc(var(--dx) * .5 + 4px), calc(var(--dy) * .5)) scale(.85); }
+  100% { transform: translate(var(--dx), var(--dy)) scale(.35); opacity: 0; }
+}
+.sfx .warm { width: 50%; height: 34%; margin: -17% 0 0 -25%;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,170,90,.32) 0%, rgba(255,130,70,.12) 50%, rgba(255,120,60,0) 100%);
+  animation: sfx-warm var(--d) ease-in-out var(--dl) infinite alternate; }
+@keyframes sfx-warm { from { opacity: .45; transform: scale(.94); } to { opacity: 1; transform: scale(1.06); } }
+/* 星尘狐：星尘拖尾（椭圆径向渐变，横截面柔和、尾部淡出）+ 星点 */
+.sfx .cm { width: calc(var(--card-w) * .3); height: calc(var(--card-w) * .03); margin: calc(var(--card-w) * -.015) 0 0 calc(var(--card-w) * -.27);
+  background: radial-gradient(ellipse 50% 50% at 90% 50%, rgba(255,255,255,.95) 0%, rgba(255,214,245,.6) 6%, rgba(214,194,255,.22) 40%, rgba(214,194,255,0) 100%);
+  transform-origin: 90% 50%; animation: sfx-comet var(--d) ease-in var(--dl) infinite; }
+@keyframes sfx-comet {
+  0% { transform: translate(0, 0) rotate(var(--r)) scaleX(.3); opacity: 0; }
+  8% { opacity: .95; } 32% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scaleX(1); opacity: 0; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scaleX(1); opacity: 0; }
+}
+.sfx .sp { width: calc(var(--card-w) * .05); aspect-ratio: 1; margin: calc(var(--card-w) * -.025);
+  background: radial-gradient(circle, #fff 0%, rgba(255,255,255,0) 18%), radial-gradient(ellipse 50% 12% at 50% 50%, rgba(255,240,255,.85) 0%, rgba(214,194,255,0) 100%), radial-gradient(ellipse 12% 50% at 50% 50%, rgba(255,240,255,.85) 0%, rgba(214,194,255,0) 100%);
+  animation: sfx-tw var(--d) ease-in-out var(--dl) infinite; }
+@keyframes sfx-tw { 0%, 100% { opacity: 0; transform: scale(.4) rotate(0); } 50% { opacity: .95; transform: scale(1) rotate(25deg); } }
+/* 金曜狮王：金色光尘 + 日芒 */
+.sfx .gd { width: calc(var(--card-w) * .018 * var(--s, 1)); aspect-ratio: 1; border-radius: 50%; margin: calc(var(--card-w) * -.009);
+  background: radial-gradient(circle, rgba(255,252,235,1) 0%, rgba(255,222,120,.8) 40%, rgba(240,180,60,0) 72%);
+  animation: sfx-rise var(--d) ease-in-out var(--dl) infinite; }
+.sfx .burst { width: calc(var(--card-w) * .34); aspect-ratio: 1; margin: calc(var(--card-w) * -.17);
+  background:
+    radial-gradient(circle, rgba(255,252,236,.95) 0%, rgba(255,236,170,.45) 9%, rgba(255,220,120,0) 30%),
+    radial-gradient(ellipse 50% 7% at 50% 50%, rgba(255,240,190,.75) 0%, rgba(255,220,130,.2) 55%, rgba(255,220,130,0) 100%),
+    radial-gradient(ellipse 7% 50% at 50% 50%, rgba(255,240,190,.75) 0%, rgba(255,220,130,.2) 55%, rgba(255,220,130,0) 100%),
+    radial-gradient(ellipse 36% 5% at 50% 50%, rgba(255,236,170,.4) 0%, rgba(255,220,130,0) 100%);
+  animation: sfx-burst 9s ease-in-out infinite; }
+.sfx .burst::after { content: ""; position: absolute; inset: 0; transform: rotate(45deg);
+  background: radial-gradient(ellipse 30% 4% at 50% 50%, rgba(255,236,170,.45) 0%, rgba(255,220,130,0) 100%), radial-gradient(ellipse 4% 30% at 50% 50%, rgba(255,236,170,.45) 0%, rgba(255,220,130,0) 100%); }
+@keyframes sfx-burst { 0%, 100% { opacity: .55; transform: rotate(0) scale(.9); } 50% { opacity: 1; transform: rotate(40deg) scale(1.05); } }
+/* WebGL 模式：同一套粒子放在画布前面，对齐卡片静止矩形 */
+.sfx-gl { position: absolute; left: var(--cx); top: var(--cy); width: var(--card-w); height: var(--card-h); transform: translate(-50%, -50%); pointer-events: none; z-index: 2; }
+.gl.loading .sfx-gl { display: none; }
+/* 暂停：视口外 / 开包时 */
+.card.is-off *, body.pk-open .stage *, .sfx-gl.is-off * { animation-play-state: paused !important; }
+.sfx-gl.is-off { display: none; }
+
+/* ---------- 切换等级的卡面过渡：一道柔光扫过（升级自下而上偏暖亮，降级自上而下偏冷淡） ---------- */
+.lv-sweep { position: absolute; inset: 0; pointer-events: none; z-index: 6; overflow: hidden; border-radius: inherit; opacity: 0; }
+.lv-sweep > i { position: absolute; left: -10%; right: -10%; top: -60%; height: 60%;
+  background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,250,235,.55) 0%, rgba(230,210,255,.28) 40%, rgba(220,200,255,0) 100%); }
+.lv-sweep.down > i { background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(220,232,255,.38) 0%, rgba(180,200,255,.16) 40%, rgba(180,200,255,0) 100%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .an-ov, .an-ov *, .an-split *, .layer--char > svg, .sfx > *, .sfx > *::after { animation: none !important; }
+  .an-snow i { opacity: .7; transform: translateY(30%); }
+  .sfx > * { opacity: .6; }
+  .sfx .cm { display: none; }
+}
+.lv-sweep--gl { inset: auto; left: var(--cx); top: var(--cy); width: var(--card-w); height: var(--card-h); transform: translate(-50%, -50%); border-radius: calc(var(--card-w) * .055); z-index: 3; }
+.gl.loading .lv-sweep--gl { display: none; }
+
+
 /* ---------- 无障碍：减少动态效果（不倾斜、粒子不动；分层静态构图与光泽变化保留） ---------- */
 @media (prefers-reduced-motion: reduce) {
   .card__rotator { transform: none !important; }
@@ -1222,7 +1425,7 @@ html.pk-open #hcv-nav { display: none !important; }
 <body>
   <header class="mast">
     <h1>全息闪卡 · 汇总版</h1>
-    <p class="tip">鼠标悬停 / 手指拖动卡片，或开启体感后轻晃手机。电脑右边栏可以逐层开关特效、切到 WebGL 渲染，还能「开包」抽卡；手机上面板在卡片上方。</p>
+    <p class="tip">鼠标悬停 / 手指拖动卡片，或开启体感后轻晃手机。在「卡面等级」里从 1 级逐级升到 5 级（键盘 1–5 / ↑↓），也可以切到 WebGL 渲染或「开包」抽卡；电脑在右边栏，手机在卡片上方。</p>
   </header>
 
   <div class="shell">
@@ -1230,23 +1433,38 @@ html.pk-open #hcv-nav { display: none !important; }
   <details class="fx" id="fx" open>
     <summary><span class="fx__title">⚙ 特效控制</span><span class="fx__sum" id="fx-sum">CSS 模式 · 全部开启</span><span class="fx__chev" aria-hidden="true">▾</span></summary>
     <div class="fx__body">
+      <div class="lv" id="lv">
+        <div class="lv__head"><span class="lv__title" id="lv-title">卡面等级</span><span class="lv__tag" id="lv-tag" hidden>自定义</span></div>
+        <div class="lv__list" role="radiogroup" aria-labelledby="lv-title">
+          <button type="button" class="lv__row" role="radio" data-lv="5" aria-checked="true"  tabindex="0"><b>5级</b><span>镀闪卡面</span><i class="lv__pips" aria-hidden="true"><s></s><s></s><s></s><s></s><s></s></i></button>
+          <button type="button" class="lv__row" role="radio" data-lv="4" aria-checked="false" tabindex="-1"><b>4级</b><span>专属特效</span><i class="lv__pips" aria-hidden="true"><s></s><s></s><s></s><s></s></i></button>
+          <button type="button" class="lv__row" role="radio" data-lv="3" aria-checked="false" tabindex="-1"><b>3级</b><span>动态画面</span><i class="lv__pips" aria-hidden="true"><s></s><s></s><s></s></i></button>
+          <button type="button" class="lv__row" role="radio" data-lv="2" aria-checked="false" tabindex="-1"><b>2级</b><span>立体效果</span><i class="lv__pips" aria-hidden="true"><s></s><s></s></i></button>
+          <button type="button" class="lv__row" role="radio" data-lv="1" aria-checked="false" tabindex="-1"><b>1级</b><span>基础卡面</span><i class="lv__pips" aria-hidden="true"><s></s></i></button>
+        </div>
+        <p class="lv__desc" id="lv-desc" aria-live="polite">镀闪卡面：整张卡随角度流动的镭射箔面、压纹与闪点。</p>
+      </div>
       <div class="fx__row" role="group" aria-label="渲染模式">
         <span class="fx__label">模式</span>
         <button type="button" data-mode="css" aria-pressed="true">CSS 模式</button>
         <button type="button" data-mode="webgl" aria-pressed="false">WebGL 模式</button>
         <button type="button" class="fx__pack" id="fx-pack" aria-haspopup="dialog">✦ 开包（5 张）</button>
       </div>
-      <div class="fx__row" role="group" aria-label="特效开关">
-        <span class="fx__label">特效</span>
-        <button type="button" class="sw" data-fx="foil"  aria-pressed="true"><i></i>镭射</button>
-        <button type="button" class="sw" data-fx="etch"  aria-pressed="true"><i></i>压纹</button>
-        <button type="button" class="sw" data-fx="rim"   aria-pressed="true"><i></i>边缘光</button>
-        <button type="button" class="sw" data-fx="depth" aria-pressed="true"><i></i>视差破框</button>
-        <button type="button" class="sw" data-fx="glare" aria-pressed="true"><i></i>高光</button>
-        <button type="button" class="sw" data-fx="rarity" aria-pressed="true"><i></i>稀有光效</button>
-        <button type="button" class="sw" data-fx="gyro"  aria-pressed="false" data-state="off"><i></i><span>体感</span></button>
-        <button type="button" class="fx__reset" id="fx-reset">全部开启</button>
-      </div>
+      <details class="fx__adv" id="fx-adv">
+        <summary><span>高级 · 单项开关</span><span class="fx__chev" aria-hidden="true">▾</span></summary>
+        <div class="fx__row" role="group" aria-label="特效开关">
+          <button type="button" class="sw" data-fx="tilt"   aria-pressed="true"><i></i>倾斜</button>
+          <button type="button" class="sw" data-fx="depth"  aria-pressed="true"><i></i>视差破框</button>
+          <button type="button" class="sw" data-fx="glare"  aria-pressed="true"><i></i>高光</button>
+          <button type="button" class="sw" data-fx="rim"    aria-pressed="true"><i></i>边缘光</button>
+          <button type="button" class="sw" data-fx="anim"   aria-pressed="true"><i></i>动态画面</button>
+          <button type="button" class="sw" data-fx="rarity" aria-pressed="true" title="每张卡的专属粒子与环境光，含稀有光晕与徽章"><i></i>专属特效</button>
+          <button type="button" class="sw" data-fx="foil"   aria-pressed="true"><i></i>镭射</button>
+          <button type="button" class="sw" data-fx="etch"   aria-pressed="true"><i></i>压纹</button>
+          <button type="button" class="sw" data-fx="gyro"   aria-pressed="false" data-state="off"><i></i><span>体感</span></button>
+          <button type="button" class="fx__reset" id="fx-reset">全部开启</button>
+        </div>
+      </details>
       <p class="fx__hint" id="fx-hint" aria-live="polite">体感：手机上点「体感」后以当前握姿为零点，轻晃手机。</p>
     </div>
   </details>
@@ -1282,7 +1500,7 @@ html.pk-open #hcv-nav { display: none !important; }
                     <filter id="d-blur" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
                   </defs>
                   <rect width="320" height="260" fill="url(#d-sky)"/>
-                  <g filter="url(#d-blur)">
+                  <g class="st-aur" filter="url(#d-blur)">
                     <path d="M-10 92 C60 50 120 110 180 70 S290 40 330 80 L330 104 C280 70 230 108 180 96 S60 84 -10 120Z" fill="url(#d-aur)"/>
                     <path d="M-10 60 C80 30 140 70 210 44 S300 30 330 50 L330 64 C290 52 240 74 200 66 S80 50 -10 78Z" fill="url(#d-aur)" opacity=".6"/>
                   </g>
@@ -1294,6 +1512,12 @@ html.pk-open #hcv-nav { display: none !important; }
                     <circle cx="128" cy="104" r=".7"/><circle cx="20" cy="88" r="1"/><circle cx="268" cy="132" r=".8"/>
                   </g>
                 </svg>
+                <!-- 3 级动态画面：极光缓慢流动（独立合成层；静态那份在动画开启时隐藏） -->
+                <svg class="an-ov an-aur" viewBox="0 0 320 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#d-blur)">
+                    <path d="M-10 92 C60 50 120 110 180 70 S290 40 330 80 L330 104 C280 70 230 108 180 96 S60 84 -10 120Z" fill="url(#d-aur)"/>
+                    <path d="M-10 60 C80 30 140 70 210 44 S300 30 330 50 L330 64 C290 52 240 74 200 66 S80 50 -10 78Z" fill="url(#d-aur)" opacity=".6"/>
+                  </g></svg>
+                <div class="an-ov an-moon" aria-hidden="true"></div>
                 <div class="foil foil--art"></div>
               </div>
               <div class="win__mid">
@@ -1304,6 +1528,7 @@ html.pk-open #hcv-nav { display: none !important; }
                   <path d="M100 160 L116 176 L104 174 L94 182 L88 172Z M262 172 L276 186 L264 184 L254 192 L250 183Z M180 168 L190 178 L182 177 L174 182Z" fill="#cfe6ff"/>
                   <path d="M0 236 C60 222 120 230 180 220 S280 226 320 218 L320 260 L0 260Z" fill="#18294a"/>
                 </svg>
+                <div class="an-ov an-snow" aria-hidden="true"><i style="--x:8%;--d:7s;--dl:-1s;--s:1"></i><i style="--x:19%;--d:9s;--dl:-5s;--s:.7"></i><i style="--x:31%;--d:8s;--dl:-2.5s;--s:.9"></i><i style="--x:44%;--d:10s;--dl:-7s;--s:.6"></i><i style="--x:56%;--d:7.5s;--dl:-4s;--s:1"></i><i style="--x:67%;--d:9.5s;--dl:-.5s;--s:.75"></i><i style="--x:78%;--d:8.5s;--dl:-6s;--s:.9"></i><i style="--x:90%;--d:7s;--dl:-3s;--s:.65"></i></div>
               </div>
             </div>
             <div class="card__etch"></div>
@@ -1404,6 +1629,7 @@ html.pk-open #hcv-nav { display: none !important; }
                     <circle cx="40" cy="36" r="1"/><circle cx="96" cy="22" r=".8"/><circle cx="268" cy="30" r="1.1"/><circle cx="300" cy="62" r=".7"/><circle cx="150" cy="40" r=".7"/>
                   </g>
                 </svg>
+                <div class="an-ov an-sunglow" aria-hidden="true"></div>
                 <div class="foil foil--art"></div>
               </div>
               <div class="win__mid">
@@ -1465,6 +1691,10 @@ html.pk-open #hcv-nav { display: none !important; }
               <path d="M78 50 C88 44 112 44 122 50" fill="none" stroke="#fff3d0" stroke-width="2" stroke-linecap="round" opacity=".6"/>
               <path d="M66 210 C66 190 72 170 82 156" fill="none" stroke="#ffe0b0" stroke-width="2" stroke-linecap="round" opacity=".45"/>
             </svg>
+            <div class="an-split" aria-hidden="true"><svg class="fx-part fp-tail" viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><defs>
+                <linearGradient id="f2-fur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb055"/><stop offset=".6" stop-color="#f0742e"/><stop offset="1" stop-color="#b8441c"/></linearGradient>
+                <linearGradient id="f2-tail" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#c24a1c"/><stop offset=".7" stop-color="#ff8a3a"/><stop offset="1" stop-color="#ffd27a"/></linearGradient>
+              </defs><g stroke="#2a0f1e" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M128 250 C160 240 190 212 192 170 C194 136 178 112 160 108 C170 128 170 150 160 170 C150 192 132 206 112 214Z" fill="url(#f2-tail)"/><path d="M160 108 C176 114 190 134 192 160 C184 146 172 138 164 136 C168 126 166 116 160 108Z" fill="#fff4e4"/></g></svg><svg class="fx-part fp-body" viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><g stroke="#2a0f1e" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M56 252 C52 206 60 150 76 104 L124 104 C140 150 148 206 144 252Z" fill="url(#f2-fur)"/><path d="M78 252 C76 210 82 160 100 128 C118 160 124 210 122 252Z" fill="#fff4e4" stroke-width="2"/><path d="M88 176 L100 190 L112 176 M90 200 L100 212 L110 200" fill="none" stroke-width="1.4" opacity=".45"/><path d="M74 252 C72 236 76 226 84 222 C92 226 94 238 92 252Z M108 252 C106 238 108 226 116 222 C124 226 128 236 126 252Z" fill="#3a1620" stroke-width="2"/></g></svg><svg class="fx-part fp-ear fp-ear--l" viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><g stroke="#2a0f1e" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M64 70 L52 0 L96 46Z" fill="url(#f2-fur)"/><path d="M66 58 L59 16 L86 46Z" fill="#3a1620" stroke-width="1.6"/></g></svg><svg class="fx-part fp-ear fp-ear--r" viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><g stroke="#2a0f1e" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M136 70 L148 0 L104 46Z" fill="url(#f2-fur)"/><path d="M134 58 L141 16 L114 46Z" fill="#3a1620" stroke-width="1.6"/></g></svg><svg class="fx-part fp-head" viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><g stroke="#2a0f1e" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M62 78 C60 56 78 40 100 40 C122 40 140 56 138 78 L156 96 L132 102 C124 120 112 132 100 134 C88 132 76 120 68 102 L44 96Z" fill="url(#f2-fur)"/><path d="M68 102 L84 98 C90 104 94 110 100 112 C106 110 110 104 116 98 L132 102 C124 120 112 132 100 134 C88 132 76 120 68 102Z" fill="#fff4e4" stroke-width="2"/><path d="M94 118 C96 114 104 114 106 118 C104 122 96 122 94 118Z" fill="#2a0f1e" stroke-width="1.4"/></g><g><path d="M78 50 C88 44 112 44 122 50" fill="none" stroke="#fff3d0" stroke-width="2" stroke-linecap="round" opacity=".6"/><path d="M66 210 C66 190 72 170 82 156" fill="none" stroke="#ffe0b0" stroke-width="2" stroke-linecap="round" opacity=".45"/></g></svg><svg class="fx-part fp-eyes" viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><g stroke="#2a0f1e" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M74 80 C80 72 90 72 94 82 C88 86 80 86 74 80Z M126 80 C120 72 110 72 106 82 C112 86 120 86 126 80Z" fill="#ffe27a" stroke-width="1.8"/><ellipse cx="86" cy="80" rx="2" ry="3.6" fill="#2a0f1e" stroke="none"/><ellipse cx="114" cy="80" rx="2" ry="3.6" fill="#2a0f1e" stroke="none"/></g></svg></div>
           </div>
           <div class="layer layer--fg">
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -1498,7 +1728,7 @@ html.pk-open #hcv-nav { display: none !important; }
                 <!-- 远景：星云（柔边椭圆，模糊后没有任何边线） -->
                 <svg viewBox="0 0 320 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
                   <defs><filter id="s-blur" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="10"/></filter></defs>
-                  <g filter="url(#s-blur)" opacity=".55">
+                  <g class="st-neb" filter="url(#s-blur)" opacity=".55">
                     <ellipse cx="210" cy="90" rx="90" ry="26" fill="#ffd1f0" transform="rotate(-18 210 90)"/>
                     <ellipse cx="90" cy="170" rx="80" ry="22" fill="#9fd0ff" transform="rotate(-12 90 170)"/>
                   </g>
@@ -1507,6 +1737,10 @@ html.pk-open #hcv-nav { display: none !important; }
                     <circle cx="292" cy="150" r=".9"/><circle cx="180" cy="200" r=".8"/><circle cx="40" cy="214" r="1"/><circle cx="236" cy="226" r=".7"/>
                   </g>
                 </svg>
+                <!-- 3 级动态画面：星云缓慢漂移（独立合成层，只动 transform / opacity；静态那份在动画开启时隐藏） -->
+                <svg class="an-ov an-neb an-neb--a" viewBox="0 0 320 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#s-blur)" opacity=".55"><ellipse cx="210" cy="90" rx="90" ry="26" fill="#ffd1f0" transform="rotate(-18 210 90)"/></g></svg>
+                <svg class="an-ov an-neb an-neb--b" viewBox="0 0 320 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#s-blur)" opacity=".55"><ellipse cx="90" cy="170" rx="80" ry="22" fill="#9fd0ff" transform="rotate(-12 90 170)"/></g></svg>
+                <div class="an-ov an-twk" aria-hidden="true"><i style="--x:18%;--y:22%;--d:3.2s;--dl:-.4s"></i><i style="--x:74%;--y:16%;--d:4s;--dl:-2s"></i><i style="--x:86%;--y:62%;--d:3.6s;--dl:-1.1s"></i><i style="--x:30%;--y:78%;--d:4.4s;--dl:-3s"></i></div>
                 <div class="foil foil--art"></div>
               </div>
               <div class="win__mid">
@@ -1568,6 +1802,7 @@ html.pk-open #hcv-nav { display: none !important; }
                   <defs><radialGradient id="l-halo"><stop offset="0" stop-color="#ffe9a6" stop-opacity=".55"/><stop offset=".5" stop-color="#d9a441" stop-opacity=".22"/><stop offset="1" stop-color="#d9a441" stop-opacity="0"/></radialGradient></defs>
                   <circle cx="160" cy="130" r="150" fill="url(#l-halo)"/>
                 </svg>
+                <div class="an-ov an-halo" aria-hidden="true"></div>
                 <div class="foil foil--art"></div>
               </div>
               <div class="win__mid">
@@ -1577,6 +1812,17 @@ html.pk-open #hcv-nav { display: none !important; }
                     <filter id="l-soft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="2.2"/></filter>
                     <radialGradient id="l-ray" cx="160" cy="130" r="170" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff2c4" stop-opacity=".0"/><stop offset=".25" stop-color="#fff2c4" stop-opacity=".28"/><stop offset="1" stop-color="#fff2c4" stop-opacity="0"/></radialGradient>
                   </defs>
+                  <g class="st-ray" fill="url(#l-ray)" filter="url(#l-soft)">
+                    <path d="M160 130 L150 -40 L170 -40Z"/><path d="M160 130 L150 -40 L170 -40Z" transform="rotate(30 160 130)"/>
+                    <path d="M160 130 L150 -40 L170 -40Z" transform="rotate(60 160 130)"/><path d="M160 130 L150 -40 L170 -40Z" transform="rotate(90 160 130)"/>
+                    <path d="M160 130 L150 -40 L170 -40Z" transform="rotate(120 160 130)"/><path d="M160 130 L150 -40 L170 -40Z" transform="rotate(150 160 130)"/>
+                    <path d="M160 130 L150 -40 L170 -40Z" transform="rotate(180 160 130)"/><path d="M160 130 L150 -40 L170 -40Z" transform="rotate(210 160 130)"/>
+                    <path d="M160 130 L150 -40 L170 -40Z" transform="rotate(240 160 130)"/><path d="M160 130 L150 -40 L170 -40Z" transform="rotate(270 160 130)"/>
+                    <path d="M160 130 L150 -40 L170 -40Z" transform="rotate(300 160 130)"/><path d="M160 130 L150 -40 L170 -40Z" transform="rotate(330 160 130)"/>
+                  </g>
+                </svg>
+                <!-- 3 级动态画面：光芒缓慢旋转（独立的方形图层，光芒在图层边缘之前就已淡出 → 旋转时看不到裁切边）+ 热浪微光 -->
+                <svg class="an-ov an-rays" viewBox="-30 -60 380 380" aria-hidden="true">
                   <g fill="url(#l-ray)" filter="url(#l-soft)">
                     <path d="M160 130 L150 -40 L170 -40Z"/><path d="M160 130 L150 -40 L170 -40Z" transform="rotate(30 160 130)"/>
                     <path d="M160 130 L150 -40 L170 -40Z" transform="rotate(60 160 130)"/><path d="M160 130 L150 -40 L170 -40Z" transform="rotate(90 160 130)"/>
@@ -1586,6 +1832,7 @@ html.pk-open #hcv-nav { display: none !important; }
                     <path d="M160 130 L150 -40 L170 -40Z" transform="rotate(300 160 130)"/><path d="M160 130 L150 -40 L170 -40Z" transform="rotate(330 160 130)"/>
                   </g>
                 </svg>
+                <div class="an-ov an-heat" aria-hidden="true"><i style="--y:70%;--d:5s;--dl:0s"></i><i style="--y:70%;--d:5s;--dl:-1.7s"></i><i style="--y:70%;--d:5s;--dl:-3.4s"></i></div>
               </div>
             </div>
             <div class="card__etch"></div>
@@ -1665,8 +1912,8 @@ const CONFIG = {
   pointerPriorityMs: 400,                   // 指针活动后这段时间内忽略陀螺仪（避免打架）
 };
 const STORE_KEY = 'holo-card:all-in-one:fx';   // 开关状态记在 localStorage（体感需要用户手势授权，不记）
-const FX_KEYS = ['foil', 'etch', 'rim', 'depth', 'glare', 'rarity'];
-const FX_NAMES = { foil: '镭射', etch: '压纹', rim: '边缘光', depth: '视差破框', glare: '高光', rarity: '稀有光效', gyro: '体感' };
+const FX_KEYS = ['tilt', 'depth', 'glare', 'rim', 'anim', 'rarity', 'foil', 'etch'];
+const FX_NAMES = { foil: '镭射', etch: '压纹', rim: '边缘光', depth: '视差破框', glare: '高光', rarity: '专属特效', tilt: '倾斜', anim: '动态画面', gyro: '体感' };
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const clamp = (v, min = 0, max = 100) => Math.min(max, Math.max(min, v));
@@ -1734,7 +1981,7 @@ function setupCard(card) {
   };
   /** 统一入口：指针与陀螺仪都走同一套弹簧 */
   const applyPose = (rx, ry, px, py, o, params) => {
-    const k = reduceMotion.matches ? 0 : 1;
+    const k = (reduceMotion.matches || !fx.tilt) ? 0 : 1;   // 1 级（关倾斜）：不倾斜，只保留轻微的悬停放大 / 投影反馈
     motion.set({ rx: rx * k, ry: ry * k, px: clamp(px), py: clamp(py) }, params);
     glow.set({ o: reduceMotion.matches ? Math.min(o, 0.35) : o });
     kick();
@@ -1777,7 +2024,7 @@ function setupCard(card) {
     if (pointerActive || performance.now() - lastPointerAt < CONFIG.pointerPriorityMs) return;
     applyPose(p.rx, p.ry, p.px, p.py, 1, CONFIG.follow);
   };
-  self.settle = () => { if (!pointerActive) settle(); };
+  self.settle = (force) => { if (force || !pointerActive) settle(); };
   self.paint = render;
   return self;
 }
@@ -1845,7 +2092,7 @@ function disableGyro() {
 /* ---------- 控制面板 ---------- */
 const fxBtns = Object.fromEntries($$('.fx [data-fx]').map(b => [b.dataset.fx, b]));
 const hint = $('#fx-hint'), sum = $('#fx-sum');
-const fx = { foil: true, etch: true, rim: true, depth: true, glare: true, rarity: true };
+const fx = { tilt: true, depth: true, glare: true, rim: true, anim: true, rarity: true, foil: true, etch: true };
 try { Object.assign(fx, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch { /* 隐私模式等读不到时用默认值 */ }
 let mode = 'css', glApi = null, glLoading = null, packOpen = false;
 const extraCards = new Set();   // 不在页面网格里、但也要跟随体感的卡（开包结果页的放大卡）
@@ -1860,27 +2107,97 @@ function setGyroUi(state, text) {
   updateSummary();
 }
 function updateSummary() {
-  // 收起时的一行摘要：模式 + 关掉了哪些层 + 体感状态
-  const keys = FX_KEYS;
-  const on = keys.filter(k => fx[k]);
-  const off = keys.filter(k => !fx[k]).map(k => FX_NAMES[k]);
-  sum.textContent = `${mode === 'webgl' ? 'WebGL' : 'CSS'} 模式 · ` +
-    (off.length === 0 ? '特效全开' : off.length <= 2 ? `已关 ${off.join('、')}` : `${on.length}/${keys.length} 项开启`) +
-    (gyro.enabled ? ' · 体感开' : '');
+  // 收起时的一行摘要：等级 + 模式 + 体感状态
+  sum.textContent = (level ? `${level}级 · ${LEVEL_INFO[level].name}` : '自定义') + ` · ${mode === 'webgl' ? 'WebGL' : 'CSS'} 模式` + (gyro.enabled ? ' · 体感开' : '');
 }
+let lastTilt = null;
 function applyFx() {
   for (const k of FX_KEYS) {
     document.body.classList.toggle('no-' + k, !fx[k]);
     fxBtns[k].setAttribute('aria-pressed', String(fx[k]));
   }
-  glApi?.setEffects({ foil: fx.foil, etch: fx.etch, rim: fx.rim, glare: fx.glare, depth: fx.depth });
+  glApi?.setEffects(glEffects());
+  if (lastTilt !== null && lastTilt !== fx.tilt) for (const c of [...cards, ...extraCards]) c.settle(true);   // 关倾斜：已倾斜的卡回正
+  lastTilt = fx.tilt;
   syncAuras();
   try { localStorage.setItem(STORE_KEY, JSON.stringify(fx)); } catch { /* 忽略 */ }
+  syncLevelUi();
   updateSummary();
 }
-for (const k of FX_KEYS) fxBtns[k].addEventListener('click', () => { fx[k] = !fx[k]; applyFx(); });
+function glEffects() { return { foil: fx.foil, etch: fx.etch, rim: fx.rim, glare: fx.glare, depth: fx.depth, tilt: fx.tilt, anim: fx.anim }; }
+
+/* ---------- 卡面等级：1 基础卡面 → 5 镀闪卡面，逐级叠加的开关预设 ---------- */
+const LEVEL_KEY = 'holo-card:all-in-one:level';
+const LEVEL_INFO = {
+  1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。', on: [] },
+  2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差，角色破框而出；加上高光与卡缘边缘光 / 纸张厚度。', on: ['tilt', 'depth', 'glare', 'rim'] },
+  3: { name: '动态画面', desc: '动态画面：立绘本身在动——龙颈呼吸、雪落极光；狐狸摆尾眨眼；星辰摆转；烈日光芒流转。', on: ['tilt', 'depth', 'glare', 'rim', 'anim'] },
+  4: { name: '专属特效', desc: '专属特效：每张卡定制的粒子与环境光（冰晶寒雾 / 火星暖光 / 星尘拖尾 / 金尘日芒），含稀有光晕与徽章。', on: ['tilt', 'depth', 'glare', 'rim', 'anim', 'rarity'] },
+  5: { name: '镀闪卡面', desc: '镀闪卡面：整张卡随角度流动的镭射箔面、压纹与闪点——全部特效叠满。', on: FX_KEYS },
+};
+const presetOf = (n) => Object.fromEntries(FX_KEYS.map(k => [k, LEVEL_INFO[n].on.includes(k)]));
+/** 当前开关恰好等于某一级的预设 → 那一级；否则 0（自定义） */
+const detectLevel = () => { for (let n = 5; n >= 1; n--) { const pr = presetOf(n); if (FX_KEYS.every(k => !!fx[k] === pr[k])) return n; } return 0; };
+let level = 5, lastLevel = 5;
+const lvRows = $$('.lv__row');
+function syncLevelUi() {
+  level = detectLevel();
+  if (level) lastLevel = level;
+  for (const r of lvRows) {
+    const on = +r.dataset.lv === lastLevel;
+    r.setAttribute('aria-checked', String(on && !!level));
+    r.tabIndex = on ? 0 : -1;
+  }
+  $('#lv').classList.toggle('is-custom', !level);
+  $('#lv-tag').hidden = !!level;
+  $('#lv-desc').textContent = level ? LEVEL_INFO[level].desc : '自定义：已在「高级」里手动调整开关。点任一级恢复它的预设。';
+  try { localStorage.setItem(LEVEL_KEY, String(level || 'custom')); } catch { /* 忽略 */ }
+  if (readHash().lv !== (level || null)) writeHash({ lv: level || null });
+}
+function setLevel(n, { animate = true } = {}) {
+  n = Math.max(1, Math.min(5, n | 0));
+  const from = level || lastLevel;
+  Object.assign(fx, presetOf(n));
+  lastLevel = n;
+  applyFx();
+  if (animate && n !== from) levelSweep(n > from ? 'up' : 'down');
+}
+/** 切换等级的卡面过渡：可见卡上扫过一道柔光（升级自下而上、偏暖亮；降级自上而下、偏冷淡） */
+function levelSweep(dir) {
+  if (reduceMotion.matches) return;
+  const run = (el) => {
+    if (!el) return;
+    el.classList.toggle('down', dir === 'down');
+    const y = dir === 'up' ? ['280%', '-20%'] : ['-20%', '280%'];
+    el.animate([{ opacity: 0 }, { opacity: 1, offset: .2 }, { opacity: 1, offset: .75 }, { opacity: 0 }], { duration: 950, easing: 'ease-out' });
+    el.firstElementChild.animate([{ transform: `translateY(${y[0]})` }, { transform: `translateY(${y[1]})` }], { duration: 950, easing: 'cubic-bezier(.3,.6,.3,1)' });
+  };
+  if (mode === 'css') { for (const c of cards) if (c.visible) run(c.el.querySelector('.lv-sweep')); }
+  else run(glSweep);
+  for (const c of extraCards) run(c.el.querySelector('.lv-sweep'));
+}
+lvRows.forEach(r => r.addEventListener('click', () => setLevel(+r.dataset.lv)));
+$('.lv__list').addEventListener('keydown', (e) => {
+  const cur = level || lastLevel;
+  let n = null;
+  if (e.key === 'ArrowUp' || e.key === 'ArrowRight') n = cur + 1;          // 列表从上到下是 5→1：向上 = 升级
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') n = cur - 1;
+  else if (e.key === 'Home') n = 5; else if (e.key === 'End') n = 1;
+  if (n == null) return;
+  e.preventDefault();
+  n = Math.max(1, Math.min(5, n));
+  setLevel(n);
+  lvRows.find(r => +r.dataset.lv === n)?.focus();
+});
+// 数字键 1–5：任意位置直接切等级（输入框里、开包时、带修饰键时不响应）
+document.addEventListener('keydown', (e) => {
+  if (packOpen || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || e.target?.isContentEditable) return;
+  if (/^[1-5]$/.test(e.key)) setLevel(+e.key);
+});
+for (const k of FX_KEYS) fxBtns[k].addEventListener('click', () => { fx[k] = !fx[k]; applyFx(); });   // 手动改开关 → 等级显示「自定义」（恰好等于某级预设时显示那一级）
 fxBtns.gyro.addEventListener('click', () => { if (gyro.enabled) disableGyro(); else enableGyro(); });
-$('#fx-reset').addEventListener('click', () => { for (const k of FX_KEYS) fx[k] = true; applyFx(); });
+$('#fx-reset').addEventListener('click', () => setLevel(5));   // 「全部开启」= 5 级
 
 /* ---------- 提示条 ---------- */
 let toastTimer = 0;
@@ -1935,7 +2252,7 @@ async function setMode(m) {
       const initial = glPick.find(b => b.getAttribute('aria-pressed') === 'true')?.dataset.card || 'dragon';
       glApi = start({
         canvas, embedded: true, initialCard: initial,
-        effects: { foil: fx.foil, etch: fx.etch, rim: fx.rim, glare: fx.glare, depth: fx.depth },
+        effects: glEffects(),
         layers: collectLayerSvgs(),   // 远景 / 中景 / 角色 / 粒子：直接用 CSS 模式里的同一份 SVG
         onLayout: (rest) => { glRest = rest; placeGlAura(); },
         onFrame: (tx, ty, o) => { if (glAura) auraPose(glAura, ty, -tx, o); },   // three 约定 → CSS 约定（rx = 绕 Y，ry = 绕 X）
@@ -2001,22 +2318,95 @@ function auraPose(el, rx, ry, o) {
   s.setProperty('--ay', (-ry).toFixed(1));
   s.setProperty('--ao', clamp(o, 0, 1).toFixed(3));
 }
+/* ---------- 4 级「专属特效」：每张卡定制的粒子与环境光（纯 CSS 动画，只动 transform / opacity） ----------
+   坐标是 .sfx 盒子里的百分比（.sfx 比卡大一圈：左右各外扩 14%、上下 10%，所以粒子可以略微飘出卡框）；
+   刻意避开卡面下方的文字区 */
+const SFX_KIND = { dragon: 'ice', fox: 'ember', stardust: 'comet', star: 'comet', lion: 'gold', sun: 'gold' };
+function makeSfx(kind) {
+  const el = document.createElement('div');
+  el.className = 'sfx'; el.dataset.k = kind; el.setAttribute('aria-hidden', 'true');
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const cw = (f) => `calc(var(--card-w) * ${f.toFixed(3)})`;
+  const it = (cls, v) => `<i class="${cls}" style="${Object.entries(v).map(([k, x]) => `--${k}:${x}`).join(';')}"></i>`;
+  let h = '';
+  if (kind === 'ice') {
+    h += it('mist', { x: '50%', y: '64%', d: '7s', dl: '0s' }) + it('mist', { x: '42%', y: '20%', d: '9s', dl: '-4s' });
+    for (let i = 0; i < 11; i++) {
+      const left = i % 2 === 0, x = left ? 6 + rnd() * 14 : 80 + rnd() * 14, y = 12 + rnd() * 58;
+      h += it('sh', { x: x.toFixed(1) + '%', y: y.toFixed(1) + '%', d: (5 + rnd() * 3).toFixed(2) + 's', dl: (-rnd() * 8).toFixed(2) + 's',
+        s: (.7 + rnd() * .8).toFixed(2), r: Math.round(rnd() * 180) + 'deg', dx: cw((left ? -1 : 1) * (.04 + rnd() * .1)), dy: cw(-.12 - rnd() * .2) });
+    }
+  } else if (kind === 'ember') {
+    h += it('warm', { x: '50%', y: '60%', d: '4.5s', dl: '0s' }) + it('warm', { x: '30%', y: '30%', d: '6s', dl: '-2s' });
+    for (let i = 0; i < 14; i++) {
+      const x = 14 + rnd() * 72, y = 50 + rnd() * 22;
+      h += it('em', { x: x.toFixed(1) + '%', y: y.toFixed(1) + '%', d: (3.2 + rnd() * 2.6).toFixed(2) + 's', dl: (-rnd() * 6).toFixed(2) + 's',
+        s: (.6 + rnd() * .9).toFixed(2), dx: cw((rnd() - .5) * .22), dy: cw(-.45 - rnd() * .4) });
+    }
+  } else if (kind === 'comet') {
+    const C = [[22, 18, 24, 6.5, 0], [74, 12, 150, 8, -3], [16, 50, 18, 7.5, -5.2], [84, 44, 160, 9, -1.6], [58, 26, 32, 10, -7]];
+    for (const [x, y, r, d, dl] of C) {
+      const rad = r * Math.PI / 180;
+      h += it('cm', { x: x + '%', y: y + '%', r: r + 'deg', d: d + 's', dl: dl + 's', dx: cw(Math.cos(rad) * .42), dy: cw(Math.sin(rad) * .42) });
+    }
+    for (let i = 0; i < 8; i++) {
+      const left = i % 2 === 0;
+      h += it('sp', { x: (left ? 7 + rnd() * 16 : 77 + rnd() * 16).toFixed(1) + '%', y: (10 + rnd() * 62).toFixed(1) + '%', d: (2.6 + rnd() * 2).toFixed(2) + 's', dl: (-rnd() * 4).toFixed(2) + 's' });
+    }
+  } else if (kind === 'gold') {
+    h += it('burst', { x: '50%', y: '30%' });
+    for (let i = 0; i < 16; i++) {
+      const x = 10 + rnd() * 80, y = 38 + rnd() * 34;
+      h += it('gd', { x: x.toFixed(1) + '%', y: y.toFixed(1) + '%', d: (4.5 + rnd() * 3.5).toFixed(2) + 's', dl: (-rnd() * 8).toFixed(2) + 's',
+        s: (.6 + rnd() * 1).toFixed(2), dx: cw((rnd() - .5) * .16), dy: cw(-.3 - rnd() * .35) });
+    }
+  }
+  el.innerHTML = h;
+  return el;
+}
+/** 给页面上的每张卡装上 4 级粒子层（.layer--sfx，处在 3D 层叠里，跟着倾斜）和等级过渡的柔光层（.lv-sweep，在卡框里） */
+for (const el of $$('#css-view .card')) {
+  const rot = el.querySelector('.card__rotator'), kind = SFX_KIND[el.dataset.card];
+  if (rot && kind && !rot.querySelector('.layer--sfx')) {
+    const L = document.createElement('div');
+    L.className = 'layer layer--sfx'; L.setAttribute('aria-hidden', 'true');
+    L.appendChild(makeSfx(kind));
+    rot.appendChild(L);
+  }
+  const fr = el.querySelector('.layer--frame');
+  if (fr && !fr.querySelector('.lv-sweep')) fr.insertAdjacentHTML('beforeend', '<div class="lv-sweep" aria-hidden="true"><i></i></div>');
+}
+let glSfx = null, glSweep = null;
 let glAura = null, glRest = null, glAuraKey = null;
 const auraIO = 'IntersectionObserver' in window
   ? new IntersectionObserver((es) => { for (const en of es) en.target.classList.toggle('is-off', !en.isIntersecting); }) : null;
 /** WebGL 模式：光效层放在画布后面（画布透明），按 holo.js 报告的卡片静止矩形对齐 */
 function placeGlAura() {
-  if (!glAura || !glRest || canvas.parentElement !== glView) return;   // 画布被临时搬进开包放大框时不动
-  const s = glAura.style;
-  s.setProperty('--card-w', glRest.w.toFixed(1) + 'px');
-  s.setProperty('--card-h', glRest.h.toFixed(1) + 'px');
-  s.setProperty('--cx', (canvas.offsetLeft + glRest.x + glRest.w / 2).toFixed(1) + 'px');
-  s.setProperty('--cy', (canvas.offsetTop + glRest.y + glRest.h / 2).toFixed(1) + 'px');
+  if (!glRest || canvas.parentElement !== glView) return;   // 画布被临时搬进开包放大框时不动
+  glSweep ??= (() => { const d = document.createElement('div'); d.className = 'lv-sweep lv-sweep--gl'; d.setAttribute('aria-hidden', 'true'); d.innerHTML = '<i></i>'; glView.appendChild(d); return d; })();
+  for (const el of [glAura, glSfx, glSweep]) {
+    if (!el) continue;
+    const s = el.style;
+    s.setProperty('--card-w', glRest.w.toFixed(1) + 'px');
+    s.setProperty('--card-h', glRest.h.toFixed(1) + 'px');
+    s.setProperty('--cx', (canvas.offsetLeft + glRest.x + glRest.w / 2).toFixed(1) + 'px');
+    s.setProperty('--cy', (canvas.offsetTop + glRest.y + glRest.h / 2).toFixed(1) + 'px');
+  }
 }
 function setGlAura(key) {
   glAuraKey = key;
   if (glAura) { auraIO?.unobserve(glAura); glAura.remove(); glAura = null; }
-  if (!fx.rarity || !RARITY[key]) return;
+  if (glSfx) { auraIO?.unobserve(glSfx); glSfx.remove(); glSfx = null; }
+  if (!fx.rarity) return;
+  if (SFX_KIND[key]) {   // 4 级粒子：放在画布前面（画布不透明的卡面挡不住它），按卡片静止矩形对齐
+    glSfx = document.createElement('div');
+    glSfx.className = 'sfx-gl'; glSfx.setAttribute('aria-hidden', 'true');
+    glSfx.appendChild(makeSfx(SFX_KIND[key]));
+    glView.appendChild(glSfx);
+    auraIO?.observe(glSfx);
+  }
+  if (!RARITY[key]) { placeGlAura(); return; }
   glAura = makeAura(RARITY[key]);
   glAura.classList.add('aura--gl');
   glView.prepend(glAura);
@@ -2050,15 +2440,25 @@ if ('IntersectionObserver' in window) {
   }, { rootMargin: '120px 0px' });
   cards.forEach(c => io.observe(c.el));
 }
+{
+  // 初始等级：#lv=N > 本地记忆（数字或 custom）> 默认 5 级
+  let saved = null; try { saved = localStorage.getItem(LEVEL_KEY); } catch { /* 忽略 */ }
+  const hv = readHash().lv;
+  if (hv) { Object.assign(fx, presetOf(hv)); lastLevel = hv; }
+  else if (saved === 'custom') { lastLevel = 5; /* 沿用 localStorage 里的开关 */ }
+  else { const n = +saved >= 1 && +saved <= 5 ? +saved : 5; Object.assign(fx, presetOf(n)); lastLevel = n; }
+  for (const k of FX_KEYS) if (typeof fx[k] !== 'boolean') fx[k] = true;
+}
 applyFx();
 if (reduceMotion.matches) setGyroUi('unavailable', '已开启「减少动态效果」：卡片不倾斜，只保留光泽变化；体感不可用。');
 else if (!orientationSupported()) setGyroUi('unavailable', '当前浏览器不支持体感方向事件。');
 else setGyroUi('off');
 /* ---------- 地址栏 hash：#webgl（WebGL 模式）、#pack=种子（直接开包），可组合：#webgl&pack=seed-legend ---------- */
 function readHash() {
-  const out = { webgl: false, pack: null };
+  const out = { webgl: false, pack: null, lv: null };
   for (const t of location.hash.slice(1).split('&')) {
     if (t === 'webgl') out.webgl = true;
+    else if (/^lv=[1-5]$/.test(t)) out.lv = +t.slice(3);
     else if (t === 'pack') out.pack = '';
     else if (t.startsWith('pack=')) out.pack = decodeURIComponent(t.slice(5));
   }
@@ -2067,6 +2467,7 @@ function readHash() {
 function writeHash(next) {
   const h = { ...readHash(), ...next }, parts = [];
   if (h.webgl) parts.push('webgl');
+  if (h.lv) parts.push('lv=' + h.lv);
   if (h.pack != null) parts.push(h.pack ? 'pack=' + encodeURIComponent(h.pack) : 'pack');
   const want = parts.length ? '#' + parts.join('&') : '';
   if (location.hash !== want) history.replaceState(null, '', want || location.pathname + location.search);
@@ -2129,11 +2530,12 @@ window.addEventListener('hashchange', () => {
   const h = readHash();
   if (h.webgl !== (mode === 'webgl')) setMode(h.webgl ? 'webgl' : 'css');
   if (h.pack != null && !packOpen) openPack(h.pack);
+  if (h.lv && h.lv !== level) setLevel(h.lv);
 });
 
 // 供无头 / 自测脚本调用（不改变正常行为）
 window.__holoAio = {
-  CONFIG, cards, gyro, fx, applyFx, setMode, mapOrientation, enableGyro, disableGyro,
+  CONFIG, cards, gyro, fx, applyFx, setMode, setLevel, get level() { return level; }, mapOrientation, enableGyro, disableGyro,
   get mode() { return mode; },
   openPack, get pack() { return pack; },
   simulateOrientation(beta, gamma) { onDeviceOrientation({ beta, gamma }); },
