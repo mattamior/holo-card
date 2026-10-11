@@ -2,6 +2,14 @@
   "repo": "mattamior/holo-card",
   "versions": [
     {
+      "route": "all-in-one",
+      "branch": "feature/all-in-one",
+      "title": "汇总版 · 全部特效",
+      "short": "汇总版",
+      "desc": "四张卡同时叠加箔面镭射、局部 mask、蚀刻压纹、边缘光与纸张厚度、多层视差与角色破框，支持陀螺仪体感；中文面板逐层开关特效，一键切到 WebGL 渲染。",
+      "thumb": "screenshots/all-in-one-thumb.png"
+    },
+    {
       "route": "classic",
       "branch": "main",
       "title": "经典 CSS 版",
