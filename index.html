@@ -58,7 +58,7 @@ nav .sep { width: 1px; background: rgba(255,255,255,.15); margin: 4px 4px; }
 </script>
 </head>
 <body class="loading">
-  <a class="back" href="../">← CSS 版</a>
+  <a class="back" href="../classic/">← CSS 版</a>
   <header>
     <h1>全息闪卡 · WebGL 旗舰版</h1>
     <p class="tip">悬停倾斜 · 按住拖动旋转看背面 · 双击翻面</p>
@@ -72,12 +72,12 @@ nav .sep { width: 1px; background: rgba(255,255,255,.15); margin: 4px 4px; }
     <button type="button" id="flip">翻面</button>
   </nav>
   <div id="msg" role="alert"><div></div></div>
-  <noscript><p style="text-align:center;margin-top:40vh">需要开启 JavaScript。<a href="../" style="color:#c9b8ff">返回 CSS 版</a></p></noscript>
+  <noscript><p style="text-align:center;margin-top:40vh">需要开启 JavaScript。<a href="../classic/" style="color:#c9b8ff">返回 CSS 版</a></p></noscript>
 
 <script type="module">
 const msg = document.getElementById('msg');
 const fail = (html) => { msg.firstElementChild.innerHTML = html; msg.classList.add('show'); document.body.classList.remove('loading'); };
-const backLink = '<a href="../">返回 CSS 版（不需要 WebGL）</a>';
+const backLink = '<a href="../classic/">返回 CSS 版（不需要 WebGL）</a>';
 
 // 1) WebGL2 检测：不支持时直接提示，不下载 Three.js
 const probe = document.createElement('canvas').getContext('webgl2');
