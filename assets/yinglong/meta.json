@@ -1,0 +1,17 @@
+{
+  "source_hash": "04f1122c16a82d05b4b57df341cc64ffc54aae8d2ba153574ee100bc681fe244",
+  "source": "/workspace/shanhaijing-style-lock-dragon.jpg",
+  "crop_left": 408,
+  "crop_size": [
+    515,
+    720
+  ],
+  "art_size": [
+    630,
+    880
+  ],
+  "name": "应龙",
+  "rarity": "ur",
+  "cutout": "rembg",
+  "note": "swap-friendly; re-run prep.py after replacing source plate"
+}
