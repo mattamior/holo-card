@@ -20,3 +20,7 @@ Do **not** use region_warp anim/ for L3 while this path is active.
 - `00_body` / `.yl-l-body`: subtle idle breathe/sway (CSS)
 - mane / wingtips / eyeglow / light: existing light motion
 
+## Body punch (anti-ghost)
+`00_body.png` has mane/wingtip regions punched transparent so `01_mane` / `02_wingtips`
+can translate without doubling solid pixels. Eyeglow/light stay additive opacity-only.
+Static `art.jpg` is `visibility:hidden` whenever `.yl-layers` is shown (never both opaque).

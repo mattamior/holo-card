@@ -473,6 +473,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 
 /* 箔面可见区 = 斜向柔边光带（随 --sheen 平移），远处很淡；绝不用小圆 spotlight */
 .foil { --far: .22; --band-half: 22%; }
+.foil--art { position: absolute; inset: 0; }
 .foil--art,
 .foil--frame {
   /* 环境虹彩 + 倾斜扫过的主带；羽化柔、可见面更宽 */
@@ -515,20 +516,20 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 
 /* ---------- 高光：适度白光扫带（辅助镭射，不盖过色带） ---------- */
 .glare {
-  --glare-strength: .42;
+  --glare-strength: .28;
   background:
     linear-gradient(var(--band-angle),
       transparent 0%,
-      transparent calc(var(--sheen) * 1% - 20%),
-      rgba(255,255,255, calc(var(--glare-strength) * .1)) calc(var(--sheen) * 1% - 12%),
-      rgba(255,255,255, calc(var(--glare-strength) * .4)) calc(var(--sheen) * 1% - 4%),
-      rgba(255,255,255, calc(var(--glare-strength) * .7)) calc(var(--sheen) * 1%),
-      rgba(255,255,255, calc(var(--glare-strength) * .4)) calc(var(--sheen) * 1% + 4%),
-      rgba(255,255,255, calc(var(--glare-strength) * .1)) calc(var(--sheen) * 1% + 12%),
-      transparent calc(var(--sheen) * 1% + 20%),
+      transparent calc(var(--sheen) * 1% - 22%),
+      rgba(255,255,255, calc(var(--glare-strength) * .08)) calc(var(--sheen) * 1% - 12%),
+      rgba(255,255,255, calc(var(--glare-strength) * .28)) calc(var(--sheen) * 1% - 4%),
+      rgba(255,255,255, calc(var(--glare-strength) * .45)) calc(var(--sheen) * 1%),
+      rgba(255,255,255, calc(var(--glare-strength) * .28)) calc(var(--sheen) * 1% + 4%),
+      rgba(255,255,255, calc(var(--glare-strength) * .08)) calc(var(--sheen) * 1% + 12%),
+      transparent calc(var(--sheen) * 1% + 22%),
       transparent 100%);
   mix-blend-mode: soft-light;
-  opacity: calc(var(--o) * 0.48 + var(--tilt) * 0.32);
+  opacity: calc(var(--o) * 0.32 + var(--tilt) * 0.22);
 }
 
 /* ---------- 边缘光（假菲涅尔）：倾斜越大，卡缘越亮（来自 foil-mask） ---------- */
@@ -563,36 +564,60 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
    ========================================================= */
 /* ---- 彩虹镭射 ---- */
 .card[data-effect="rainbow"] .foil {
-  /* 平衡：倾斜可见虹彩色带 + 不洗白。color-dodge 控亮，overlay 提色相 */
-  --holo-angle: calc(115deg + var(--rx) * 2.6deg - var(--ry) * 1.7deg);
-  --holo-speed: 1;
-  --band: 3.8%;
+  /* L5 镭射：双层硬可见——frame soft-light 底 + art color 提色相；倾斜时明显扫过 */
+  --holo-angle: calc(115deg + var(--rx) * 3deg - var(--ry) * 2deg);
+  --holo-speed: 1.1;
+  --band: 3.6%;
   --scan: 1px;
-  --holo-max: .9;
+  --holo-max: 1;
   background-image:
     repeating-linear-gradient(90deg,
-      transparent 0, rgba(255,255,255,.12) var(--scan), transparent calc(var(--scan) * 2)),
+      transparent 0, rgba(255,255,255,.18) var(--scan), transparent calc(var(--scan) * 2)),
     repeating-linear-gradient(var(--holo-angle),
-      var(--c-violet) 0%,
-      var(--c-blue) calc(var(--band) * 1),
-      var(--c-green) calc(var(--band) * 2),
-      var(--c-yellow) calc(var(--band) * 3),
-      var(--c-red) calc(var(--band) * 4),
-      var(--c-violet) calc(var(--band) * 5));
-  background-size: auto, 420% 420%;
+      #d26aff 0%,
+      #2ec8ff calc(var(--band) * 1),
+      #3dffb0 calc(var(--band) * 2),
+      #ffe94a calc(var(--band) * 3),
+      #ff4d7a calc(var(--band) * 4),
+      #d26aff calc(var(--band) * 5),
+      #2ec8ff calc(var(--band) * 6));
+  background-size: auto, 340% 340%;
   background-position:
-    calc(var(--sheen) * -0.4px) 0,
+    calc(var(--sheen) * -0.5px) calc(var(--ry) * 0.4px),
     clamp(0%, calc(var(--sheen) * var(--holo-speed) * 1%), 100%)
-    clamp(0%, calc((100 - var(--sheen)) * var(--holo-speed) * 0.65% + 18%), 100%);
-  background-blend-mode: soft-light, normal;
-  filter: brightness(calc(.48 + var(--tilt) * .22)) contrast(1.22) saturate(calc(1.45 + var(--tilt) * .35));
-  mix-blend-mode: color-dodge;
-  opacity: calc((0.32 + var(--o) * 0.68) * var(--holo-max) * (0.5 + var(--tilt) * 0.5));
+    clamp(0%, calc((100 - var(--sheen)) * var(--holo-speed) * 0.75% + 10%), 100%);
+  background-blend-mode: overlay, normal;
+  filter: brightness(calc(.85 + var(--tilt) * .12)) contrast(1.3) saturate(calc(1.85 + var(--tilt) * .6));
+  mix-blend-mode: soft-light;
+  opacity: calc((0.72 + var(--o) * 0.28) * var(--holo-max) * (0.7 + var(--tilt) * 0.3));
 }
-/* 亮底插画（应龙）补一层 soft-light，保证色带仍可读 */
 .card[data-effect="rainbow"] .foil--art {
-  /* 继承上条背景；略抬不透明度，仍用 color-dodge（亮度已压） */
-  opacity: calc((0.38 + var(--o) * 0.62) * var(--holo-max, .9) * (0.52 + var(--tilt) * 0.48));
+  mix-blend-mode: color;
+  opacity: calc((0.55 + var(--o) * 0.4) * (0.62 + var(--tilt) * 0.38));
+  filter: saturate(calc(2.2 + var(--tilt) * .7)) contrast(1.12);
+}
+.card[data-effect="rainbow"] .foil--frame {
+  mix-blend-mode: soft-light;
+  opacity: calc((0.68 + var(--o) * 0.32) * (0.72 + var(--tilt) * 0.28));
+}
+/* 再叠一层硬光扫带（伪元素不可用时用第二 foil 通道：提高 art 对比） */
+.card[data-effect="rainbow"] .foil--art::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(var(--holo-angle, 115deg),
+    hsla(290,90%,70%,.0) 0%,
+    hsla(190,95%,65%,.35) calc(var(--band, 4%) * 1),
+    hsla(140,90%,60%,.35) calc(var(--band, 4%) * 2),
+    hsla(50,95%,60%,.35) calc(var(--band, 4%) * 3),
+    hsla(350,90%,65%,.35) calc(var(--band, 4%) * 4),
+    hsla(290,90%,70%,.0) calc(var(--band, 4%) * 5));
+  background-size: 300% 300%;
+  background-position:
+    clamp(0%, calc(var(--sheen) * 1.1%), 100%)
+    clamp(0%, calc((100 - var(--sheen)) * 0.7% + 12%), 100%);
+  mix-blend-mode: soft-light;
+  opacity: calc(0.45 + var(--tilt) * 0.4 + var(--o) * 0.2);
+  pointer-events: none;
 }
 
 /* ---- 闪光星点 ---- */
@@ -1020,17 +1045,22 @@ body.modal-open .fx__adv > summary { display: flex !important; }
 /* =========================================================
    控制面板的开关
    ========================================================= */
-body.no-foil  .foil       { display: none; }
-body.no-etch  .card__etch { display: none; }
-body.no-glare .glare      { display: none; }
-body.no-rim   .card__rim, body.no-rim .layer--edge { display: none; }
+/* 全局高级开关（body）+ 每卡等级预设（.card.no-*） */
+body.no-foil  .foil,       .card.no-foil  .foil       { display: none !important; }
+body.no-etch  .card__etch, .card.no-etch  .card__etch { display: none !important; }
+body.no-glare .glare,      .card.no-glare .glare      { display: none !important; }
+/* L1–4 无卡缘边框；仅 L5（未加 .no-rim）显示半细 rim + 纸缘 */
+body.no-rim   .card__rim, body.no-rim .layer--edge,
+.card.no-rim  .card__rim, .card.no-rim .layer--edge { display: none !important; }
 /* 关掉视差破框：各层几乎贴回卡面（保留极小的层间距，保证前后顺序稳定），角色和粒子裁回卡内 */
-body.no-depth .card { --depth: .02; }
-body.no-depth .card[data-break="none"]::after { display: none; }
-body.no-depth .card[data-break="none"] .layer--char {
+body.no-depth .card, .card.no-depth { --depth: .02; }
+body.no-depth .card[data-break="none"]::after,
+.card.no-depth[data-break="none"]::after { display: none; }
+body.no-depth .card[data-break="none"] .layer--char,
+.card.no-depth[data-break="none"] .layer--char {
   clip-path: inset(calc(var(--breakout) / (var(--win-h) + var(--breakout)) * 100%) 0 0 0);
 }
-body.no-depth .layer--fg {
+body.no-depth .layer--fg, .card.no-depth .layer--fg {
   clip-path: inset(calc((var(--breakout) - var(--win-t)) / (1 - var(--win-t) + var(--breakout)) * 100%) 0 0 0 round 0 0 12px 12px);
 }
 
@@ -1280,27 +1310,27 @@ body.no-rarity .layer--fg .p { animation: none; }
   50% { transform: translate3d(calc(var(--card-w) * .02), 48%, 0); }
   85% { opacity: .75; } 100% { transform: translate3d(calc(var(--card-w) * -.01), 96%, 0); opacity: 0; }
 }
-body:not(.no-anim) .card[data-card="dragon"] .layer--char > svg { transform-origin: 50% 100%; animation: an-breathe 4.6s ease-in-out infinite alternate; }
-@keyframes an-breathe { from { transform: scale(1, 1); } to { transform: translateY(-.4%) scale(1.006, 1.022); } }
+body:not(.no-anim) .card[data-card="dragon"]:not(.no-anim) .layer--char > svg { transform-origin: 50% 100%; animation: an-breathe 4.6s ease-in-out infinite alternate; }
+@keyframes an-breathe { from { transform: scale(1, 1); } to { transform: translateY(-1%) scale(1.012, 1.038); } }
 /* 焰尾狐 L3：拆层后尾巴摇摆、耳朵偶尔抖动、眨眼（夕阳光晕 → L4） */
-body:not(.no-anim) .card[data-card="fox"] .layer--char > svg:not(.fx-part) { display: none; }
+body:not(.no-anim) .card[data-card="fox"]:not(.no-anim) .layer--char > svg:not(.fx-part) { display: none; }
 .an-split { position: absolute; inset: 0; }
 .layer--char .fx-part { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: block; filter: drop-shadow(0 10px 10px rgba(0,0,0,.45)); }
 .layer--char .fp-eyes { filter: none; }
 /* 原点按 viewBox 坐标换算到元素百分比（角色层宽高比固定：xMidYMax meet，纵向撑满） */
-.fp-body { transform-origin: 50% 88%; animation: an-fox-body 4.6s ease-in-out infinite alternate; }
-.fp-head { transform-origin: 50% 55%; animation: an-fox-body 4.6s ease-in-out infinite alternate; }
+body:not(.no-anim) .card[data-card="fox"]:not(.no-anim) .fp-body { transform-origin: 50% 88%; animation: an-fox-body 4.2s ease-in-out infinite alternate; }
+body:not(.no-anim) .card[data-card="fox"]:not(.no-anim) .fp-head { transform-origin: 50% 55%; animation: an-fox-body 4.2s ease-in-out infinite alternate; }
 @keyframes an-fox-body {
   from { transform: translateY(0) scale(1, 1); }
-  to   { transform: translateY(-0.45%) scale(1.004, 1.016); }
+  to   { transform: translateY(-1.1%) scale(1.012, 1.035); }
 }
-.fp-tail { transform-origin: 63.3% 92.8%; animation: an-tail 3.4s ease-in-out infinite alternate; }
+body:not(.no-anim) .card[data-card="fox"]:not(.no-anim) .fp-tail { transform-origin: 63.3% 92.8%; animation: an-tail 3.4s ease-in-out infinite alternate; }
 @keyframes an-tail { from { transform: rotate(-3.5deg); } to { transform: rotate(4.5deg); } }
-.fp-ear--l { transform-origin: 41.1% 23.2%; animation: an-ear-l 6.4s ease-in-out infinite; }
-.fp-ear--r { transform-origin: 58.9% 23.2%; animation: an-ear-r 8.2s ease-in-out -3s infinite; }
+body:not(.no-anim) .card[data-card="fox"]:not(.no-anim) .fp-ear--l { transform-origin: 41.1% 23.2%; animation: an-ear-l 6.4s ease-in-out infinite; }
+body:not(.no-anim) .card[data-card="fox"]:not(.no-anim) .fp-ear--r { transform-origin: 58.9% 23.2%; animation: an-ear-r 8.2s ease-in-out -3s infinite; }
 @keyframes an-ear-l { 0%, 84%, 100% { transform: rotate(0); } 87% { transform: rotate(-8deg); } 90% { transform: rotate(2.5deg); } 93% { transform: rotate(-3deg); } 96% { transform: rotate(0); } }
 @keyframes an-ear-r { 0%, 84%, 100% { transform: rotate(0); } 87% { transform: rotate(8deg); } 90% { transform: rotate(-2.5deg); } 93% { transform: rotate(3deg); } 96% { transform: rotate(0); } }
-.fp-eyes { transform-origin: 50% 32%; animation: an-blink 5.2s ease-in-out infinite; }
+body:not(.no-anim) .card[data-card="fox"]:not(.no-anim) .fp-eyes { transform-origin: 50% 32%; animation: an-blink 5.2s ease-in-out infinite; }
 @keyframes an-blink { 0%, 92%, 100% { transform: scaleY(1); } 94.5% { transform: scaleY(.08); } 97% { transform: scaleY(1); } }
 .an-sunglow {
   background: radial-gradient(ellipse 34% 40% at 27% 62%, rgba(255,226,160,.55) 0%, rgba(255,170,110,.25) 45%, rgba(255,140,100,0) 100%);
@@ -1308,7 +1338,7 @@ body:not(.no-anim) .card[data-card="fox"] .layer--char > svg:not(.fx-part) { dis
 }
 @keyframes an-glow { from { opacity: .3; transform: scale(.94); } to { opacity: .95; transform: scale(1.06); } }
 /* 星尘狐 L3：星辰徽记缓慢摆转 / 脉动（星云漂移、星点闪烁 → L4） */
-body:not(.no-anim) .card[data-card="stardust"] .layer--char > svg { animation: an-star 7s ease-in-out infinite alternate; }
+body:not(.no-anim) .card[data-card="stardust"]:not(.no-anim) .layer--char > svg { animation: an-star 7s ease-in-out infinite alternate; }
 @keyframes an-star { from { transform: rotate(-6deg) scale(.985); } to { transform: rotate(6deg) scale(1.04); } }
 .an-neb--a { animation: an-neb-a 19s ease-in-out infinite alternate; }
 .an-neb--b { animation: an-neb-b 23s ease-in-out infinite alternate; }
@@ -1325,47 +1355,57 @@ body:not(.no-anim) .card[data-card="stardust"] .layer--char > svg { animation: a
   background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,246,214,.3) 0%, rgba(255,232,170,.12) 45%, rgba(255,232,170,0) 100%);
   animation: an-heat var(--d) ease-in-out var(--dl) infinite; opacity: 0; }
 @keyframes an-heat { 0% { transform: translateY(0) scaleX(.9); opacity: 0; } 30% { opacity: .9; } 100% { transform: translateY(-300%) scaleX(1.12); opacity: 0; } }
-body:not(.no-anim) .card[data-card="lion"] .layer--char > svg { animation: an-pulse 4.5s ease-in-out infinite alternate; }
+body:not(.no-anim) .card[data-card="lion"]:not(.no-anim) .layer--char > svg { animation: an-pulse 4.5s ease-in-out infinite alternate; }
 @keyframes an-pulse { from { transform: scale(.985); } to { transform: scale(1.03); } }
 
 /* ---------- 其它卡环境叠层：仅 L4+（rarity）；与应龙 mist/mane/embers/godrays 分层一致 ---------- */
-body.no-rarity .an-aur,
-body.no-rarity .an-moon,
-body.no-rarity .an-snow,
-body.no-rarity .an-sunglow,
-body.no-rarity .an-neb,
-body.no-rarity .an-twk,
-body.no-rarity .an-rays,
-body.no-rarity .an-halo,
-body.no-rarity .an-heat {
+body.no-rarity .an-aur, .card.no-rarity .an-aur,
+body.no-rarity .an-moon, .card.no-rarity .an-moon,
+body.no-rarity .an-snow, .card.no-rarity .an-snow,
+body.no-rarity .an-sunglow, .card.no-rarity .an-sunglow,
+body.no-rarity .an-neb, .card.no-rarity .an-neb,
+body.no-rarity .an-twk, .card.no-rarity .an-twk,
+body.no-rarity .an-rays, .card.no-rarity .an-rays,
+body.no-rarity .an-halo, .card.no-rarity .an-halo,
+body.no-rarity .an-heat, .card.no-rarity .an-heat {
   display: none !important;
 }
 
-/* 应龙 L3：分层轻动（option C）。L1–L2 静帧 art.jpg；禁用 region_warp 序列。 */
-body:not(.no-anim) .card[data-card="yinglong"] .st-yl-fog { display: none; }
-body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art {
-  animation: none !important; /* 禁止旧 breathe / warp */
-  transform: none;
-}
+/* 应龙 L3：分层轻动（option C）。L1–L2 静帧 art.jpg；禁用 region_warp 序列。
+   互斥：yl-layers 显示时静帧/sprite 必须不可见，避免重影。 */
+body:not(.no-anim) .card[data-card="yinglong"]:not(.no-anim) .st-yl-fog { display: none; }
 .card[data-card="yinglong"] .photo-art--wing { display: none !important; }
 .card[data-card="yinglong"] .photo-art-sheet {
   position: absolute; inset: 0; width: 100%; height: 100%;
   background-repeat: no-repeat; pointer-events: none; z-index: 2;
 }
-body.yl-sprite-sheet .card[data-card="yinglong"] .win__bg > img.photo-art { opacity: 0; }
+body.yl-sprite-sheet .card[data-card="yinglong"] .win__bg > img.photo-art {
+  opacity: 0; visibility: hidden;
+}
 
-/* 应龙 L3 分层栈：仅 L3+（非 no-anim）且素材就绪时显示 */
+/* 应龙 L3 分层栈：仅 L3+（卡未 no-anim）且素材就绪 */
 .card[data-card="yinglong"] .yl-layers {
   position: absolute; inset: 0;
   pointer-events: none; overflow: hidden;
   display: none; z-index: 1;
+  isolation: isolate;
 }
-body.yl-layers-ready:not(.no-anim) .card[data-card="yinglong"] .yl-layers { display: block; }
-body.yl-layers-ready:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art { opacity: 0; }
+body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .yl-layers { display: block; }
+/* 分层开时彻底关掉静帧 / sprite，永不双露 */
+body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .win__bg > img.photo-art,
+body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .photo-art-sheet {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  animation: none !important;
+  transform: none !important;
+}
 .card[data-card="yinglong"] .yl-layers > img {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: var(--yl-pos, 50% 28%);
   display: block; pointer-events: none;
+  /* 禁止滤镜叠影 */
+  filter: none;
+  backface-visibility: hidden;
 }
 .card[data-card="yinglong"] .yl-layers .yl-l-body { z-index: 1; }
 .card[data-card="yinglong"] .yl-layers .yl-l-light { z-index: 2; }
@@ -1373,52 +1413,57 @@ body.yl-layers-ready:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.ph
 .card[data-card="yinglong"] .yl-layers .yl-l-mane { z-index: 4; }
 .card[data-card="yinglong"] .yl-layers .yl-l-eyeglow { z-index: 5; }
 
-/* L3 躯体：极小幅度呼吸/晃动（与鬃/翼/眼光叠层） */
-body:not(.no-anim).yl-layers-ready .card[data-card="yinglong"] .yl-l-body {
+/* L3 躯体呼吸（孔洞已从 body 抠出鬃/翼，叠层可动不重影） */
+body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .yl-l-body {
   transform-origin: 48% 72%;
-  animation: yl-l-body 4.8s ease-in-out infinite alternate;
+  animation: yl-l-body 4.2s ease-in-out infinite alternate;
   will-change: transform;
 }
 @keyframes yl-l-body {
-  from { transform: translate(0, 0) scale(1, 1) rotate(-0.2deg); }
-  to   { transform: translate(0.15%, -0.55%) scale(1.007, 1.016) rotate(0.2deg); }
+  from { transform: translate(0, 0) scale(1, 1) rotate(-0.45deg); }
+  to   { transform: translate(0.35%, -1.35%) scale(1.018, 1.042) rotate(0.45deg); }
 }
 
-body:not(.no-anim).yl-layers-ready .card[data-card="yinglong"] .yl-l-mane {
-  animation: yl-l-mane 3.5s ease-in-out infinite alternate;
+body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .yl-l-mane {
+  transform-origin: 42% 40%;
+  animation: yl-l-mane 3.2s ease-in-out infinite alternate;
 }
 @keyframes yl-l-mane {
-  from { transform: translateX(-3px); }
-  to   { transform: translateX(3px); }
+  from { transform: translate(-4px, 1px) rotate(-0.6deg); }
+  to   { transform: translate(5px, -2px) rotate(0.6deg); }
 }
-body:not(.no-anim).yl-layers-ready .card[data-card="yinglong"] .yl-l-wingtips {
+body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .yl-l-wingtips {
   transform-origin: 70% 35%;
-  animation: yl-l-wing 4.2s ease-in-out infinite alternate;
+  animation: yl-l-wing 3.8s ease-in-out infinite alternate;
 }
 @keyframes yl-l-wing {
-  from { transform: translateY(-2px) rotate(-0.4deg); }
-  to   { transform: translateY(2px) rotate(0.4deg); }
+  from { transform: translateY(-4px) rotate(-1deg); }
+  to   { transform: translateY(4px) rotate(1deg); }
 }
-body:not(.no-anim).yl-layers-ready .card[data-card="yinglong"] .yl-l-eyeglow {
-  animation: yl-l-eye 2.8s ease-in-out infinite alternate;
+body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .yl-l-eyeglow {
+  animation: yl-l-eye 2.6s ease-in-out infinite alternate;
 }
 @keyframes yl-l-eye {
-  from { opacity: .7; }
+  from { opacity: .65; }
   to   { opacity: 1; }
 }
-body:not(.no-anim).yl-layers-ready .card[data-card="yinglong"] .yl-l-light {
-  animation: yl-l-light 5.5s ease-in-out infinite alternate;
+body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .yl-l-light {
+  animation: yl-l-light 5s ease-in-out infinite alternate;
 }
 @keyframes yl-l-light {
-  from { opacity: .5; }
-  to   { opacity: .85; }
+  from { opacity: .45; }
+  to   { opacity: .9; }
 }
 
 /* 应龙 L4 环境层（rarity）：云雾 / 鬃毛柔光 / 金尘 / 神性光带 */
 body.no-rarity .card[data-card="yinglong"] .an-yl-mist,
+.card.no-rarity[data-card="yinglong"] .an-yl-mist,
 body.no-rarity .card[data-card="yinglong"] .an-yl-mane,
+.card.no-rarity[data-card="yinglong"] .an-yl-mane,
 body.no-rarity .card[data-card="yinglong"] .an-yl-embers,
-body.no-rarity .card[data-card="yinglong"] .an-godrays {
+.card.no-rarity[data-card="yinglong"] .an-yl-embers,
+body.no-rarity .card[data-card="yinglong"] .an-godrays,
+.card.no-rarity[data-card="yinglong"] .an-godrays {
   display: none !important;
 }
 body:not(.no-rarity) .card[data-card="yinglong"] .an-yl-mist { will-change: transform, opacity; }
@@ -2543,6 +2588,9 @@ const CONFIG = {
   pointerPriorityMs: 400,                   // 指针活动后这段时间内忽略陀螺仪（避免打架）
 };
 const STORE_KEY = 'holo-card:all-in-one:fx';   // 开关状态记在 localStorage（体感需要用户手势授权，不记）
+let focusedCard = null;   // 弹层当前卡；等级按卡存储，须尽早声明避免 TDZ
+let modalOpen = false;
+
 const FX_KEYS = ['tilt', 'depth', 'glare', 'rim', 'anim', 'rarity', 'foil', 'etch'];
 const FX_NAMES = { foil: '镭射', etch: '压纹', rim: '边缘光', depth: '视差', glare: '高光', rarity: '专属特效', tilt: '倾斜', anim: '动态画面', gyro: '体感' };
 
@@ -2629,7 +2677,9 @@ function setupCard(card) {
   };
   /** 统一入口：指针与陀螺仪都走同一套弹簧 */
   const applyPose = (rx, ry, px, py, o, params) => {
-    const k = (reduceMotion.matches || !fx.tilt) ? 0 : 1;   // 1 级（关倾斜）：不倾斜，只保留轻微的悬停放大 / 投影反馈
+    // 全局高级关 tilt 或本卡等级无 tilt（.no-tilt）→ 不倾斜
+    const tiltOn = fx.tilt && !card.classList.contains('no-tilt');
+    const k = (reduceMotion.matches || !tiltOn) ? 0 : 1;
     motion.set({ rx: rx * k, ry: ry * k, px: clamp(px), py: clamp(py) }, params);
     glow.set({ o: reduceMotion.matches ? Math.min(o, 0.35) : o });
     kick();
@@ -2762,7 +2812,8 @@ function setGyroUi(state, text) {
 }
 function updateSummary() {
   // 收起时的一行摘要：等级 + 模式 + 体感状态
-  sum.textContent = (level ? `${level}级 · ${LEVEL_INFO[level].name}` : '自定义') + ` · ${mode === 'webgl' ? 'WebGL' : 'CSS'} 模式` + (gyro.enabled ? ' · 体感开' : '');
+  const who = focusedCard ? `${focusedCard} · ` : '';
+  sum.textContent = who + (level ? `${level}级 · ${LEVEL_INFO[level].name}` : '自定义') + ` · ${mode === 'webgl' ? 'WebGL' : 'CSS'} 模式` + (gyro.enabled ? ' · 体感开' : '');
 }
 let lastTilt = null;
 function applyFx() {
@@ -2781,7 +2832,8 @@ function applyFx() {
 function glEffects() { return { foil: fx.foil, etch: fx.etch, rim: fx.rim, glare: fx.glare, depth: fx.depth, tilt: fx.tilt, anim: fx.anim }; }
 
 /* ---------- 卡面等级：1 基础卡面 → 5 镀闪卡面，逐级叠加的开关预设 ---------- */
-const LEVEL_KEY = 'holo-card:all-in-one:level';
+const LEVEL_KEY = 'holo-card:all-in-one:level'; // legacy single; migrated into per-card map
+const CARD_LEVELS_KEY = 'holo-card:all-in-one:card-levels';
 const LEVEL_INFO = {
   1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。无边框。', on: [] },
   2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（框内）；高光。1–4 级无卡缘边框。', on: ['tilt', 'depth', 'glare'] },
@@ -2790,13 +2842,59 @@ const LEVEL_INFO = {
   5: { name: '镀闪卡面', desc: '镀闪卡面：镭射箔面、压纹、闪点，并显示细边框（约为旧版一半粗细）。', on: FX_KEYS },
 };
 const presetOf = (n) => Object.fromEntries(FX_KEYS.map(k => [k, LEVEL_INFO[n].on.includes(k)]));
-/** 当前开关恰好等于某一级的预设 → 那一级；否则 0（自定义） */
-const detectLevel = () => { for (let n = 5; n >= 1; n--) { const pr = presetOf(n); if (FX_KEYS.every(k => !!fx[k] === pr[k])) return n; } return 0; };
+/** 每张卡自己的等级（localStorage 映射）；列表缩略图与弹层各自反映 */
+let cardLevels = {};
+try { cardLevels = JSON.parse(localStorage.getItem(CARD_LEVELS_KEY) || '{}') || {}; } catch { cardLevels = {}; }
+function saveCardLevels() {
+  try { localStorage.setItem(CARD_LEVELS_KEY, JSON.stringify(cardLevels)); } catch { /* 忽略 */ }
+}
+function getCardLevel(key) {
+  const n = +cardLevels[key];
+  return (n >= 1 && n <= 5) ? n : 0;
+}
+function detectLevelFromCard(cardEl) {
+  if (!cardEl) return 0;
+  const n = +cardEl.dataset.lv;
+  if (n >= 1 && n <= 5) {
+    const pr = presetOf(n);
+    if (FX_KEYS.every(k => cardEl.classList.contains('no-' + k) === !pr[k])) return n;
+  }
+  return 0;
+}
+function applyCardLevel(cardEl, n) {
+  if (!cardEl?.dataset?.card) return;
+  n = Math.max(1, Math.min(5, n | 0));
+  const key = cardEl.dataset.card;
+  const pr = presetOf(n);
+  cardEl.dataset.lv = String(n);
+  for (const k of FX_KEYS) cardEl.classList.toggle('no-' + k, !pr[k]);
+  cardLevels[key] = n;
+  saveCardLevels();
+  // 稀有光晕按卡
+  const c = cards.find(x => x.el === cardEl);
+  if (c) {
+    const rareOn = fx.rarity && !cardEl.classList.contains('no-rarity');
+    if (rareOn && !c.aura && RARITY[key]) {
+      c.aura = makeAura(RARITY[key]);
+      c.aura.classList.toggle('is-off', cardEl.classList.contains('is-off'));
+      cardEl.after(c.aura);
+      c.paint?.();
+    } else if (!rareOn && c.aura) { c.aura.remove(); c.aura = null; }
+    c.settle?.(true);
+  }
+}
 let level = 5, lastLevel = 5;
 const lvRows = $$('.lv__row');
+function activeLevelKey() {
+  return focusedCard || null;
+}
 function syncLevelUi() {
-  level = detectLevel();
+  const key = activeLevelKey();
+  const cardEl = key ? document.querySelector(`.card[data-card="${CSS.escape(key)}"]`) : null;
+  level = cardEl ? detectLevelFromCard(cardEl) : (key ? getCardLevel(key) : 0);
+  if (!level && key && getCardLevel(key)) level = getCardLevel(key);
   if (level) lastLevel = level;
+  else if (key) lastLevel = getCardLevel(key) || lastLevel;
   for (const r of lvRows) {
     const on = +r.dataset.lv === lastLevel;
     r.setAttribute('aria-checked', String(on && !!level));
@@ -2804,16 +2902,28 @@ function syncLevelUi() {
   }
   $('#lv').classList.toggle('is-custom', !level);
   $('#lv-tag').hidden = !!level;
-  $('#lv-desc').textContent = level ? LEVEL_INFO[level].desc : '自定义：已在「高级」里手动调整开关。点任一级恢复它的预设。';
+  const desc = level ? LEVEL_INFO[level].desc : '自定义：已在「高级」里手动调整开关。点任一级恢复它的预设。';
+  $('#lv-desc').textContent = key ? `${key} · ${desc}` : desc;
   try { localStorage.setItem(LEVEL_KEY, String(level || 'custom')); } catch { /* 忽略 */ }
-  if (readHash().lv !== (level || null)) writeHash({ lv: level || null });
+  const wantLv = level || null;
+  if (readHash().lv !== wantLv) writeHash({ lv: wantLv });
 }
-function setLevel(n, { animate = true } = {}) {
+function setLevel(n, { animate = true, key = null } = {}) {
   n = Math.max(1, Math.min(5, n | 0));
+  const targetKey = key || activeLevelKey();
   const from = level || lastLevel;
-  Object.assign(fx, presetOf(n));
+  if (!targetKey) {
+    for (const c of $$('.card[data-card]')) applyCardLevel(c, n);
+    lastLevel = n;
+    syncLevelUi();
+    if (animate && n !== from) levelSweep(n > from ? 'up' : 'down');
+    return;
+  }
+  const cardEl = document.querySelector(`.card[data-card="${CSS.escape(targetKey)}"]`);
+  applyCardLevel(cardEl, n);
   lastLevel = n;
-  applyFx();
+  // 等级只写在卡上（.card.no-*）。不要用 body.no-rim 等全局类，否则列表里 L5 卡会被误关边框/箔。
+  syncLevelUi();
   if (animate && n !== from) levelSweep(n > from ? 'up' : 'down');
 }
 /** 切换等级的卡面过渡：可见卡上扫过一道柔光（升级自下而上、偏暖亮；降级自上而下、偏冷淡） */
@@ -2826,8 +2936,11 @@ function levelSweep(dir) {
     el.animate([{ opacity: 0 }, { opacity: 1, offset: .2 }, { opacity: 1, offset: .75 }, { opacity: 0 }], { duration: 950, easing: 'ease-out' });
     el.firstElementChild.animate([{ transform: `translateY(${y[0]})` }, { transform: `translateY(${y[1]})` }], { duration: 950, easing: 'cubic-bezier(.3,.6,.3,1)' });
   };
-  if (mode === 'css') { for (const c of cards) if (c.visible) run(c.el.querySelector('.lv-sweep')); }
-  else run(glSweep);
+  if (mode === 'css') {
+    const focusEl = focusedCard ? document.querySelector(`.card[data-card="${CSS.escape(focusedCard)}"]`) : null;
+    if (focusEl) run(focusEl.querySelector('.lv-sweep'));
+    else { for (const c of cards) if (c.visible) run(c.el.querySelector('.lv-sweep')); }
+  } else run(glSweep);
   for (const c of extraCards) run(c.el.querySelector('.lv-sweep'));
 }
 lvRows.forEach(r => r.addEventListener('click', () => setLevel(+r.dataset.lv)));
@@ -2847,7 +2960,10 @@ $('.lv__list').addEventListener('keydown', (e) => {
 document.addEventListener('keydown', (e) => {
   if (packOpen || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || e.target?.isContentEditable) return;
-  if (/^[1-5]$/.test(e.key)) setLevel(+e.key);
+  if (/^[1-5]$/.test(e.key)) {
+    if (!focusedCard) return;
+    setLevel(+e.key);
+  }
 });
 for (const k of FX_KEYS) fxBtns[k].addEventListener('click', () => { fx[k] = !fx[k]; applyFx(); });   // 手动改开关 → 等级显示「自定义」（恰好等于某级预设时显示那一级）
 fxBtns.gyro.addEventListener('click', () => { if (gyro.enabled) disableGyro(); else enableGyro(); });
@@ -3068,8 +3184,8 @@ function setGlAura(key) {
   placeGlAura();
 }
 function syncAuras() {
-  const on = !!fx.rarity;
   for (const c of cards) {
+    const on = !!fx.rarity && !c.el.classList.contains('no-rarity');
     if (on && !c.aura && RARITY[c.el.dataset.card]) {
       c.aura = makeAura(RARITY[c.el.dataset.card]);
       c.aura.classList.toggle('is-off', c.el.classList.contains('is-off'));
@@ -3077,7 +3193,8 @@ function syncAuras() {
       c.paint();
     } else if (!on && c.aura) { c.aura.remove(); c.aura = null; }
   }
-  if (on !== !!glAura) setGlAura(glAuraKey || glPick.find(b => b.getAttribute('aria-pressed') === 'true')?.dataset.card || 'dragon');
+  const glOn = !!fx.rarity;
+  if (glOn !== !!glAura) setGlAura(glAuraKey || glPick.find(b => b.getAttribute('aria-pressed') === 'true')?.dataset.card || 'dragon');
 }
 
 /* ---------- 初始化 ---------- */
@@ -3095,15 +3212,29 @@ if ('IntersectionObserver' in window) {
   cards.forEach(c => io.observe(c.el));
 }
 {
-  // 初始等级：#lv=N > 本地记忆（数字或 custom）> 默认 5 级
+  // 迁移：旧的全局 level → 填进尚未记录的卡。等级效果只挂在 .card 上。
   let saved = null; try { saved = localStorage.getItem(LEVEL_KEY); } catch { /* 忽略 */ }
-  const hv = readHash().lv;
-  if (hv) { Object.assign(fx, presetOf(hv)); lastLevel = hv; }
-  else if (saved === 'custom') { lastLevel = 5; /* 沿用 localStorage 里的开关 */ }
-  else { const n = +saved >= 1 && +saved <= 5 ? +saved : 5; Object.assign(fx, presetOf(n)); lastLevel = n; }
-  for (const k of FX_KEYS) if (typeof fx[k] !== 'boolean') fx[k] = true;
+  const legacy = (+saved >= 1 && +saved <= 5) ? +saved : 5;
+  const hv = readHash();
+  for (const el of $$('.card[data-card]')) {
+    const key = el.dataset.card;
+    let n = getCardLevel(key);
+    if (!n) n = legacy;
+    if (hv.lv && hv.focus === key) n = hv.lv;
+    else if (hv.lv && !hv.focus && !cardLevels[key]) n = hv.lv;
+    applyCardLevel(el, n);
+  }
+  if (hv.lv && hv.focus) {
+    const el = document.querySelector(`.card[data-card="${CSS.escape(hv.focus)}"]`);
+    if (el) applyCardLevel(el, hv.lv);
+    lastLevel = hv.lv;
+  } else if (hv.lv) lastLevel = hv.lv;
+  else lastLevel = legacy;
+  // body 高级开关默认全开，避免全局 no-rim 盖住各卡自己的 L5 边框
+  for (const k of FX_KEYS) fx[k] = true;
 }
 applyFx();
+syncLevelUi();
 if (reduceMotion.matches) setGyroUi('unavailable', '已开启「减少动态效果」：卡片不倾斜，只保留光泽变化；体感不可用。');
 else if (!orientationSupported()) setGyroUi('unavailable', '当前浏览器不支持体感方向事件。');
 else setGyroUi('off');
@@ -3186,7 +3317,7 @@ window.addEventListener('hashchange', () => {
   const h = readHash();
   if (h.webgl !== (mode === 'webgl')) setMode(h.webgl ? 'webgl' : 'css');
   if (h.pack != null && !packOpen) openPack(h.pack);
-  if (h.lv && h.lv !== level) setLevel(h.lv);
+  if (h.lv && h.lv !== level) setLevel(h.lv, { key: h.focus || focusedCard || null });
 });
 
 // 供无头 / 自测脚本调用（不改变正常行为）
@@ -3208,8 +3339,7 @@ const stageEl = $('#css-view');
 const shellHome = document.createComment('shell-home');
 shellEl.after(shellHome);
 
-let modalOpen = false;
-let focusedCard = null;
+// focusedCard / modalOpen 已在脚本前部声明
 let focusedWrap = null;
 let focusPlaceholder = null;
 let cardOrder = [];
@@ -3312,9 +3442,12 @@ function openCardDetail(key, { syncHash = true } = {}) {
   modalOpen = true;
   const fxPanel = $('#fx');
   if (fxPanel) fxPanel.open = true;
+  // 切卡：等级 UI 跟随该卡已存等级（不改其它卡、不动 body.no-*）
+  lastLevel = getCardLevel(key) || 5;
+  syncLevelUi();
   wakeCard(key);
   try { $('#holo-modal-close')?.focus({ preventScroll: true }); } catch { /* */ }
-  if (syncHash) writeHash({ focus: key });
+  if (syncHash) writeHash({ focus: key, lv: getCardLevel(key) || lastLevel });
 }
 
 function closeCardDetail({ syncHash = true } = {}) {
@@ -3413,7 +3546,7 @@ window.addEventListener('hashchange', () => {
 });
 
 window.__holoAio = {
-  CONFIG, cards, gyro, fx, applyFx, setMode, setLevel, get level() { return level; }, mapOrientation, enableGyro, disableGyro,
+  CONFIG, cards, gyro, fx, applyFx, setMode, setLevel, get level() { return level; }, get cardLevels() { return { ...cardLevels }; }, applyCardLevel, getCardLevel, mapOrientation, enableGyro, disableGyro,
   get mode() { return mode; },
   openPack, get pack() { return pack; },
   openCardDetail, closeCardDetail, get viewMode() { return modalOpen ? 'detail' : 'list'; }, get focusedCard() { return focusedCard; }, get modalOpen() { return modalOpen; },
