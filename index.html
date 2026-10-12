@@ -706,16 +706,152 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
           mask-image: linear-gradient(to top, transparent 0, rgba(0,0,0,.35) calc(var(--char-fade) * .45), #000 var(--char-fade));
 }
 
-body.focus-one .stage { --cols: 1; justify-content: center;
+/* =========================================================
+   列表 → 单卡预览（对齐山海经图鉴：默认缩略图网格，点击进详情）
+   ========================================================= */
+.list-bar {
+  width: min(100%, 1280px);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 12px 16px; margin: 0 0 18px; padding: 0 4px;
+}
+.list-bar__hint { margin: 0; font-size: 13px; opacity: .55; }
+.list-bar__pack {
+  appearance: none; border: 1px solid rgba(210,195,255,.45);
+  background: linear-gradient(120deg, rgba(150,120,255,.38), rgba(255,140,200,.28));
+  color: #f4f0ff; font: inherit; font-size: 13px; font-weight: 600;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(80,50,160,.25);
+}
+.list-bar__pack:hover { filter: brightness(1.08); }
+.list-bar__pack:focus-visible { outline: 2px solid #c6b8ff; outline-offset: 2px; }
+
+.card-list {
+  width: min(100%, 1280px);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+  gap: 14px;
+  margin: 0 0 8px;
+}
+@media (min-width: 640px) {
+  .card-list { grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 18px; }
+}
+
+.clist-item {
+  position: relative;
+  display: flex; flex-direction: column;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: #16141f;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  box-shadow: 0 4px 16px rgba(0,0,0,.28);
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.clist-item:hover, .clist-item:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(210,195,255,.35);
+  background: #1c1830;
+  outline: none;
+}
+.clist-item__art {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: linear-gradient(160deg, #1a1628, #0e0c14 70%);
+  overflow: hidden;
+}
+.clist-item__art img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.clist-item__art--dragon {
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(120,200,255,.35), transparent 55%),
+    linear-gradient(165deg, #0a1230, #1d3566 55%, #3f73a6);
+}
+.clist-item__art--fox {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255,140,90,.4), transparent 50%),
+    linear-gradient(165deg, #3b2a5c, #120c22 70%);
+}
+.clist-item__art--stardust {
+  background:
+    radial-gradient(circle at 30% 30%, #ff9ad5 0%, transparent 40%),
+    radial-gradient(circle at 70% 60%, #7a3cff 0%, transparent 45%),
+    linear-gradient(165deg, #2a1848, #1a0b3d);
+}
+.clist-item__art--lion {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255,220,120,.45), transparent 50%),
+    linear-gradient(165deg, #3a2a10, #a57a28 50%, #2a1d08);
+}
+.clist-item__mark {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: clamp(2.4rem, 8vw, 3.2rem);
+  opacity: .55; pointer-events: none;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,.45));
+}
+.clist-item__badge {
+  position: absolute; top: 10px; right: 10px;
+  padding: 3px 8px; border-radius: 999px;
+  font-size: .68rem; letter-spacing: .04em;
+  background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.12);
+  color: #c8c4d8; backdrop-filter: blur(6px);
+}
+.clist-item__badge[data-r="r"] { color: #cfe6ff; border-color: rgba(160,200,255,.45); }
+.clist-item__badge[data-r="ur"] { color: #ffe6a8; border-color: rgba(255,214,130,.55); }
+.clist-item__body { padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 4px; min-height: 68px; }
+.clist-item__name {
+  margin: 0; font-size: 1.02rem; font-weight: 600; letter-spacing: .04em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.clist-item__meta {
+  margin: 0; font-size: .75rem; color: rgba(200,196,220,.55);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.detail-bar {
+  width: min(100%, 1520px);
+  display: none;
+  align-items: center; gap: 12px;
+  margin: 0 0 12px; padding: 0 4px;
+}
+.detail-bar__back {
+  appearance: none; border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06); color: #e8e8f0;
+  font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 10px; cursor: pointer;
+}
+.detail-bar__back:hover { background: rgba(255,255,255,.1); }
+.detail-bar__back:focus-visible { outline: 2px solid #c6b8ff; outline-offset: 2px; }
+.detail-bar__title { margin: 0; font-size: 14px; opacity: .7; }
+
+body.view-list .shell { display: none !important; }
+body.view-list .detail-bar { display: none !important; }
+body.view-list .card-list { display: grid; }
+body.view-list .list-bar { display: flex; }
+
+body.view-detail .card-list,
+body.view-detail .list-bar { display: none !important; }
+body.view-detail .detail-bar { display: flex; }
+body.view-detail .stage {
+  --cols: 1; justify-content: center;
   --card-w: clamp(280px, min(72vw, 420px), 440px);
-  --card-h: calc(var(--card-w) * 88 / 63);  /* 与 --card-w 同作用域，避免只拉宽不拉高 */
+  --card-h: calc(var(--card-w) * 88 / 63);
   padding-top: calc(var(--card-h) * max(0, var(--breakout) - var(--win-t)) + 36px);
 }
-body.focus-one .stage > div[hidden] { display: none !important; }
-body.focus-one .side { display: none; }
-body.focus-one .shell { display: block; }
-body.focus-one .main { max-width: none; }
-body.focus-one header h1 { font-size: 1.15rem; }
+body.view-detail .stage > div[hidden] { display: none !important; }
+body.view-detail header.mast h1 { font-size: 1.15rem; }
+/* 详情保留侧栏等级 / 特效；窄屏仍是面板在上 */
+@media (min-width: 900px) {
+  body.view-detail .shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--side-w, 268px);
+    grid-template-areas: "main side";
+  }
+}
 
 
 /* =========================================================
@@ -1635,11 +1771,22 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
 
 </style>
 </head>
-<body>
+<body class="view-list">
   <header class="mast">
     <h1>全息闪卡 · 汇总版</h1>
-    <p class="tip">应龙（《山海经·大荒东经》 / 《大荒北经》）已加入汇总。鼠标悬停 / 手指拖动，或开启体感。默认 5 级镀闪；单卡预览加 <code>#focus=yinglong</code>。电脑右边栏，手机在卡片上方。</p>
+    <p class="tip">点选卡片进入全息预览；等级与特效在详情侧栏调节。默认列表浏览，深链可用 <code>#lv=3&amp;focus=yinglong</code>。</p>
   </header>
+
+  <div class="list-bar" id="list-bar">
+    <p class="list-bar__hint">图鉴列表 · 点击查看全息卡面</p>
+    <button type="button" class="list-bar__pack" id="list-pack" aria-haspopup="dialog">✦ 开包（5 张）</button>
+  </div>
+  <main id="card-list" class="card-list" aria-label="闪卡列表"></main>
+
+  <div class="detail-bar" id="detail-bar">
+    <button type="button" class="detail-bar__back" id="detail-back">← 返回图鉴</button>
+    <p class="detail-bar__title" id="detail-title">单卡预览</p>
+  </div>
 
   <div class="shell">
   <aside class="side">
@@ -2845,23 +2992,158 @@ window.addEventListener('hashchange', () => {
 
 // 供无头 / 自测脚本调用（不改变正常行为）
 
-/* ---------- 单卡聚焦：#focus=yinglong 只显示应龙（便于预览 / 换图验收） ---------- */
-(function focusCard() {
-  const key = readHash().focus;
-  if (!key) return;
-  document.body.classList.add('focus-one');
-  for (const wrap of $$('#css-view > div')) {
-    const c = wrap.querySelector('.card');
-    wrap.hidden = !(c && c.dataset.card === key);
+/* ---------- 列表 → 单卡预览（默认图鉴网格；#focus=slug 进详情） ---------- */
+const TIP_DEFAULT = '点选卡片进入全息预览；等级与特效在详情侧栏调节。默认列表浏览，深链可用 #lv=3&focus=yinglong。';
+const TIP_BY_CARD = {
+  yinglong: '应龙（《山海经·大荒东经》 / 《大荒北经》）。悬停 / 拖动看箔面；侧栏调等级。Esc 或「返回图鉴」回列表。',
+};
+const CLIST_MARK = { dragon: '❄', fox: '🦊', stardust: '✦', lion: '☀', yinglong: '🐉' };
+const tipEl = document.querySelector('header .tip');
+const cardListEl = $('#card-list');
+const detailTitle = $('#detail-title');
+let viewMode = 'list'; // list | detail
+let focusedCard = null;
+
+function cardWraps() { return $$('#css-view > div'); }
+
+function buildCardList() {
+  if (!cardListEl || cardListEl.childElementCount) return;
+  const frag = document.createDocumentFragment();
+  for (const wrap of cardWraps()) {
+    const card = wrap.querySelector('.card');
+    if (!card) continue;
+    const id = card.dataset.card;
+    const rarity = card.dataset.rarity || 'r';
+    const name = card.querySelector('.card__head span')?.textContent?.trim() || id;
+    const rarityLabel = card.querySelector('.card__head small')?.textContent?.trim()
+      || (rarity === 'ur' ? '传说' : '稀有');
+    const meta = wrap.querySelector('.label small')?.textContent?.trim() || '';
+    const artSrc = card.querySelector('img.photo-art')?.getAttribute('src');
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'clist-item';
+    btn.dataset.card = id;
+    btn.setAttribute('aria-label', `${name}，${rarityLabel}`);
+
+    const art = document.createElement('div');
+    art.className = 'clist-item__art' + (artSrc ? '' : ` clist-item__art--${id}`);
+    if (artSrc) {
+      const img = document.createElement('img');
+      img.src = artSrc;
+      img.alt = name;
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      art.appendChild(img);
+    } else {
+      const mark = document.createElement('span');
+      mark.className = 'clist-item__mark';
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = CLIST_MARK[id] || '◆';
+      art.appendChild(mark);
+    }
+    const badge = document.createElement('span');
+    badge.className = 'clist-item__badge';
+    badge.dataset.r = rarity;
+    badge.textContent = rarityLabel;
+    art.appendChild(badge);
+
+    const body = document.createElement('div');
+    body.className = 'clist-item__body';
+    const h = document.createElement('h3');
+    h.className = 'clist-item__name';
+    h.textContent = name;
+    const p = document.createElement('p');
+    p.className = 'clist-item__meta';
+    p.textContent = meta || rarityLabel;
+    body.append(h, p);
+
+    btn.append(art, body);
+    btn.addEventListener('click', () => openCardDetail(id));
+    frag.appendChild(btn);
   }
-  const tip = document.querySelector('header .tip');
-  if (tip && key === 'yinglong') tip.textContent = '应龙（《山海经·大荒东经》 / 《大荒北经》）· 等级 5。换图：assets/yinglong/prep.py。';
-})();
+  cardListEl.appendChild(frag);
+}
+
+function setView(mode, key) {
+  viewMode = mode;
+  focusedCard = mode === 'detail' ? key : null;
+  document.body.classList.toggle('view-list', mode === 'list');
+  document.body.classList.toggle('view-detail', mode === 'detail');
+  document.body.classList.remove('focus-one');
+  for (const wrap of cardWraps()) {
+    const c = wrap.querySelector('.card');
+    if (mode === 'detail') wrap.hidden = !(c && c.dataset.card === key);
+    else wrap.hidden = false;
+  }
+  if (tipEl) {
+    tipEl.textContent = (mode === 'detail' && TIP_BY_CARD[key]) || TIP_DEFAULT;
+  }
+  if (detailTitle) {
+    const name = key && $(`.card[data-card="${key}"] .card__head span`)?.textContent?.trim();
+    detailTitle.textContent = name ? `${name} · 全息预览` : '单卡预览';
+  }
+  if (mode === 'list') {
+    for (const c of cards) c.settle?.(true);
+  }
+  // 详情进视口后 IntersectionObserver 会摘掉 is-off；列表时 stage 已隐藏
+  writeHash({ focus: mode === 'detail' ? key : null });
+}
+
+function openCardDetail(key) {
+  if (!key || !$(`.card[data-card="${key}"]`)) return;
+  setView('detail', key);
+  // 窄屏：展开特效面板，方便调等级
+  const fxPanel = $('#fx');
+  if (fxPanel && matchMedia('(max-width: 899px)').matches) fxPanel.open = true;
+  try { $(`.card[data-card="${key}"]`).scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch { /* */ }
+}
+
+function closeCardDetail() {
+  if (viewMode !== 'detail') return;
+  setView('list', null);
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { window.scrollTo(0, 0); }
+}
+
+buildCardList();
+{
+  const bootFocus = readHash().focus;
+  if (bootFocus && $(`.card[data-card="${bootFocus}"]`)) openCardDetail(bootFocus);
+  else setView('list', null);
+}
+
+$('#detail-back')?.addEventListener('click', closeCardDetail);
+$('#list-pack')?.addEventListener('click', () => openPack());
+
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (packOpen) return;
+  if (viewMode === 'detail') {
+    e.preventDefault();
+    closeCardDetail();
+  }
+});
+
+window.addEventListener('hashchange', () => {
+  const h = readHash();
+  if (h.focus && h.focus !== focusedCard) openCardDetail(h.focus);
+  else if (!h.focus && viewMode === 'detail') {
+    // 仅清 focus，不二次 writeHash（由浏览器后退触发）
+    viewMode = 'list';
+    focusedCard = null;
+    document.body.classList.add('view-list');
+    document.body.classList.remove('view-detail', 'focus-one');
+    for (const wrap of cardWraps()) wrap.hidden = false;
+    if (tipEl) tipEl.textContent = TIP_DEFAULT;
+    for (const c of cards) c.settle?.(true);
+  }
+});
 
 window.__holoAio = {
   CONFIG, cards, gyro, fx, applyFx, setMode, setLevel, get level() { return level; }, mapOrientation, enableGyro, disableGyro,
   get mode() { return mode; },
   openPack, get pack() { return pack; },
+  openCardDetail, closeCardDetail, get viewMode() { return viewMode; }, get focusedCard() { return focusedCard; },
   simulateOrientation(beta, gamma) { onDeviceOrientation({ beta, gamma }); },
 };
 
