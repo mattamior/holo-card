@@ -301,6 +301,8 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   inset: 0;
   border-radius: var(--card-radius);
   overflow: hidden;
+  /* clip-path reinforces corner clip under preserve-3d (overflow+radius alone can fail) */
+  clip-path: inset(0 round var(--card-radius));
   isolation: isolate;
   background: var(--frame);
 }
@@ -1052,26 +1054,45 @@ body.no-glare .glare,      .card.no-glare .glare      { display: none !important
 /* ---------- 边框真相：厚奶油/金边 = .layer--frame 衬底（由 --win-* 留白露出）+ .win::after 描边环。
    .card__rim 只是边缘高光，不是那圈厚框。等级类挂在 .card，勿用 body.no-rim 管列表。 ---------- */
 
-/* L1–4 真·无边框：内容贴边（≤~1% 留白），关掉奶油衬底与窗口描边环 */
+/* L1–4 真·无边框：插画贴边，无奶油外框；顶角必须跟卡片圆角裁齐 */
 .card.no-rim {
-  --win-l: .01;
-  --win-t: .01;
-  --win-w: .98;
-  --win-h: .64;
+  --win-l: .008;
+  --win-t: .008;
+  --win-w: .984;
+  --win-h: .645;
   --frame: #141018; /* 吞掉香槟/金渐变，残余缝不再读成厚框 */
 }
 .card.no-rim .layer--frame {
   background: #141018;
+  overflow: hidden;
+  border-radius: var(--card-radius);
+  clip-path: inset(0 round var(--card-radius));
 }
 .card.no-rim .layer--frame::before {
   display: none;
   opacity: 0;
+}
+/* 顶角跟卡片椭圆圆角（减掉贴边 inset）；底边贴描述带保持直角 */
+.card.no-rim .win {
+  --nr-rx: max(0px, calc(var(--card-w) * 0.05 - var(--win-l) * var(--card-w)));
+  --nr-ry: max(0px, calc(var(--card-h) * 0.034 - var(--win-t) * var(--card-h)));
+  border-radius: var(--nr-rx) / var(--nr-ry);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  overflow: hidden;
 }
 .card.no-rim .win::after {
   display: none !important;
   border: none !important;
   box-shadow: none !important;
   content: none !important;
+}
+.card.no-rim .layer--char {
+  --nr-rx: max(0px, calc(var(--card-w) * 0.05 - var(--win-l) * var(--card-w)));
+  --nr-ry: max(0px, calc(var(--card-h) * 0.034 - var(--win-t) * var(--card-h)));
+  border-radius: var(--nr-rx) / var(--nr-ry);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 .card.no-rim .card__foot {
   left: 2.2%;
@@ -1080,6 +1101,7 @@ body.no-glare .glare,      .card.no-glare .glare      { display: none !important
 .card.no-rim .card__body {
   bottom: 5.2%;
   padding: 4% 4.5%;
+  border-radius: 0;
 }
 body.no-rim   .card__rim, body.no-rim .layer--edge,
 .card.no-rim  .card__rim, .card.no-rim .layer--edge {
@@ -1090,23 +1112,69 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
   background: none !important;
 }
 
-/* L5 细边框：衬底约半厚（左右合计 ~3%），窗口环 1px，保留细 rim 高光 */
+/* L5 细边框（对齐王者）：整卡均匀奶油/米白外框 ~2.5% 边宽，内缘细深线，脚注落在底框带内 */
 .card[data-lv="5"]:not(.no-rim) {
-  --win-l: .015;
-  --win-t: .012;
-  --win-w: .97;
-  --win-h: .63;
+  --win-l: .025;
+  --win-t: .022;
+  --win-w: .95;
+  --win-h: .605;
+  --frame: linear-gradient(165deg, #f5f1e6 0%, #ebe4d4 48%, #f3efe6 100%);
+  --rim-cream: #efe9dc;
+}
+.card[data-lv="5"]:not(.no-rim) .layer--frame {
+  background: linear-gradient(165deg, #f6f2e8 0%, #e8e1d0 50%, #f2eee4 100%);
+  overflow: hidden;
+  border-radius: var(--card-radius);
+  clip-path: inset(0 round var(--card-radius));
+}
+.card[data-lv="5"]:not(.no-rim) .layer--frame::before {
+  opacity: .12; /* 极淡纹理，不要脏香槟块 */
+  background: repeating-linear-gradient(135deg, transparent 0 7px, rgba(255,255,255,.2) 7px 8px);
+}
+/* 内缘深线：包住插画窗 + 描述区，半径略紧于外框使奶油带在弯角均匀 */
+.card[data-lv="5"]:not(.no-rim) .layer--frame::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--win-l) * 100%);
+  width: calc(var(--win-w) * 100%);
+  top: calc(var(--win-t) * 100%);
+  bottom: 2.4%;
+  border-radius: 2.4% / 1.65%;
+  border: 1px solid rgba(28, 22, 14, .38);
+  box-shadow:
+    inset 0 0 0 0.5px rgba(255,255,255,.18),
+    0 0 0 0.5px rgba(255,255,255,.08);
+  pointer-events: none;
+  z-index: 6;
+}
+.card[data-lv="5"]:not(.no-rim) .win {
+  border-radius: 2.4% / 1.65%;
+  border-bottom-left-radius: 2px;
+  border-bottom-right-radius: 2px;
+  overflow: hidden;
 }
 .card[data-lv="5"]:not(.no-rim) .win::after {
-  border-width: 1px;
+  border: none;
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.1),
-    inset 0 3px 8px rgba(0,0,0,.35),
-    inset 0 0 12px rgba(0,0,0,.18);
+    inset 0 0 0 1px rgba(20,16,12,.2),
+    inset 0 2px 6px rgba(0,0,0,.28),
+    inset 0 0 10px rgba(0,0,0,.12);
+}
+.card[data-lv="5"]:not(.no-rim) .card__body {
+  bottom: 6.8%; /* 给底框奶油带 + 脚注留空 */
+  border-radius: 2px;
+  background: rgba(16, 14, 22, .86);
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.22),
+    inset 0 1px 0 rgba(255,255,255,.06);
 }
 .card[data-lv="5"]:not(.no-rim) .card__foot {
-  left: 3.2%;
-  right: 3.2%;
+  left: calc(var(--win-l) * 100% + 1.2%);
+  right: calc((1 - var(--win-l) - var(--win-w)) * 100% + 1.2%);
+  bottom: 2.6%;
+  color: rgba(72, 58, 40, .78);
+  opacity: .9;
+  letter-spacing: .05em;
 }
 .card[data-lv="5"]:not(.no-rim) .card__rim {
   display: block !important;
@@ -2903,7 +2971,7 @@ const LEVEL_INFO = {
   2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（框内）；高光。1–4 级真无边框（无奶油衬底）。', on: ['tilt', 'depth', 'glare'] },
   3: { name: '动态画面', desc: '动态画面：立绘主体在动——应龙躯体微呼吸+鬃/翼/眼光；霜晶龙颈呼吸；焰尾狐躯体+摆尾/耳/眨眼；星尘狐星辰摆转；金曜狮王徽记脉动。环境在 4 级。真无边框。', on: ['tilt', 'depth', 'glare', 'anim'] },
   4: { name: '专属特效', desc: '专属特效：环境在动（云雾/极光/星云等）与稀有光晕。真无边框。', on: ['tilt', 'depth', 'glare', 'anim', 'rarity'] },
-  5: { name: '镀闪卡面', desc: '镀闪卡面：镭射箔面、压纹、闪点，并显示细边框（约 1.5% 金/奶油衬底 + 1px 窗环，约为旧版一半以下）。', on: FX_KEYS },
+  5: { name: '镀闪卡面', desc: '镀闪卡面：镭射箔面、压纹、闪点；王者式细奶油外框（约 2.5% 边宽、内缘深线、脚注落在底框带）。', on: FX_KEYS },
 };
 const presetOf = (n) => Object.fromEntries(FX_KEYS.map(k => [k, LEVEL_INFO[n].on.includes(k)]));
 /** 每张卡自己的等级（localStorage 映射）；列表缩略图与弹层各自反映 */
