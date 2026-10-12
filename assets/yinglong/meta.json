@@ -13,11 +13,11 @@
   "name": "应龙",
   "rarity": "ur",
   "cutout": "rembg",
-  "card_blurb": "有翼之龙。助黄帝杀蚩尤与夸父，处南极；旱时仿其形，乃得大雨。",
+  "card_blurb": "有翼之龙（郭璞注「龙有翼者也」）。黄帝令应龙攻蚩尤于冀州之野，应龙畜水；杀蚩尤与夸父，不得复上，处南极，故下数旱。旱而为应龙之状，乃得大雨。其后去南方，故南方多雨。",
   "card_source_line": "《山海经·大荒东经》 / 《大荒北经》",
   "guopu_note": "应龙，龙有翼者也。（有翼依郭璞注/广雅）",
   "art_note": "白金鸟羽为项目画风，勿写成经文",
   "copy_file": "/workspace/yinglong-card-copy.md",
-  "note": "full plate for object-fit:contain in window; no portrait crop",
+  "note": "full plate contain + long classical blurb filling card__body",
   "art_mode": "full-landscape-contain"
 }
