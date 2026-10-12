@@ -9,14 +9,13 @@
     "f07.jpg",
     "f08.jpg"
   ],
-  "fps": 8,
+  "fps": 10,
   "loop": true,
   "size": [
     768,
     1024
   ],
   "aspect": "3:4",
-  "note": "idle: breath, mane/whiskers, wing tips, soft eye glow",
-  "source": "procedural_displacement_from_art.jpg",
-  "qa": "GenerateImage unavailable to executor; identity pixel-locked to art.jpg; motion is mesh-warp idle not AI-regen"
+  "method": "region_warp_from_art",
+  "note": "idle: breath, mane/whiskers, wing tips, soft eye glow; identity locked to art.jpg"
 }

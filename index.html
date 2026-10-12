@@ -637,8 +637,9 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .card[data-card="yinglong"] {
   --breakout: 0;
-  --bleed: 0px;                 /* contain 贴窗，避免出血再裁 */
-  /* --win-t / --win-h 用全局 .12 / .46：恢复全貌改动前的高窗 + 正常描述区 */
+  --bleed: 0px;
+  --win-t: .12;
+  --win-h: .4725;               /* 插画窗 ≈ 4:3 横版（闪卡直接用横版母图 contain，不裁竖窗） */
   --frame: linear-gradient(160deg, #f4efe4, #c4b59a 40%, #8a7a5c 70%, #e8dcc4);
   --frame-pattern: radial-gradient(circle at 50% 0%, rgba(255,230,170,.35), transparent 55%);
   --panel: rgba(18,14,10,.82);
@@ -646,7 +647,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   --head-shadow: rgba(0,0,0,.4);
   --ring: rgba(255,220,160,.4);
   --art-bg: #2a2e36;
-  --yl-pos: 52% 44%;
+  --yl-pos: 50% 50%;
 }
 /* 照片卡通用 */
 .win__bg > img.photo-art {
