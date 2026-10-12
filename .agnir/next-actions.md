@@ -2,7 +2,6 @@
 
 Updated: 2026-10-12
 
-1. Spot-check Pages portrait modal + list after deploy.
-2. When new Yinglong L3 frames arrive: prefer portrait for the vertical window; keep warp rejected.
-3. Optional: richer SVG-card list thumbs (photo covers).
-4. Foil polish / breakout only from Principal feedback.
+1. Spot-check Pages: real-card list → modal 2× → L3 no rim / L5 thin rim + foil; Esc/backdrop; ‹›.
+2. Further foil polish only from Principal feedback.
+3. Portrait L3 sequence frames when art arrives; keep warp rejected.

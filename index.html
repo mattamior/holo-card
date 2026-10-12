@@ -59,7 +59,7 @@
   --etch-boost: .42;            /* 悬停 + 大幅倾斜时的蚀刻可见度 */
   --rim-idle: .1;               /* 静止边缘光 */
   --rim-max: .5;                /* 大幅倾斜时边缘光 */
-  --thickness: 1.6px;           /* 纸张侧面厚度 */
+  --thickness: 0.8px;  /* L5 纸缘，约为原先一半 */           /* 纸张侧面厚度 */
 
   /* 程序化纹理（内联 SVG，无外部图片） */
   --mask-etch: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='80' height='80' fill='%23555555'/><g fill='none' stroke='%23ffffff' stroke-width='0.7' opacity='0.95'><path d='M0 10H80M0 30H80M0 50H80M0 70H80'/><path d='M10 0V80M30 0V80M50 0V80M70 0V80' opacity='0.55'/><path d='M0 0L80 80M0 40L40 80M40 0L80 40' stroke-width='0.45' opacity='0.7'/></g><g fill='%23ffffff' opacity='0.85'><circle cx='20' cy='20' r='1.1'/><circle cx='60' cy='20' r='1.1'/><circle cx='20' cy='60' r='1.1'/><circle cx='60' cy='60' r='1.1'/><circle cx='40' cy='40' r='1.4'/></g><g fill='none' stroke='%23ffffff' stroke-width='0.9' opacity='0.8'><path d='M40 12l4 8h-8z'/><path d='M40 68l4-8h-8z'/><path d='M12 40l8 4v-8z'/><path d='M68 40l-8 4v-8z'/></g></svg>");
@@ -461,7 +461,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 
 /* 倾斜驱动的条带扫光（真闪卡）：--px/--py/--sheen 由 JS lightFromTilt 导出；不是圆心聚光灯 */
 .card {
-  --band-angle: calc(118deg + var(--rx) * 1.35deg - var(--ry) * 0.9deg);
+  --band-angle: calc(118deg + var(--rx) * 2.1deg - var(--ry) * 1.4deg);
   --sheen: 50; /* 0–100，条带沿对角扫过的相位；JS 写入 */
 }
 
@@ -472,17 +472,20 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 
 /* 箔面可见区 = 斜向柔边光带（随 --sheen 平移），远处很淡；绝不用小圆 spotlight */
-.foil { --far: .12; --band-half: 14%; }
+.foil { --far: .1; --band-half: 18%; }
 .foil--art,
 .foil--frame {
+  /* 更宽的羽化，避免硬色带接缝 */
   --band-mask: linear-gradient(var(--band-angle),
     rgba(0,0,0, var(--far)) 0%,
-    rgba(0,0,0, var(--far)) calc(var(--sheen) * 1% - var(--band-half) - 8%),
-    rgba(0,0,0, .45)        calc(var(--sheen) * 1% - var(--band-half)),
-    #000                    calc(var(--sheen) * 1% - 2%),
-    #000                    calc(var(--sheen) * 1% + 2%),
-    rgba(0,0,0, .45)        calc(var(--sheen) * 1% + var(--band-half)),
-    rgba(0,0,0, var(--far)) calc(var(--sheen) * 1% + var(--band-half) + 8%),
+    rgba(0,0,0, var(--far)) calc(var(--sheen) * 1% - var(--band-half) - 14%),
+    rgba(0,0,0, .28)        calc(var(--sheen) * 1% - var(--band-half) - 4%),
+    rgba(0,0,0, .72)        calc(var(--sheen) * 1% - var(--band-half) * .45),
+    #000                    calc(var(--sheen) * 1% - 1%),
+    #000                    calc(var(--sheen) * 1% + 1%),
+    rgba(0,0,0, .72)        calc(var(--sheen) * 1% + var(--band-half) * .45),
+    rgba(0,0,0, .28)        calc(var(--sheen) * 1% + var(--band-half) + 4%),
+    rgba(0,0,0, var(--far)) calc(var(--sheen) * 1% + var(--band-half) + 14%),
     rgba(0,0,0, var(--far)) 100%);
   -webkit-mask-image: var(--band-mask);
           mask-image: var(--band-mask);
@@ -512,28 +515,31 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 
 /* ---------- 高光：斜向柔光带扫过（盖住卡框与窗口，不盖文字和角色） ---------- */
 .glare {
-  --glare-strength: .55;
+  --glare-strength: .58;
   background:
     linear-gradient(var(--band-angle),
       transparent 0%,
-      transparent calc(var(--sheen) * 1% - 16%),
-      rgba(255,255,255, calc(var(--glare-strength) * .12)) calc(var(--sheen) * 1% - 9%),
-      rgba(255,255,255, calc(var(--glare-strength) * .7))  calc(var(--sheen) * 1% - 1.5%),
-      rgba(255,255,255, calc(var(--glare-strength) * .85)) calc(var(--sheen) * 1%),
-      rgba(255,255,255, calc(var(--glare-strength) * .7))  calc(var(--sheen) * 1% + 1.5%),
-      rgba(255,255,255, calc(var(--glare-strength) * .12)) calc(var(--sheen) * 1% + 9%),
-      transparent calc(var(--sheen) * 1% + 16%),
+      transparent calc(var(--sheen) * 1% - 22%),
+      rgba(255,255,255, calc(var(--glare-strength) * .06)) calc(var(--sheen) * 1% - 14%),
+      rgba(255,255,255, calc(var(--glare-strength) * .28)) calc(var(--sheen) * 1% - 7%),
+      rgba(255,255,255, calc(var(--glare-strength) * .7))  calc(var(--sheen) * 1% - 2%),
+      rgba(255,255,255, calc(var(--glare-strength) * .9))  calc(var(--sheen) * 1%),
+      rgba(255,255,255, calc(var(--glare-strength) * .7))  calc(var(--sheen) * 1% + 2%),
+      rgba(255,255,255, calc(var(--glare-strength) * .28)) calc(var(--sheen) * 1% + 7%),
+      rgba(255,255,255, calc(var(--glare-strength) * .06)) calc(var(--sheen) * 1% + 14%),
+      transparent calc(var(--sheen) * 1% + 22%),
       transparent 100%);
   mix-blend-mode: overlay;
-  opacity: calc(var(--o) * 0.8 + var(--tilt) * 0.45);
+  opacity: calc(var(--o) * 0.78 + var(--tilt) * 0.48);
 }
 
 /* ---------- 边缘光（假菲涅尔）：倾斜越大，卡缘越亮（来自 foil-mask） ---------- */
 .card__rim {
   border-radius: inherit;
+  /* L5 边框：约为原先一半粗细（1.25 → .62） */
   box-shadow:
-    inset 0 0 0 1.25px rgba(255,255,255, calc(var(--rim-idle) + var(--tilt) * (var(--rim-max) - var(--rim-idle)))),
-    inset 0 0 calc(10px + var(--tilt) * 14px) rgba(255,255,255, calc(var(--tilt) * .12));
+    inset 0 0 0 0.62px rgba(255,255,255, calc(var(--rim-idle) + var(--tilt) * (var(--rim-max) - var(--rim-idle)))),
+    inset 0 0 calc(6px + var(--tilt) * 8px) rgba(255,255,255, calc(var(--tilt) * .1));
   /* 朝向“光源”一侧的柔边高光：色标 0→22% 线性渐隐，没有硬边 */
   background: linear-gradient(
     calc(180deg - var(--rx) * 2.5deg + var(--ry) * 0.5deg),
@@ -559,27 +565,32 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
    ========================================================= */
 /* ---- 彩虹镭射 ---- */
 .card[data-effect="rainbow"] .foil {
-  --holo-angle: 115deg;     /* 彩虹条纹角度 */
-  --holo-speed: 1;          /* 彩虹带移动倍率（≤1：背景位置保持在 0~100%，否则会露出平铺接缝） */
-  --band: 4%;               /* 每条色带宽度（相对 400% 渐变） */
-  --scan: 1px;              /* 扫描线粗细 */
-  --holo-max: .75;          /* 最大不透明度（汇总版略收） */
+  /* 虹彩：角度随倾斜，色带柔过渡，避免硬接缝 */
+  --holo-angle: calc(112deg + var(--rx) * 1.8deg - var(--ry) * 1.1deg);
+  --holo-speed: 0.92;
+  --band: 5.5%;
+  --scan: 1.25px;
+  --holo-max: .82;
   background-image:
-    repeating-linear-gradient(90deg, #3a3a3a 0, #6a6a6a var(--scan), #3a3a3a calc(var(--scan) * 2)),   /* 首尾同色、无硬边 */
+    repeating-linear-gradient(90deg,
+      rgba(40,40,48,.0) 0, rgba(255,255,255,.07) var(--scan), rgba(40,40,48,.0) calc(var(--scan) * 2.4)),
     repeating-linear-gradient(var(--holo-angle),
-      var(--c-violet) 0%, var(--c-blue) calc(var(--band) * 1),
-      var(--c-green) calc(var(--band) * 2), var(--c-yellow) calc(var(--band) * 3),
-      var(--c-red) calc(var(--band) * 4), var(--c-violet) calc(var(--band) * 5));
-  background-size: auto, 400% 400%;
-  /* 彩虹相位移：由 --sheen（倾斜反射相位）驱动，条带扫过而非定点 */
+      var(--c-violet) 0%,
+      var(--c-blue) calc(var(--band) * .9),
+      var(--c-green) calc(var(--band) * 1.85),
+      var(--c-yellow) calc(var(--band) * 2.75),
+      var(--c-red) calc(var(--band) * 3.65),
+      var(--c-violet) calc(var(--band) * 4.6),
+      var(--c-blue) calc(var(--band) * 5.5));
+  background-size: auto, 520% 520%;
   background-position:
-    0 0,
+    calc(var(--sheen) * -0.2px) 0,
     clamp(0%, calc(var(--sheen) * var(--holo-speed) * 1%), 100%)
-    clamp(0%, calc((100 - var(--sheen)) * var(--holo-speed) * 0.65% + 20%), 100%);
-  background-blend-mode: soft-light;
-  filter: brightness(calc(.55 + var(--tilt) * .35)) contrast(1.12) saturate(1.2);
+    clamp(0%, calc((100 - var(--sheen)) * var(--holo-speed) * 0.55% + 18%), 100%);
+  background-blend-mode: soft-light, normal;
+  filter: brightness(calc(.52 + var(--tilt) * .42)) contrast(1.08) saturate(calc(1.15 + var(--tilt) * .2));
   mix-blend-mode: color-dodge;
-  opacity: calc((0.2 + var(--o) * 0.8) * var(--holo-max) * (0.45 + var(--tilt) * 0.55));
+  opacity: calc((0.18 + var(--o) * 0.82) * var(--holo-max) * (0.4 + var(--tilt) * 0.6));
 }
 
 /* ---- 闪光星点 ---- */
@@ -599,7 +610,8 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
     calc(var(--sheen) * 0.55px) calc((100 - var(--sheen)) * 0.35px),
     calc(var(--sheen) * 1%) calc((100 - var(--sheen)) * 0.8%);
   mix-blend-mode: color-dodge;
-  opacity: calc((0.12 + var(--o) * 0.88) * var(--glitter-max) * (0.4 + var(--tilt) * 0.6));
+  filter: brightness(calc(.9 + var(--tilt) * .25)) saturate(calc(1 + var(--tilt) * .15));
+  opacity: calc((0.14 + var(--o) * 0.86) * var(--glitter-max) * (0.38 + var(--tilt) * 0.62));
 }
 
 /* ---- 金属拉丝 ---- */
@@ -729,12 +741,12 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 
 /* =========================================================
-   列表 + 弹窗预览（参考王者卡牌录像：肖像列表 / 左卡右等级弹层）
+   列表 = 真卡缩小；弹层 = 同一张卡放大约 2× + 更透背景
    ========================================================= */
 .list-bar {
   width: min(100%, 1280px);
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-  gap: 12px 16px; margin: 0 0 20px; padding: 0 4px;
+  gap: 12px 16px; margin: 0 0 18px; padding: 0 4px;
 }
 .list-bar__hint { margin: 0; font-size: 13px; opacity: .55; }
 .list-bar__pack {
@@ -747,135 +759,42 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 .list-bar__pack:hover { filter: brightness(1.08); }
 .list-bar__pack:focus-visible { outline: 2px solid #c6b8ff; outline-offset: 2px; }
 
-.card-list {
-  width: min(100%, 1280px);
+/* 旧缩略图列表停用（列表改用真实 .card） */
+.card-list { display: none !important; }
+
+/* 列表态：shell 展示真卡网格；侧栏隐藏 */
+#shell.shell--list {
+  display: block !important;
+  position: relative !important;
+  left: auto !important; top: auto !important;
+  width: min(100%, 1280px) !important;
+  height: auto !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  overflow: visible !important;
+  margin: 0 auto 24px;
+}
+#shell.shell--list .side { display: none !important; }
+#shell.shell--list .main { width: 100%; align-items: stretch; }
+#shell.shell--list .stage {
+  --cols: auto;
+  --card-w: clamp(132px, 17vw, 168px);
+  --card-h: calc(var(--card-w) * 3 / 2);
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-  gap: 18px 16px;
-  margin: 0 0 12px;
+  grid-template-columns: repeat(auto-fill, minmax(var(--card-w), 1fr));
+  justify-content: center;
+  column-gap: 16px;
+  row-gap: 18px;
+  padding-top: 12px;
+  width: 100%;
 }
-@media (min-width: 720px) {
-  .card-list { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 22px 18px; }
-}
-
-/* 肖像磁贴：上插画+叠名 / 中描述带 / 下脚注（稀有色） */
-.clist-item {
-  position: relative;
-  display: flex; flex-direction: column;
-  aspect-ratio: 2 / 3;
-  border: 1.5px solid var(--clist-border, rgba(180,190,210,.35));
-  border-radius: 12px;
-  background: #12141c;
-  overflow: hidden;
+#shell.shell--list .stage > div {
+  display: flex; flex-direction: column; align-items: center;
   cursor: pointer;
-  text-align: left;
-  color: inherit;
-  padding: 0;
-  font: inherit;
-  box-shadow: 0 8px 22px rgba(0,0,0,.4);
-  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-.clist-item:hover, .clist-item:focus-visible {
-  transform: translateY(-4px);
-  border-color: var(--clist-border-hot, rgba(230,220,255,.55));
-  box-shadow: 0 14px 32px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06);
-  outline: none;
-}
-.clist-item[data-r="r"] {
-  --clist-border: rgba(140,180,230,.45);
-  --clist-border-hot: rgba(170,210,255,.7);
-  --clist-foot: linear-gradient(90deg, #3a4a66, #5a6e8e 50%, #3a4a66);
-  --clist-foot-ink: #d8e6ff;
-}
-.clist-item[data-r="ur"] {
-  --clist-border: rgba(210,170,90,.55);
-  --clist-border-hot: rgba(255,214,130,.8);
-  --clist-foot: linear-gradient(90deg, #6a4a18, #b8903a 50%, #6a4a18);
-  --clist-foot-ink: #ffe9b8;
-}
-.clist-item__art {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  background: linear-gradient(160deg, #1a1628, #0e0c14 70%);
-  overflow: hidden;
-}
-.clist-item__art img {
-  width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; display: block;
-}
-.clist-item__art::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 42%;
-  background: linear-gradient(to top, rgba(0,0,0,.72), transparent);
-  pointer-events: none; z-index: 1;
-}
-.clist-item__art--dragon {
-  background:
-    radial-gradient(ellipse at 50% 20%, rgba(120,200,255,.35), transparent 55%),
-    linear-gradient(165deg, #0a1230, #1d3566 55%, #3f73a6);
-}
-.clist-item__art--fox {
-  background:
-    radial-gradient(circle at 50% 30%, rgba(255,140,90,.4), transparent 50%),
-    linear-gradient(165deg, #3b2a5c, #120c22 70%);
-}
-.clist-item__art--stardust {
-  background:
-    radial-gradient(circle at 30% 30%, #ff9ad5 0%, transparent 40%),
-    radial-gradient(circle at 70% 60%, #7a3cff 0%, transparent 45%),
-    linear-gradient(165deg, #2a1848, #1a0b3d);
-}
-.clist-item__art--lion {
-  background:
-    radial-gradient(circle at 50% 35%, rgba(255,220,120,.45), transparent 50%),
-    linear-gradient(165deg, #3a2a10, #a57a28 50%, #2a1d08);
-}
-.clist-item__mark {
-  position: absolute; inset: 0;
-  display: grid; place-items: center;
-  font-size: clamp(2.2rem, 7vw, 3rem);
-  opacity: .5; pointer-events: none;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,.45));
-}
-.clist-item__corner {
-  position: absolute; top: 8px; left: 8px; z-index: 2;
-  width: 22px; height: 22px; border-radius: 50%;
-  background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.18);
-  display: grid; place-items: center;
-  font-size: 10px; color: rgba(255,255,255,.7);
-}
-.clist-item__name {
-  position: absolute; left: 6%; right: 6%; bottom: 8px; z-index: 2;
-  margin: 0; text-align: center;
-  font-size: 1.05rem; font-weight: 700; letter-spacing: .14em;
-  color: #fff;
-  text-shadow: 0 0 12px rgba(0,0,0,.9), 0 2px 4px rgba(0,0,0,.8);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.clist-item__desc {
-  flex: 0 0 auto;
-  margin: 0;
-  padding: 9px 10px 8px;
-  min-height: 2.7em;
-  font-size: .72rem; line-height: 1.4;
-  color: rgba(235,232,245,.88);
-  background: rgba(12,12,18,.82);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.clist-item__foot {
-  flex: 0 0 auto;
-  margin: 0;
-  padding: 6px 8px;
-  text-align: center;
-  font-size: .68rem; letter-spacing: .16em;
-  color: var(--clist-foot-ink, #d8d4e8);
-  background: var(--clist-foot, linear-gradient(90deg, #2a2e3a, #3a4050 50%, #2a2e3a));
-  border-top: 1px solid rgba(255,255,255,.06);
-}
+#shell.shell--list .stage .label { display: none !important; }
+#shell.shell--list .stage .card { cursor: pointer; }
 
-/* 舞台停放 */
 .shell--parked {
   position: fixed !important;
   left: -9999px !important;
@@ -888,7 +807,15 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   display: block !important;
 }
 
-/* ---------- 弹窗：全屏升级页感（左大卡 | 右等级） ---------- */
+.card-slot-placeholder {
+  width: var(--card-w, 160px);
+  height: calc(var(--card-w, 160px) * 3 / 2);
+  border-radius: 12px;
+  background: rgba(255,255,255,.03);
+  border: 1px dashed rgba(255,255,255,.08);
+}
+
+/* ---------- 弹窗 ---------- */
 .holo-modal[hidden] { display: none !important; }
 .holo-modal {
   position: fixed; inset: 0; z-index: 40;
@@ -896,9 +823,10 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .holo-modal__backdrop {
   position: absolute; inset: 0;
-  background: rgba(4, 5, 10, .62);
-  backdrop-filter: blur(18px) saturate(.85);
-  -webkit-backdrop-filter: blur(18px) saturate(.85);
+  /* 更透：列表更清晰可见 */
+  background: rgba(4, 5, 10, .18);
+  backdrop-filter: blur(6px) saturate(.92);
+  -webkit-backdrop-filter: blur(6px) saturate(.92);
 }
 .holo-modal__ui {
   position: relative; z-index: 1;
@@ -928,17 +856,19 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto minmax(220px, 320px);
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(180px, 260px);
   grid-template-areas: "prev card next side";
-  gap: 8px 10px;
+  gap: 6px 8px;
   align-items: center;
+  overflow: auto;
 }
 .holo-modal__nav {
   appearance: none; border: 0; background: transparent;
   color: rgba(255,255,255,.82); font-size: 42px; line-height: 1;
-  width: 44px; height: 64px; cursor: pointer;
+  width: 40px; height: 64px; cursor: pointer;
   text-shadow: 0 2px 10px rgba(0,0,0,.5);
   align-self: center;
+  position: sticky; top: 40%;
 }
 .holo-modal__nav:hover { color: #fff; }
 .holo-modal__nav:focus-visible { outline: 2px solid #c6b8ff; outline-offset: 2px; border-radius: 8px; }
@@ -948,6 +878,17 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   grid-area: card;
   min-width: 0; min-height: 0;
   display: flex; justify-content: center; align-items: center;
+  /* 列表卡约 150–168；弹层约 2×，并限制高度以免裁切 */
+  --card-w: clamp(300px, min(52vw, 360px), 400px);
+  --card-h: calc(var(--card-w) * 3 / 2);
+  min-height: calc(var(--card-h) + 12px);
+  padding: 4px 0 12px;
+}
+.holo-modal__card-host > div { position: relative; z-index: 2; }
+.holo-modal__card-host .label { display: none !important; }
+.holo-modal__card-host .card {
+  width: var(--card-w);
+  height: var(--card-h);
 }
 .holo-modal__side-host {
   grid-area: side;
@@ -955,56 +896,48 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   align-self: stretch;
   display: flex; flex-direction: column;
   justify-content: center;
-  padding: 8px 4px 8px 8px;
+  padding: 8px 2px 8px 6px;
+  overflow-y: auto;
+  max-height: min(88vh, 920px);
 }
 
+@media (min-width: 1100px) {
+  .holo-modal__card-host {
+    --card-w: clamp(320px, min(36vw, 400px), 420px);
+    --card-h: calc(var(--card-w) * 3 / 2);
+  }
+}
 @media (max-width: 899px) {
   .holo-modal__layout {
-    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
     grid-template-rows: auto auto;
     grid-template-areas:
       "prev card next"
       "side side side";
     align-items: start;
-    overflow: auto;
   }
-  .holo-modal__side-host { justify-content: flex-start; padding: 4px 0 12px; }
-  .holo-modal__nav { font-size: 34px; width: 36px; height: 48px; }
+  .holo-modal__card-host {
+    --card-w: clamp(280px, min(72vw, 360px), 380px);
+    --card-h: calc(var(--card-w) * 3 / 2);
+  }
+  .holo-modal__side-host { justify-content: flex-start; max-height: none; }
+  .holo-modal__nav { font-size: 34px; width: 32px; height: 48px; position: static; }
 }
 
 body.modal-open { overflow: hidden; }
+/* 列表真卡留在背后：略模糊但不要太暗 */
+body.modal-open #shell.shell--list {
+  filter: blur(4px) brightness(.88);
+  pointer-events: none;
+  user-select: none;
+}
 body.modal-open .mast,
-body.modal-open .list-bar,
-body.modal-open .card-list {
-  filter: blur(10px) brightness(.55);
+body.modal-open .list-bar {
+  filter: blur(4px) brightness(.88);
   pointer-events: none;
   user-select: none;
 }
 
-/* 弹窗内卡舞台 */
-body.modal-open .main {
-  width: 100%;
-  display: flex; flex-direction: column; align-items: center;
-}
-body.modal-open .stage {
-  --cols: 1; justify-content: center;
-  --card-w: clamp(200px, min(48vw, 300px), 340px);
-  --card-h: calc(var(--card-w) * 3 / 2);
-  padding-top: calc(var(--card-h) * max(0, var(--breakout) - var(--win-t)) + 20px);
-  row-gap: 0;
-  margin: 0;
-}
-body.modal-open .stage > div[hidden] { display: none !important; }
-body.modal-open .stage .label { display: none !important; }
-body.modal-open #gl-view { width: min(100%, 420px); }
-@media (min-width: 900px) {
-  body.modal-open .stage {
-    --card-w: clamp(240px, min(32vw, 340px), 360px);
-    --card-h: calc(var(--card-w) * 3 / 2);
-  }
-}
-
-/* 右侧等级栏：参考升级页 */
 body.modal-open .side {
   width: 100%;
   position: static;
@@ -1019,11 +952,11 @@ body.modal-open .fx {
 }
 body.modal-open .fx > summary { display: none !important; }
 body.modal-open .fx__body {
-  display: flex; flex-direction: column; gap: 14px;
+  display: flex; flex-direction: column; gap: 12px;
   padding: 4px 2px 8px;
 }
 body.modal-open .lv__tabs {
-  display: flex; align-items: center; gap: 18px;
+  display: flex; align-items: center; gap: 16px;
   margin-bottom: 4px;
   border-bottom: 1px solid rgba(255,255,255,.1);
   padding-bottom: 8px;
@@ -1034,20 +967,18 @@ body.modal-open .lv__tab {
   letter-spacing: .12em; padding: 4px 2px 8px; cursor: default;
   position: relative;
 }
-body.modal-open .lv__tab.is-on {
-  color: #fff; cursor: default;
-}
+body.modal-open .lv__tab.is-on { color: #fff; }
 body.modal-open .lv__tab.is-on::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -9px;
   height: 2px; background: #fff; border-radius: 2px;
 }
-body.modal-open .lv__tab:disabled { opacity: .35; cursor: default; }
+body.modal-open .lv__tab:disabled { opacity: .35; }
 body.modal-open .lv__head .lv__title { display: none; }
 body.modal-open .lv__list { gap: 6px; }
 body.modal-open .fx .lv__row {
   grid-template-columns: 3.4em 1fr;
-  gap: 14px;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 11px 14px;
   border-radius: 10px;
   background: transparent;
   border: 1px solid transparent;
@@ -1055,7 +986,7 @@ body.modal-open .fx .lv__row {
 }
 body.modal-open .fx .lv__row .lv__pips { display: none; }
 body.modal-open .fx .lv__row b { font-size: 15px; font-weight: 700; }
-body.modal-open .fx .lv__row span { font-size: 14px; letter-spacing: .08em; justify-self: start; }
+body.modal-open .fx .lv__row span { font-size: 13px; letter-spacing: .06em; }
 body.modal-open .fx .lv__row[aria-checked="true"] {
   color: #fff;
   background: rgba(255,255,255,.14);
@@ -1063,15 +994,7 @@ body.modal-open .fx .lv__row[aria-checked="true"] {
   box-shadow: none;
 }
 body.modal-open .fx .lv__row:hover { background: rgba(255,255,255,.08); color: #eee; }
-body.modal-open .lv__desc {
-  font-size: 12px; opacity: .55; min-height: 0;
-  margin-top: 4px;
-}
-body.modal-open .fx__row[aria-label="渲染模式"],
-body.modal-open .fx__adv,
-body.modal-open .fx__hint {
-  opacity: .85;
-}
+body.modal-open .lv__desc { font-size: 12px; opacity: .55; min-height: 0; }
 body.modal-open .fx__adv > summary { display: flex !important; }
 
 /* =========================================================
@@ -1994,11 +1917,11 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
 <body>
   <header class="mast">
     <h1>全息闪卡 · 汇总版</h1>
-    <p class="tip">点选卡片弹窗预览（左卡右等级）。深链可用 <code>#lv=3&amp;focus=yinglong</code>。</p>
+    <p class="tip">列表与弹层为同一张全息卡；点击放大预览。深链 <code>#lv=3&amp;focus=yinglong</code>。</p>
   </header>
 
   <div class="list-bar" id="list-bar">
-    <p class="list-bar__hint">卡牌图鉴 · 点击升级预览</p>
+    <p class="list-bar__hint">卡牌图鉴 · 点击同一张卡放大预览</p>
     <button type="button" class="list-bar__pack" id="list-pack" aria-haspopup="dialog">✦ 开包（5 张）</button>
   </div>
   <main id="card-list" class="card-list" aria-label="闪卡列表"></main>
@@ -2019,7 +1942,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
     </div>
   </div>
 
-  <div class="shell shell--parked" id="shell">
+  <div class="shell shell--list" id="shell">
   <aside class="side">
   <details class="fx" id="fx" open>
     <summary><span class="fx__title">⚙ 特效控制</span><span class="fx__sum" id="fx-sum">CSS 模式 · 全部开启</span><span class="fx__chev" aria-hidden="true">▾</span></summary>
@@ -2823,11 +2746,11 @@ function glEffects() { return { foil: fx.foil, etch: fx.etch, rim: fx.rim, glare
 /* ---------- 卡面等级：1 基础卡面 → 5 镀闪卡面，逐级叠加的开关预设 ---------- */
 const LEVEL_KEY = 'holo-card:all-in-one:level';
 const LEVEL_INFO = {
-  1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。', on: [] },
-  2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（全部在框内，不破框）；加上高光与卡缘边缘光 / 纸张厚度。', on: ['tilt', 'depth', 'glare', 'rim'] },
-  3: { name: '动态画面', desc: '动态画面：立绘主体在动——应龙分层轻动（鬃/翼/眼光）；霜晶龙颈呼吸；焰尾狐摆尾/耳抖/眨眼；星尘狐星辰摆转；金曜狮王徽记脉动。极光/雪/星云/日芒等环境层在 4 级。', on: ['tilt', 'depth', 'glare', 'rim', 'anim'] },
-  4: { name: '专属特效', desc: '专属特效：环境在动——应龙云雾/鬃毛柔光/金尘/神性光带；霜晶龙极光/月光/雪花与冰晶寒雾；焰尾狐夕阳光晕与火星暖光；星尘狐星云/星点与星尘拖尾；金曜狮王日芒/光晕/热浪与金尘日芒；含稀有光晕与徽章。', on: ['tilt', 'depth', 'glare', 'rim', 'anim', 'rarity'] },
-  5: { name: '镀闪卡面', desc: '镀闪卡面：整张卡随角度流动的镭射箔面、压纹与闪点——全部特效叠满。', on: FX_KEYS },
+  1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。无边框。', on: [] },
+  2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（框内）；高光。1–4 级无卡缘边框。', on: ['tilt', 'depth', 'glare'] },
+  3: { name: '动态画面', desc: '动态画面：立绘主体在动——应龙分层轻动；霜晶龙/狐/狮主体动。环境层在 4 级。无边框。', on: ['tilt', 'depth', 'glare', 'anim'] },
+  4: { name: '专属特效', desc: '专属特效：环境在动（云雾/极光/星云等）与稀有光晕。无边框。', on: ['tilt', 'depth', 'glare', 'anim', 'rarity'] },
+  5: { name: '镀闪卡面', desc: '镀闪卡面：镭射箔面、压纹、闪点，并显示细边框（约为旧版一半粗细）。', on: FX_KEYS },
 };
 const presetOf = (n) => Object.fromEntries(FX_KEYS.map(k => [k, LEVEL_INFO[n].on.includes(k)]));
 /** 当前开关恰好等于某一级的预设 → 那一级；否则 0（自定义） */
@@ -3231,14 +3154,12 @@ window.addEventListener('hashchange', () => {
 
 // 供无头 / 自测脚本调用（不改变正常行为）
 
-/* ---------- 列表 + 弹窗预览（左卡右等级；‹ › 切换；#focus= 深链） ---------- */
-const TIP_DEFAULT = '点选卡片弹窗预览（左卡右等级）。深链可用 #lv=3&focus=yinglong。';
+/* ---------- 列表=真卡；弹层=同卡 2×；‹ ›；#focus= ---------- */
+const TIP_DEFAULT = '列表与弹层为同一张全息卡；点击放大预览。深链 #lv=3&focus=yinglong。';
 const TIP_BY_CARD = {
-  yinglong: '应龙（《山海经·大荒东经》 / 《大荒北经》）。‹ › 切换卡牌；右侧调等级。← 卡牌 / Esc / 遮罩关闭。',
+  yinglong: '应龙。‹ › 切换；右侧调等级（5 级才有细边框）。← 卡牌 / Esc / 遮罩关闭。',
 };
-const CLIST_MARK = { dragon: '❄', fox: '🦊', stardust: '✦', lion: '☀', yinglong: '🐉' };
 const tipEl = document.querySelector('header .tip');
-const cardListEl = $('#card-list');
 const holoModal = $('#holo-modal');
 const cardHost = $('#holo-modal-card-host');
 const sideHost = $('#holo-modal-side-host');
@@ -3246,108 +3167,90 @@ const holoModalTitle = $('#holo-modal-title');
 const shellEl = $('#shell');
 const mainEl = shellEl.querySelector('.main');
 const sideEl = shellEl.querySelector('.side');
+const stageEl = $('#css-view');
 const shellHome = document.createComment('shell-home');
 shellEl.after(shellHome);
 
 let modalOpen = false;
 let focusedCard = null;
+let focusedWrap = null;
+let focusPlaceholder = null;
 let cardOrder = [];
 
-function cardWraps() { return $$('#css-view > div'); }
-
-function shortDesc(text, max = 42) {
-  const t = String(text || '').replace(/\s+/g, ' ').trim();
-  if (t.length <= max) return t;
-  return t.slice(0, max - 1) + '…';
+function cardWraps() {
+  // 含仍在 stage 内的，以及已挂到弹层 host 的
+  const inStage = $$('#css-view > div').filter(d => d.querySelector?.('.card') || d.classList.contains('card-slot-placeholder'));
+  return inStage;
 }
-
-function buildCardList() {
-  if (!cardListEl || cardListEl.childElementCount) return;
-  const frag = document.createDocumentFragment();
-  cardOrder = [];
-  for (const wrap of cardWraps()) {
-    const card = wrap.querySelector('.card');
-    if (!card) continue;
-    const id = card.dataset.card;
-    cardOrder.push(id);
-    const rarity = card.dataset.rarity || 'r';
-    const name = card.querySelector('.card__head span')?.textContent?.trim() || id;
-    const rarityLabel = card.querySelector('.card__head small')?.textContent?.trim()
-      || (rarity === 'ur' ? '传说' : '稀有');
-    const bodyText = card.querySelector('.card__body')?.textContent?.trim() || '';
-    const footSrc = card.querySelector('.card__foot span')?.textContent?.trim() || '';
-    const artSrc = card.querySelector('img.photo-art')?.getAttribute('src');
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'clist-item';
-    btn.dataset.card = id;
-    btn.dataset.r = rarity;
-    btn.setAttribute('aria-label', `${name}，${rarityLabel}`);
-
-    const art = document.createElement('div');
-    art.className = 'clist-item__art' + (artSrc ? '' : ` clist-item__art--${id}`);
-    if (artSrc) {
-      const img = document.createElement('img');
-      img.src = artSrc;
-      img.alt = name;
-      img.loading = 'lazy';
-      img.decoding = 'async';
-      art.appendChild(img);
-    } else {
-      const mark = document.createElement('span');
-      mark.className = 'clist-item__mark';
-      mark.setAttribute('aria-hidden', 'true');
-      mark.textContent = CLIST_MARK[id] || '◆';
-      art.appendChild(mark);
+function allCardEls() { return $$('.card[data-card]'); }
+function wrapForKey(key) {
+  const card = document.querySelector(`.card[data-card="${CSS.escape(key)}"]`);
+  if (!card) return null;
+  // 舞台子节点（含 .card + .label + .aura），不要用 closest('div')——会命中 .card 自己
+  if (stageEl) {
+    for (const w of stageEl.children) {
+      if (w.contains(card)) return w;
     }
-    const corner = document.createElement('span');
-    corner.className = 'clist-item__corner';
-    corner.setAttribute('aria-hidden', 'true');
-    corner.textContent = '✦';
-    const nm = document.createElement('h3');
-    nm.className = 'clist-item__name';
-    nm.textContent = name;
-    art.append(corner, nm);
-
-    const desc = document.createElement('p');
-    desc.className = 'clist-item__desc';
-    desc.textContent = shortDesc(bodyText, 48);
-
-    const foot = document.createElement('p');
-    foot.className = 'clist-item__foot';
-    const srcShort = (footSrc || rarityLabel).replace(/^《|》$/g, '');
-    foot.textContent = `— ${srcShort.length > 14 ? rarityLabel : srcShort} —`;
-
-    btn.append(art, desc, foot);
-    btn.addEventListener('click', () => openCardDetail(id));
-    frag.appendChild(btn);
   }
-  cardListEl.appendChild(frag);
+  if (cardHost?.contains(card)) return card.parentElement;
+  return card.parentElement;
 }
 
-function parkShell() {
-  // 还原 side → main 顺序进 shell
-  if (sideEl && sideEl.parentElement !== shellEl) shellEl.appendChild(sideEl);
+function refreshCardOrder() {
+  cardOrder = [];
+  for (const w of $$('#css-view > div')) {
+    const c = w.querySelector?.('.card');
+    if (c?.dataset.card) cardOrder.push(c.dataset.card);
+  }
+  // 若当前卡在弹层里，顺序以 placeholder 位置为准：用 data 存
+  if (!cardOrder.length) {
+    cardOrder = allCardEls().map(c => c.dataset.card);
+  }
+}
+
+function showListShell() {
+  // 还原 side 进 shell（隐藏），main 留在 shell
+  if (sideEl && sideEl.parentElement !== shellEl) {
+    shellEl.insertBefore(sideEl, mainEl);
+  }
   if (mainEl && mainEl.parentElement !== shellEl) shellEl.appendChild(mainEl);
-  if (shellEl.parentElement !== shellHome.parentElement || shellEl.previousSibling !== shellHome) {
-    shellHome.after(shellEl);
-  }
-  shellEl.classList.add('shell--parked');
-}
-
-function mountShellInModal() {
+  if (shellEl.previousSibling !== shellHome) shellHome.after(shellEl);
+  shellEl.classList.add('shell--list');
   shellEl.classList.remove('shell--parked');
-  // shell 本体仍停在原位（空壳），主区与侧栏分别挂进弹窗两列
-  if (mainEl) cardHost.appendChild(mainEl);
-  if (sideEl) sideHost.appendChild(sideEl);
 }
 
-function showFocusedCard(key) {
-  for (const wrap of cardWraps()) {
-    const c = wrap.querySelector('.card');
-    wrap.hidden = !(c && c.dataset.card === key);
+function mountCardInModal(key) {
+  const wrap = wrapForKey(key);
+  if (!wrap || !stageEl) return null;
+  // 占位：列表背后仍能看见格子
+  if (focusPlaceholder) {
+    focusPlaceholder.remove();
+    focusPlaceholder = null;
   }
+  focusPlaceholder = document.createElement('div');
+  focusPlaceholder.className = 'card-slot-placeholder';
+  focusPlaceholder.dataset.for = key;
+  wrap.before(focusPlaceholder);
+  focusedWrap = wrap;
+  cardHost.appendChild(wrap);
+  if (sideEl) sideHost.appendChild(sideEl);
+  return wrap;
+}
+
+function restoreCardFromModal() {
+  if (focusedWrap && focusPlaceholder?.parentElement) {
+    focusPlaceholder.replaceWith(focusedWrap);
+  } else if (focusedWrap && stageEl) {
+    stageEl.appendChild(focusedWrap);
+  }
+  focusedWrap = null;
+  if (focusPlaceholder) { focusPlaceholder.remove(); focusPlaceholder = null; }
+  if (sideEl && sideEl.parentElement !== shellEl) {
+    shellEl.insertBefore(sideEl, mainEl);
+  }
+}
+
+function wakeCard(key) {
   requestAnimationFrame(() => {
     const card = $(`.card[data-card="${key}"]`);
     card?.classList.remove('is-off');
@@ -3358,20 +3261,21 @@ function showFocusedCard(key) {
 
 function openCardDetail(key, { syncHash = true } = {}) {
   if (!key || !$(`.card[data-card="${key}"]`)) return;
+  // 切换卡：先把上一张放回
+  if (modalOpen && focusedCard && focusedCard !== key) {
+    restoreCardFromModal();
+  }
   focusedCard = key;
-  showFocusedCard(key);
-  const name = $(`.card[data-card="${key}"] .card__head span`)?.textContent?.trim() || key;
   if (holoModalTitle) holoModalTitle.textContent = '卡牌预览';
   if (tipEl) tipEl.textContent = TIP_BY_CARD[key] || TIP_DEFAULT;
 
-  mountShellInModal();
+  mountCardInModal(key);
   holoModal.hidden = false;
   document.body.classList.add('modal-open');
   modalOpen = true;
-
   const fxPanel = $('#fx');
   if (fxPanel) fxPanel.open = true;
-
+  wakeCard(key);
   try { $('#holo-modal-close')?.focus({ preventScroll: true }); } catch { /* */ }
   if (syncHash) writeHash({ focus: key });
 }
@@ -3382,22 +3286,56 @@ function closeCardDetail({ syncHash = true } = {}) {
   focusedCard = null;
   holoModal.hidden = true;
   document.body.classList.remove('modal-open');
-  parkShell();
-  for (const wrap of cardWraps()) wrap.hidden = false;
+  restoreCardFromModal();
+  showListShell();
   for (const c of cards) c.settle?.(true);
   if (tipEl) tipEl.textContent = TIP_DEFAULT;
   if (syncHash) writeHash({ focus: null });
 }
 
 function cycleCard(delta) {
-  if (!cardOrder.length) return;
-  const i = Math.max(0, cardOrder.indexOf(focusedCard));
-  const next = cardOrder[(i + delta + cardOrder.length) % cardOrder.length];
+  refreshCardOrder();
+  // order from stage placeholders + cards
+  const order = [];
+  for (const w of $$('#css-view > div')) {
+    if (w.classList.contains('card-slot-placeholder') && w.dataset.for) order.push(w.dataset.for);
+    else {
+      const c = w.querySelector?.('.card');
+      if (c) order.push(c.dataset.card);
+    }
+  }
+  if (!order.length) refreshCardOrder();
+  const list = order.length ? order : cardOrder;
+  if (!list.length) return;
+  const i = Math.max(0, list.indexOf(focusedCard));
+  const next = list[(i + delta + list.length) % list.length];
   openCardDetail(next);
 }
 
-buildCardList();
-parkShell();
+function wireListClicks() {
+  refreshCardOrder();
+  for (const card of allCardEls()) {
+    const wrap = card.parentElement;
+    if (!wrap || wrap.dataset.listWired) continue;
+    wrap.dataset.listWired = '1';
+    let downX = 0, downY = 0, dragging = false;
+    card.addEventListener('pointerdown', (e) => {
+      downX = e.clientX; downY = e.clientY; dragging = false;
+    });
+    card.addEventListener('pointermove', (e) => {
+      if (Math.hypot(e.clientX - downX, e.clientY - downY) > 10) dragging = true;
+    });
+    card.addEventListener('click', (e) => {
+      if (modalOpen) return;
+      if (dragging) return;
+      e.preventDefault();
+      openCardDetail(card.dataset.card);
+    });
+  }
+}
+
+showListShell();
+wireListClicks();
 {
   const bootFocus = readHash().focus;
   if (bootFocus && $(`.card[data-card="${bootFocus}"]`)) openCardDetail(bootFocus, { syncHash: false });
