@@ -31,6 +31,7 @@
   --z-bg: -56;                  /* 远景 + 插画箔光（窗口内；幅度收一点，立体感留在框内） */
   --z-mid: -26;                 /* 中景（窗口内） */
   --z-text: 12;                 /* 文字层 */
+  --z-foil: 14;                 /* 整卡面镭射（文字之上、角色之下；圆角裁切） */
   --z-char: 26;                 /* 角色层：轻微浮起，不大幅越框 */
   --z-fg: 34;                   /* 前景粒子：贴近卡面 */
   --depth: 1;                   /* 总深度倍率；「视差破框」关掉时接近 0 */
@@ -237,12 +238,13 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
      z= -1   投影层 .layer--shadow
      z= -.5  纸张厚度 .layer--edge（随倾斜露出的侧边）
      z=  0   卡框层 .layer--frame（overflow:hidden，平面内混合）：
-               底色 + 细纹 → 卡框箔 .foil--frame（border / inverse 变体）
-               → 插画窗口 .win（远景 .win__bg 内含插画箔 .foil--art / 中景 .win__mid，等效深度）
+               底色 + 细纹 → 卡框箔 .foil--frame（L5 细框环镭射 / border 变体）
+               → 插画窗口 .win（远景 .win__bg / 中景 .win__mid，等效深度）
                → 蚀刻压纹 .card__etch → 高光 .glare → 边缘光 .card__rim
-     z= 16   文字层 .layer--text（不被任何光层覆盖 → 文字始终清晰）
-     z= 44   角色层 .layer--char（破框 / 浮在窗口前）
-     z= 80   前景粒子 .layer--fg
+     z= 12   文字层 .layer--text
+     z= 14   整卡面镭射 .layer--foil > .foil--art（圆角裁切，覆盖立绘+描述+底栏；柔和扫光非彩虹贴纸）
+     z= 26   角色层 .layer--char（破框 / 浮在窗口前）
+     z= 34   前景粒子 .layer--fg
 
    ⚠ 压平陷阱：overflow / opacity<1 / filter / mask / clip-path / mix-blend-mode / isolation
      只要出现在 .card__rotator 上，整个 3D 就会被压成一张平面图。
@@ -318,6 +320,16 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 .card__etch  { z-index: 2; }
 .glare       { z-index: 3; }
 .card__rim   { z-index: 4; }
+
+/* 整卡面镭射层：盖住立绘窗+描述带+底栏，裁到卡圆角；不挂在 .win 里 */
+.layer--foil {
+  --z: var(--z-foil);
+  inset: 0;
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  clip-path: inset(0 round var(--card-radius));
+  pointer-events: none;
+}
 
 /* ---------- 插画窗口：裁剪远景与中景 ---------- */
 .win {
@@ -515,11 +527,10 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 
 /* 箔面可见区 = 斜向柔边光带（随 --sheen 平移），远处很淡；绝不用小圆 spotlight */
 .foil { --far: .22; --band-half: 22%; }
-.foil--art { position: absolute; inset: 0; }
-.card[data-card="yinglong"] .foil--art {
-  /* inset 1px from win clip — avoids hard-light/color edge crushing to black at matte join */
-  inset: 1px;
-  border-radius: 1px;
+.foil--art {
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  /* full-card face laser (parent .layer--foil clips to --card-radius) */
 }
 .foil--art,
 .foil--frame {
@@ -611,64 +622,92 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
    ========================================================= */
 /* ---- 彩虹镭射 ---- */
 .card[data-effect="rainbow"] .foil {
-  /* L5 镭射：双层硬可见——frame soft-light 底 + art color 提色相；倾斜时明显扫过 */
+  /* 金属镭射底：细扫描线 + 淡虹彩（低饱和）；条带 mask 驱动，禁止霓虹彩虹贴纸 */
   --holo-angle: calc(115deg + var(--rx) * 3deg - var(--ry) * 2deg);
-  --holo-speed: 1.1;
-  --band: 3.6%;
+  --holo-speed: 1.05;
+  --band: 9%;
   --scan: 1px;
   --holo-max: 1;
   background-image:
     repeating-linear-gradient(90deg,
-      transparent 0, rgba(255,255,255,.18) var(--scan), transparent calc(var(--scan) * 2)),
+      transparent 0, rgba(255,255,255,.1) var(--scan), transparent calc(var(--scan) * 2.2)),
     repeating-linear-gradient(var(--holo-angle),
-      #d26aff 0%,
-      #2ec8ff calc(var(--band) * 1),
-      #3dffb0 calc(var(--band) * 2),
-      #ffe94a calc(var(--band) * 3),
-      #ff4d7a calc(var(--band) * 4),
-      #d26aff calc(var(--band) * 5),
-      #2ec8ff calc(var(--band) * 6));
-  background-size: auto, 340% 340%;
+      #b89ad4 0%,
+      #7eb6c8 calc(var(--band) * 1),
+      #7cbc9a calc(var(--band) * 2),
+      #c8bc7a calc(var(--band) * 3),
+      #c8889a calc(var(--band) * 4),
+      #b89ad4 calc(var(--band) * 5),
+      #7eb6c8 calc(var(--band) * 6));
+  background-size: auto, 280% 280%;
   background-position:
-    calc(var(--sheen) * -0.5px) calc(var(--ry) * 0.4px),
+    calc(var(--sheen) * -0.45px) calc(var(--ry) * 0.35px),
     clamp(0%, calc(var(--sheen) * var(--holo-speed) * 1%), 100%)
     clamp(0%, calc((100 - var(--sheen)) * var(--holo-speed) * 0.75% + 10%), 100%);
-  background-blend-mode: overlay, normal;
-  filter: brightness(calc(.85 + var(--tilt) * .12)) contrast(1.3) saturate(calc(1.85 + var(--tilt) * .6));
+  background-blend-mode: soft-light, normal;
+  filter: brightness(calc(1 + var(--tilt) * .04)) contrast(1.06) saturate(calc(1.05 + var(--tilt) * .2));
   mix-blend-mode: soft-light;
-  opacity: calc((0.72 + var(--o) * 0.28) * var(--holo-max) * (0.7 + var(--tilt) * 0.3));
+  opacity: calc((0.48 + var(--o) * 0.28) * var(--holo-max) * (0.5 + var(--tilt) * 0.5));
 }
 .card[data-effect="rainbow"] .foil--art {
-  /* Face laser: color-dodge + dimmed brightness so rainbow reads on cream/gold art
-     (mix-blend color alone looked invisible on Yinglong L5). Stays inside .win clip. */
-  --far: .34;
-  --band-half: 28%;
-  mix-blend-mode: color-dodge;
-  opacity: calc((0.44 + var(--o) * 0.52) * (0.55 + var(--tilt) * 0.45));
-  filter: brightness(calc(.7 + var(--tilt) * .1)) contrast(1.42) saturate(calc(2.1 + var(--tilt) * .6));
+  /* 父层不混合、不透明：让 ::before/::after 各自与整卡面混合（否则 screen 扫光被 soft-light 吃掉，深色区看不见） */
+  --far: .07;
+  --band-half: 24%;
+  background: none;
+  background-image: none;
+  filter: none;
+  mix-blend-mode: normal;
+  opacity: 1;
+  -webkit-mask-image: none;
+          mask-image: none;
 }
 .card[data-effect="rainbow"] .foil--frame {
   mix-blend-mode: soft-light;
   opacity: calc((0.68 + var(--o) * 0.32) * (0.72 + var(--tilt) * 0.28));
 }
-/* Second rainbow sweep on art — soft-light hue bands over the dodge layer */
+/* 主镭射：screen 镜面条带，立绘+描述+底栏连续 */
+.card[data-effect="rainbow"] .foil--art::before {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(var(--holo-angle, 115deg),
+    transparent 0%,
+    hsla(195, 45%, 90%, .04) calc(var(--sheen) * 1% - 30%),
+    hsla(0, 0%, 100%, .22) calc(var(--sheen) * 1% - 10%),
+    hsla(0, 0%, 100%, .62) calc(var(--sheen) * 1%),
+    hsla(300, 35%, 92%, .2) calc(var(--sheen) * 1% + 9%),
+    hsla(50, 40%, 90%, .05) calc(var(--sheen) * 1% + 28%),
+    transparent 100%);
+  mix-blend-mode: screen;
+  opacity: calc(0.48 + var(--tilt) * 0.45 + var(--o) * 0.18);
+  -webkit-mask-image: var(--band-mask);
+          mask-image: var(--band-mask);
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+}
+/* 辅：低饱和金属虹彩（soft-light），绝不用 color-dodge 宽彩虹块 */
 .card[data-effect="rainbow"] .foil--art::after {
   content: "";
   position: absolute; inset: 0;
-  background: repeating-linear-gradient(var(--holo-angle, 115deg),
-    hsla(290,95%,68%,.0) 0%,
-    hsla(190,100%,62%,.55) calc(var(--band, 3.6%) * 1),
-    hsla(145,95%,58%,.55) calc(var(--band, 3.6%) * 2),
-    hsla(48,100%,58%,.55) calc(var(--band, 3.6%) * 3),
-    hsla(350,95%,62%,.55) calc(var(--band, 3.6%) * 4),
-    hsla(290,95%,68%,.0) calc(var(--band, 3.6%) * 5));
-  background-size: 280% 280%;
-  background-position:
-    clamp(0%, calc(var(--sheen) * 1.15%), 100%)
-    clamp(0%, calc((100 - var(--sheen)) * 0.75% + 10%), 100%);
-  mix-blend-mode: overlay;
-  opacity: calc(0.55 + var(--tilt) * 0.4 + var(--o) * 0.2);
+  border-radius: inherit;
   pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0, rgba(255,255,255,.08) 1px, transparent 2px),
+    repeating-linear-gradient(var(--holo-angle, 115deg),
+      hsla(280, 40%, 70%, 0) 0%,
+      hsla(195, 50%, 65%, .35) calc(var(--band, 9%) * .5),
+      hsla(55, 45%, 65%, .28) calc(var(--band, 9%) * 1),
+      hsla(330, 40%, 65%, .28) calc(var(--band, 9%) * 1.5),
+      hsla(280, 40%, 70%, 0) calc(var(--band, 9%) * 2));
+  background-size: auto, 210% 210%;
+  background-position:
+    calc(var(--sheen) * -0.4px) 0,
+    clamp(0%, calc(var(--sheen) * 1%), 100%)
+    clamp(0%, calc((100 - var(--sheen)) * 0.7% + 10%), 100%);
+  mix-blend-mode: soft-light;
+  opacity: calc(0.2 + var(--tilt) * 0.32 + var(--o) * 0.14);
   -webkit-mask-image: var(--band-mask);
           mask-image: var(--band-mask);
   -webkit-mask-size: 100% 100%;
@@ -1288,13 +1327,19 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
   mix-blend-mode: overlay;
   opacity: calc((0.7 + var(--o) * 0.3) * (0.48 + var(--tilt) * 0.52));
 }
-/* L5 face foil: always on when foil enabled (not accidentally gated by mask=art / no-rim) */
+/* L5 face foil: full-card soft laser (layer--foil); rim laser stays on .foil--frame */
 .card[data-lv="5"]:not(.no-foil) .foil--art {
   display: block;
-  z-index: 4;
 }
 .card[data-lv="5"]:not(.no-foil)[data-effect="rainbow"] .foil--art {
-  opacity: calc((0.48 + var(--o) * 0.5) * (0.58 + var(--tilt) * 0.42));
+  /* opacity stays 1 so ::before/::after screen/soft-light composite against the card */
+  opacity: 1;
+}
+.card[data-lv="5"]:not(.no-foil)[data-effect="rainbow"] .foil--art::before {
+  opacity: calc(0.5 + var(--tilt) * 0.42 + var(--o) * 0.18);
+}
+.card[data-lv="5"]:not(.no-foil)[data-effect="rainbow"] .foil--art::after {
+  opacity: calc(0.22 + var(--tilt) * 0.34 + var(--o) * 0.14);
 }
 .card.no-rim .foil--frame {
   /* 无边卡不露框带镭射（即便误开 foil） */
@@ -2345,7 +2390,6 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
                 <img class="photo-art" src="assets/yinglong/art.jpg" alt="" width="960" height="720" decoding="async" />
                 <div class="yl-layers" aria-hidden="true"></div>
                 <div class="an-ov an-godrays" aria-hidden="true"></div>
-                <div class="foil foil--art"></div>
               </div>
               <div class="win__mid">
                 <svg class="st-yl-fog" viewBox="0 0 320 260" preserveAspectRatio="none" aria-hidden="true">
@@ -2382,6 +2426,9 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
             <div class="card__head"><span>应龙</span><small>传说</small></div>
             <div class="card__body">龙有翼者也。黄帝令应龙攻蚩尤于冀州之野，应龙畜水；杀蚩尤与夸父，不得复上，处南极，故下数旱。旱而为应龙之状，乃得大雨。其后去南方，故南方多雨。</div>
             <div class="card__foot"><span class="card__foot-no">NO.1</span><span class="card__foot-src">山海经·大荒东经</span><span class="card__foot-stars" aria-label="星级"></span></div>
+          </div>
+          <div class="layer layer--foil" aria-hidden="true">
+            <div class="foil foil--art"></div>
           </div>
           <div class="layer layer--char">
             <img class="photo-char" src="assets/yinglong/char.png" alt="" width="630" height="880" decoding="async" />
@@ -2444,7 +2491,6 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
                     <path d="M-10 60 C80 30 140 70 210 44 S300 30 330 50 L330 64 C290 52 240 74 200 66 S80 50 -10 78Z" fill="url(#d-aur)" opacity=".6"/>
                   </g></svg>
                 <div class="an-ov an-moon" aria-hidden="true"></div>
-                <div class="foil foil--art"></div>
               </div>
               <div class="win__mid">
                 <svg viewBox="0 0 320 260" preserveAspectRatio="none" aria-hidden="true">
@@ -2465,6 +2511,9 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
             <div class="card__head"><span>霜晶龙</span><small>HP 120</small></div>
             <div class="card__body"><b>冰棱吐息 · 60</b>令对手的下一回合无法撤退。彩虹镭射只在极光夜空里流动，立绘留在窗内。</div>
             <div class="card__foot"><span class="card__foot-no">NO.2</span><span class="card__foot-src">冰棱吐息</span><span class="card__foot-stars" aria-label="星级"></span></div>
+          </div>
+          <div class="layer layer--foil" aria-hidden="true">
+            <div class="foil foil--art"></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
@@ -2556,7 +2605,6 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
                   </g>
                 </svg>
                 <div class="an-ov an-sunglow" aria-hidden="true"></div>
-                <div class="foil foil--art"></div>
               </div>
               <div class="win__mid">
                 <svg viewBox="0 0 320 260" preserveAspectRatio="none" aria-hidden="true">
@@ -2576,6 +2624,9 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
             <div class="card__head"><span>焰尾狐</span><small>HP 90</small></div>
             <div class="card__body"><b>流星焰 · 40×</b>掷 3 次硬币，每次正面造成 40 点伤害。亮片只在晚霞里闪，立绘留在窗内。</div>
             <div class="card__foot"><span class="card__foot-no">NO.3</span><span class="card__foot-src">流星焰</span><span class="card__foot-stars" aria-label="星级"></span></div>
+          </div>
+          <div class="layer layer--foil" aria-hidden="true">
+            <div class="foil foil--art"></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
@@ -2667,7 +2718,6 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
                 <svg class="an-ov an-neb an-neb--a" viewBox="0 0 320 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#s-blur)" opacity=".55"><ellipse cx="210" cy="90" rx="90" ry="26" fill="#ffd1f0" transform="rotate(-18 210 90)"/></g></svg>
                 <svg class="an-ov an-neb an-neb--b" viewBox="0 0 320 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g filter="url(#s-blur)" opacity=".55"><ellipse cx="90" cy="170" rx="80" ry="22" fill="#9fd0ff" transform="rotate(-12 90 170)"/></g></svg>
                 <div class="an-ov an-twk" aria-hidden="true"><i style="--x:18%;--y:22%;--d:3.2s;--dl:-.4s"></i><i style="--x:74%;--y:16%;--d:4s;--dl:-2s"></i><i style="--x:86%;--y:62%;--d:3.6s;--dl:-1.1s"></i><i style="--x:30%;--y:78%;--d:4.4s;--dl:-3s"></i></div>
-                <div class="foil foil--art"></div>
               </div>
               <div class="win__mid">
                 <!-- 中景：一圈环绕的星尘带 -->
@@ -2688,6 +2738,9 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
             <div class="card__head"><span>星尘狐</span><small>HP 90</small></div>
             <div class="card__body"><b>流星雨 · 40×</b>亮片只在卡缘一圈闪，插画保持哑光；星辰徽记浮在窗口前方。</div>
             <div class="card__foot"><span class="card__foot-no">NO.4</span><span class="card__foot-src">流星雨</span><span class="card__foot-stars" aria-label="星级"></span></div>
+          </div>
+          <div class="layer layer--foil" aria-hidden="true">
+            <div class="foil foil--art"></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 100 100" aria-hidden="true">
@@ -2729,7 +2782,6 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
                   <circle cx="160" cy="130" r="150" fill="url(#l-halo)"/>
                 </svg>
                 <div class="an-ov an-halo" aria-hidden="true"></div>
-                <div class="foil foil--art"></div>
               </div>
               <div class="win__mid">
                 <!-- 中景：放射光芒（窄三角，尖端渐隐） -->
@@ -2769,6 +2821,9 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
             <div class="card__head"><span>金曜狮王</span><small>HP 250</small></div>
             <div class="card__body"><b>王者咆哮 · 200</b>反闪：卡框与文字区拉丝金箔，插画保持哑光；烈日徽记浮在窗口前方。</div>
             <div class="card__foot"><span class="card__foot-no">NO.5</span><span class="card__foot-src">王者咆哮</span><span class="card__foot-stars" aria-label="星级"></span></div>
+          </div>
+          <div class="layer layer--foil" aria-hidden="true">
+            <div class="foil foil--art"></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 100 100" aria-hidden="true">
@@ -4114,7 +4169,7 @@ async function initYinglongLayers() {
     host = document.createElement('div');
     host.className = 'yl-layers';
     host.setAttribute('aria-hidden', 'true');
-    const before = bg.querySelector('.an-godrays, .foil--art');
+    const before = bg.querySelector('.an-godrays');
     if (before) bg.insertBefore(host, before);
     else bg.appendChild(host);
   }

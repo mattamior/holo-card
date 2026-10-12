@@ -1,0 +1,13 @@
+{
+  "artDisplay": "block",
+  "artBlend": "normal",
+  "artOpacity": "1",
+  "artInWin": false,
+  "parent": "layer layer--foil",
+  "artH": 935.9,
+  "winH": 650.1,
+  "cardH": 828,
+  "tallerThanWin": true,
+  "noRim": true,
+  "noFoil": false
+}

@@ -1,0 +1,17 @@
+{
+  "hasFoilLayer": true,
+  "artParent": "layer layer--foil",
+  "artDisplay": "none",
+  "artBlend": "normal",
+  "artOpacity": "1",
+  "artInWin": false,
+  "artW": 0,
+  "artH": 0,
+  "cardW": 552,
+  "cardH": 828,
+  "winH": 664.1,
+  "coversFullCard": false,
+  "frameDisplay": "none",
+  "noRim": true,
+  "lv": "4"
+}

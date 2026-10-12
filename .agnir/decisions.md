@@ -27,3 +27,5 @@ Updated: 2026-10-12
 
 - **2026-10-12** — L5 face laser: rainbow `.foil--art` must use a luminance-aware blend (`color-dodge` + dimmed brightness), not `mix-blend-mode: color` alone — color on cream/gold Yinglong art is effectively invisible. Keep foil inside `.win`; L5 `display:block` when foil on. Rim laser: `overlay` (not hard-light+bright) so cream rim reads rainbow hues instead of washing white-only.
 
+- **2026-10-12** — Face laser is **full-card** (`.layer--foil` > `.foil--art`, clip to `--card-radius`), not `.win`-clipped. Look = tilt-driven screen specular + soft-light low-sat iridescence; **reject** e96ae6e `color-dodge` rainbow sticker. Parent foil must stay `mix-blend-mode: normal` / `opacity: 1` so pseudo blends hit the card (including dark desc). L5 rim laser remains `.foil--frame` + `--mask-rim-l5` only. Foil still L5 preset-on (L1–4 presets omit foil; architecture works on 无边 when foil enabled).
+
