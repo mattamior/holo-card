@@ -441,14 +441,14 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   pointer-events: none;
 }
 
-/* 指针在“远景层自身坐标”里的位置（远景层比卡片小、且偏上，需要换算） */
+/* 倾斜反射光在远景层坐标里的落点（--px/--py 由 JS 按固定环境光 + rx/ry 导出，不是指针 UV） */
 .win__bg {
   --lx: calc(var(--px) / 100 * var(--card-w) - (var(--win-l) * var(--card-w) - var(--bleed)));
   --ly: calc(var(--py) / 100 * var(--card-h) - (var(--win-t) * var(--card-h) - var(--bleed)));
 }
 
-/* 指针附近才明显、远处很淡的遮罩（多段色标近似 smoothstep，没有一圈“光的边缘”）
-   插画箔：以像素为半径（远景层尺寸与卡片不同）；卡框箔：以百分比为半径（卡框 = 整张卡） */
+/* 反射高光附近才明显、远处很淡的遮罩（多段色标近似 smoothstep）
+   插画箔：以像素为半径；卡框箔：以百分比为半径。落点随倾斜扫过，非指哪亮哪 */
 .foil { --far: .15; }
 .foil--art {
   --reach-px: 170px;
@@ -467,7 +467,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .foil--frame {
   --reach-pct: 60%;
-  --pointer-mask: radial-gradient(circle at calc(var(--px) * 1%) calc(var(--py) * 1%),
+  --pointer-mask: radial-gradient(circle at calc(var(--px) * 1%) calc(var(--py) * 1%),  /* 名称为历史遗留：实为倾斜反射光 */
     #000 0%,
     rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .85)) calc(var(--reach-pct) * .25),
     rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .5))  calc(var(--reach-pct) * .5),
@@ -495,7 +495,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 /* inverse：反闪 → 只有卡框箔（插画窗口不透明挡住；文字面板半透明透出箔光），关掉插画箔 */
 .card[data-mask="inverse"] .foil--art { display: none; }
 
-/* ---------- 高光：跟随指针的柔和光斑（在卡框层平面内：盖住卡框与窗口，但不盖文字和角色） ---------- */
+/* ---------- 高光：固定环境光在倾斜卡面上的镜面斑（盖住卡框与窗口，不盖文字和角色） ---------- */
 .glare {
   --glare-strength: .45;
   --glare-r: 180px;
@@ -507,7 +507,8 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
     rgba(255,255,255, calc(var(--glare-strength) * .07)) 80%,
     rgba(255,255,255, 0) 100%);
   mix-blend-mode: overlay;
-  opacity: var(--o);
+  /* 悬停增强 + 倾斜时也保留一点膜面反光 */
+  opacity: calc(var(--o) * 0.75 + var(--tilt) * 0.35);
 }
 
 /* ---------- 边缘光（假菲涅尔）：倾斜越大，卡缘越亮（来自 foil-mask） ---------- */
@@ -560,7 +561,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   background-blend-mode: soft-light;
   filter: brightness(calc(.6 + var(--dist) * .25)) contrast(1.1) saturate(1.15);
   mix-blend-mode: color-dodge;
-  opacity: calc(var(--o) * var(--holo-max));
+  opacity: calc((0.14 + var(--o) * 0.86) * var(--holo-max) * (0.4 + var(--tilt) * 0.6));
 }
 
 /* ---- 闪光星点 ---- */
@@ -580,7 +581,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
     calc(var(--px) * 0.7px) calc(var(--py) * 0.6px),
     calc(var(--px) * 1%) calc(var(--py) * 1%);
   mix-blend-mode: color-dodge;
-  opacity: calc(var(--o) * var(--glitter-max));
+  opacity: calc((0.12 + var(--o) * 0.88) * var(--glitter-max) * (0.4 + var(--tilt) * 0.6));
 }
 
 /* ---- 金属拉丝 ---- */
@@ -2018,7 +2019,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
 
 <script>
 /* =========================================================
-   交互：指针 / 陀螺仪 → 目标值 → 物理弹簧（按真实时间积分，与屏幕刷新率无关）→ CSS 变量
+   交互：指针 / 陀螺仪只驱动倾斜；镭射/高光位置由固定环境光相对倾斜角反射得到 → 弹簧 → CSS 变量
    性能：
      · 每张卡各自一个 rAF 循环，只在弹簧还在动时运行 → 只有正在交互的那张卡在跑动画
      · 体感只驱动视口里的卡（IntersectionObserver）；滚出视口的卡粒子动画暂停
@@ -2040,6 +2041,16 @@ const FX_NAMES = { foil: '镭射', etch: '压纹', rim: '边缘光', depth: '视
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const clamp = (v, min = 0, max = 100) => Math.min(max, Math.max(min, v));
+/** 固定环境光（斜上方偏左）：反光 UV 随倾斜扫过卡面，不是指针聚光灯 */
+const LIGHT = { u0: 40, v0: 34, sweepX: 36, sweepY: 32 };  // 静止偏左上；满倾扫到对角侧，少贴 0/100 边
+/** rx/ry（度）→ 箔面/高光落点（卡面 %）。右缘抬起时高光向左扫，下缘抬起时高光向上扫。 */
+function lightFromTilt(rx, ry) {
+  const t = CONFIG.maxTilt || 1;
+  return {
+    px: clamp(LIGHT.u0 + (rx / t) * LIGHT.sweepX),
+    py: clamp(LIGHT.v0 - (ry / t) * LIGHT.sweepY),
+  };
+}
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 
@@ -2075,7 +2086,8 @@ class Spring {
 
 /* ---------- 单张卡 ---------- */
 function setupCard(card) {
-  const motion = new Spring({ rx: 0, ry: 0, px: 50, py: 50 }, CONFIG.follow); // 倾斜 + 光点位置
+  const restL = lightFromTilt(0, 0);
+  const motion = new Spring({ rx: 0, ry: 0, px: restL.px, py: restL.py }, CONFIG.follow); // 倾斜 + 由倾斜导出的反光 UV
   const glow = new Spring({ o: 0 }, CONFIG.fade);                              // 光泽强度
   let raf = 0, last = 0, lastPointerAt = 0, pointerActive = false;
   const self = { el: card, visible: true };
@@ -2110,23 +2122,27 @@ function setupCard(card) {
     kick();
   };
   const settle = () => {
-    if (gyro.enabled && gyro.pose && !reduceMotion.matches) {   // 体感开着：回到体感姿态
-      const p = gyro.pose; applyPose(p.rx, p.ry, p.px, p.py, 1, CONFIG.settle); return;
+    if (gyro.enabled && gyro.pose && !reduceMotion.matches) {   // 体感开着：回到体感姿态（反光仍由角度导出）
+      const p = gyro.pose; const L = lightFromTilt(p.rx, p.ry);
+      applyPose(p.rx, p.ry, L.px, L.py, 1, CONFIG.settle); return;
     }
-    motion.set({ rx: 0, ry: 0, px: 50, py: 50 }, CONFIG.settle);
+    const L = lightFromTilt(0, 0);
+    motion.set({ rx: 0, ry: 0, px: L.px, py: L.py }, CONFIG.settle);
     glow.set({ o: 0 });
     kick();
   };
 
   const onMove = (e) => {
     lastPointerAt = performance.now(); pointerActive = true;
-    // 用 .card（未旋转的外框）测量：倾斜和破框角色都不会让坐标跳动；破框热区里 py 被限幅为 0
+    // 用 .card（未旋转的外框）测量：只把指针映射成倾斜角；反光 UV 另由 lightFromTilt 算出
     const r = card.getBoundingClientRect();
-    const px = clamp(((e.clientX - r.left) / r.width) * 100);
-    const py = clamp(((e.clientY - r.top) / r.height) * 100);
+    const u = clamp(((e.clientX - r.left) / r.width) * 100);
+    const v = clamp(((e.clientY - r.top) / r.height) * 100);
     const tilt = CONFIG.maxTilt;
     // 指针所在一侧抬向观众：rotateY 负值 → 右边缘靠近；rotateX 正值 → 下边缘靠近
-    applyPose(-((px - 50) / 50) * tilt, ((py - 50) / 50) * tilt, px, py, 1, CONFIG.follow);
+    const rx = -((u - 50) / 50) * tilt, ry = ((v - 50) / 50) * tilt;
+    const L = lightFromTilt(rx, ry);
+    applyPose(rx, ry, L.px, L.py, 1, CONFIG.follow);
   };
   const onLeave = () => { pointerActive = false; lastPointerAt = performance.now(); settle(); };
 
@@ -2145,7 +2161,8 @@ function setupCard(card) {
   /** 陀螺仪驱动：指针正在操作或刚操作过则跳过 */
   self.applyGyro = (p) => {
     if (pointerActive || performance.now() - lastPointerAt < CONFIG.pointerPriorityMs) return;
-    applyPose(p.rx, p.ry, p.px, p.py, 1, CONFIG.follow);
+    const L = lightFromTilt(p.rx, p.ry);
+    applyPose(p.rx, p.ry, L.px, L.py, 1, CONFIG.follow);
   };
   self.settle = (force) => { if (force || !pointerActive) settle(); };
   self.paint = render;
@@ -2160,10 +2177,11 @@ const gyro = {
 };
 const clampTilt = (v) => Math.min(CONFIG.maxTilt, Math.max(-CONFIG.maxTilt, v));
 function mapOrientation(beta, gamma) {
-  // 相对零点；限幅后映射到与指针相同的 rx/ry/px/py。gamma 左右 → rotateY(rx)；beta 前后 → rotateX(ry)
+  // 相对零点 → rx/ry；反光 UV 与指针模式同一套 lightFromTilt。gamma 左右 → rotateY(rx)；beta 前后 → rotateX(ry)
   const rx = clampTilt(((gamma - gyro.zeroGamma) / CONFIG.gyroRange) * CONFIG.maxTilt);
   const ry = clampTilt(((beta - gyro.zeroBeta) / CONFIG.gyroRange) * CONFIG.maxTilt);
-  return { rx, ry, px: clamp(50 - (rx / CONFIG.maxTilt) * 50), py: clamp(50 + (ry / CONFIG.maxTilt) * 50) };
+  const L = lightFromTilt(rx, ry);
+  return { rx, ry, px: L.px, py: L.py };
 }
 function onDeviceOrientation(e) {
   if (!gyro.enabled || e.beta == null || e.gamma == null) return;   // 部分桌面会触发但值为 null
