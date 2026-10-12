@@ -1,15 +1,15 @@
 # Current State — holo-card (all-in-one)
 
-Updated: 2026-10-12 (Asia/Shanghai) — no-rim top radius clip + HoK L5 cream thin frame
+Updated: 2026-10-12 (Asia/Shanghai) — footer NO./等缀 + L5 rim half-again + rim laser
 
 ## Project
 Branch `feature/all-in-one`; Pages: https://mattamior.github.io/holo-card/all-in-one/
 
 ## Shipped (this checkpoint)
-1. **无边版顶角裁切（Principal 红框）：** `.layer--frame` 增加 `clip-path: inset(0 round var(--card-radius))`（preserve-3d 下单靠 overflow+radius 不可靠）。`.card.no-rim .win` / `.layer--char` 顶角设为卡片椭圆半径减 inset，底边贴描述带保持直角。
-2. **L5 细框对齐王者：** 整卡均匀奶油外框 `--win-l/.025`（约 2.5% 边宽），`--frame` 米白渐变（非脏香槟厚块）；`layer--frame::after` 内缘深线；插画窗/描述区内半径略紧；脚注色落入底框奶油带。
-3. **仍有效：** L1–4 无奶油衬底 + 无窗环；应龙 L3 未挖空；每卡独立等级；L5 镭射。
+1. **底栏（Principal 红标）：** 左 `NO. 出处`；右 `{id} 等缀 ★…`。应龙 `YL-001 等缀 ★★★`；其余四卡同左栏 + `00n/004 等缀 ★…`。未改 lore。
+2. **L5 细框再细一半：** `--win-l/.0125`、`--win-t/.011`（约 1.25% 边宽，原 ~2.5%）。珍珠/银奶油金属渐变（区别无边深底 `#141018`）；内缘深线保留。
+3. **L5 框带独立镭射：** `.foil--frame` 在 L5 强制显示并用 `--mask-rim-l5`∩条带 mask 限制在奶油环；`hard-light` 倾斜驱动；`.card.no-rim` / L1–4 `.no-foil` 隐藏。插画 `.foil--art` 不变。
 
-## Verified (local headless)
-- L1 yinglong：`no-rim`，winTL ≈ 23×22px 椭圆；顶左亮像素 x 随 y 递减（圆角曲线，无直角戳出）。Evidence: `.agnir/evidence/yinglong-l1-norim-radius-2026-10-12.jpg`.
-- L5 yinglong：左奶油带宽 ≈ 2.5% 卡宽；frame 米白渐变；内缘深线 + 底脚在框带内。Evidence: `.agnir/evidence/yinglong-l5-cream-thin-2026-10-12.jpg`.
+## Verified (local CDP)
+- L5 yinglong：left/right inset 1.25%，foot=`NO. 出处 YL-001 等缀 ★★★`，foil--frame `display:block` + hard-light。Evidence: `.agnir/evidence/yinglong-l5-foot-thin-rim-2026-10-12.png`, rim laser tilt `.agnir/evidence/yinglong-l5-rim-laser-tilt-2026-10-12.png`.
+- L1 yinglong：`no-rim`，frameBg `#141018`，foil--frame `none`，同脚注文案。Evidence: `.agnir/evidence/yinglong-l1-norim-foot-2026-10-12.png`.
