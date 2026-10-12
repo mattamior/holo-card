@@ -513,22 +513,22 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .card[data-mask="inverse"] .foil--art { display: none; }
 
-/* ---------- 高光：细扫光辅助；故意压低，避免盖住下层虹彩箔 ---------- */
+/* ---------- 高光：适度白光扫带（辅助镭射，不盖过色带） ---------- */
 .glare {
-  --glare-strength: .28;
+  --glare-strength: .42;
   background:
     linear-gradient(var(--band-angle),
       transparent 0%,
-      transparent calc(var(--sheen) * 1% - 18%),
-      rgba(255,255,255, calc(var(--glare-strength) * .08)) calc(var(--sheen) * 1% - 10%),
-      rgba(255,255,255, calc(var(--glare-strength) * .35)) calc(var(--sheen) * 1% - 3%),
-      rgba(255,255,255, calc(var(--glare-strength) * .55)) calc(var(--sheen) * 1%),
-      rgba(255,255,255, calc(var(--glare-strength) * .35)) calc(var(--sheen) * 1% + 3%),
-      rgba(255,255,255, calc(var(--glare-strength) * .08)) calc(var(--sheen) * 1% + 10%),
-      transparent calc(var(--sheen) * 1% + 18%),
+      transparent calc(var(--sheen) * 1% - 20%),
+      rgba(255,255,255, calc(var(--glare-strength) * .1)) calc(var(--sheen) * 1% - 12%),
+      rgba(255,255,255, calc(var(--glare-strength) * .4)) calc(var(--sheen) * 1% - 4%),
+      rgba(255,255,255, calc(var(--glare-strength) * .7)) calc(var(--sheen) * 1%),
+      rgba(255,255,255, calc(var(--glare-strength) * .4)) calc(var(--sheen) * 1% + 4%),
+      rgba(255,255,255, calc(var(--glare-strength) * .1)) calc(var(--sheen) * 1% + 12%),
+      transparent calc(var(--sheen) * 1% + 20%),
       transparent 100%);
   mix-blend-mode: soft-light;
-  opacity: calc(var(--o) * 0.32 + var(--tilt) * 0.22);
+  opacity: calc(var(--o) * 0.48 + var(--tilt) * 0.32);
 }
 
 /* ---------- 边缘光（假菲涅尔）：倾斜越大，卡缘越亮（来自 foil-mask） ---------- */
@@ -563,39 +563,36 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
    ========================================================= */
 /* ---- 彩虹镭射 ---- */
 .card[data-effect="rainbow"] .foil {
-  /* 虹彩镭射：倾斜驱动色相扫过；soft-light 避免亮底 color-dodge 洗成白光 */
-  --holo-angle: calc(115deg + var(--rx) * 2.4deg - var(--ry) * 1.6deg);
+  /* 平衡：倾斜可见虹彩色带 + 不洗白。color-dodge 控亮，overlay 提色相 */
+  --holo-angle: calc(115deg + var(--rx) * 2.6deg - var(--ry) * 1.7deg);
   --holo-speed: 1;
-  --band: 4.2%;
+  --band: 3.8%;
   --scan: 1px;
-  --holo-max: .95;
+  --holo-max: .9;
   background-image:
     repeating-linear-gradient(90deg,
-      transparent 0, rgba(255,255,255,.1) var(--scan), transparent calc(var(--scan) * 2.2)),
+      transparent 0, rgba(255,255,255,.12) var(--scan), transparent calc(var(--scan) * 2)),
     repeating-linear-gradient(var(--holo-angle),
-      #c45ef0 0%,
-      #3fbde8 calc(var(--band) * 1),
-      #4ce0a0 calc(var(--band) * 2),
-      #e8dc4a calc(var(--band) * 3),
-      #ec4a6a calc(var(--band) * 4),
-      #c45ef0 calc(var(--band) * 5),
-      #3fbde8 calc(var(--band) * 6));
-  background-size: auto, 400% 400%;
+      var(--c-violet) 0%,
+      var(--c-blue) calc(var(--band) * 1),
+      var(--c-green) calc(var(--band) * 2),
+      var(--c-yellow) calc(var(--band) * 3),
+      var(--c-red) calc(var(--band) * 4),
+      var(--c-violet) calc(var(--band) * 5));
+  background-size: auto, 420% 420%;
   background-position:
-    calc(var(--sheen) * -0.35px) calc(var(--ry) * 0.4px),
+    calc(var(--sheen) * -0.4px) 0,
     clamp(0%, calc(var(--sheen) * var(--holo-speed) * 1%), 100%)
-    clamp(0%, calc((100 - var(--sheen)) * var(--holo-speed) * 0.7% + 16%), 100%);
-  background-blend-mode: overlay, normal;
-  /* 压亮度 + 提饱和：在亮插画上仍能看出色带，而不是一片白 */
-  filter: brightness(calc(.72 + var(--tilt) * .12)) contrast(1.2) saturate(calc(1.55 + var(--tilt) * .45));
-  mix-blend-mode: soft-light;
-  opacity: calc((0.42 + var(--o) * 0.58) * var(--holo-max) * (0.55 + var(--tilt) * 0.45));
+    clamp(0%, calc((100 - var(--sheen)) * var(--holo-speed) * 0.65% + 18%), 100%);
+  background-blend-mode: soft-light, normal;
+  filter: brightness(calc(.48 + var(--tilt) * .22)) contrast(1.22) saturate(calc(1.45 + var(--tilt) * .35));
+  mix-blend-mode: color-dodge;
+  opacity: calc((0.32 + var(--o) * 0.68) * var(--holo-max) * (0.5 + var(--tilt) * 0.5));
 }
-/* 插画窗内再叠一层 color 混合，强化色相随指针偏移（不抬白） */
+/* 亮底插画（应龙）补一层 soft-light，保证色带仍可读 */
 .card[data-effect="rainbow"] .foil--art {
-  mix-blend-mode: color;
-  opacity: calc((0.28 + var(--o) * 0.5) * (0.45 + var(--tilt) * 0.55));
-  filter: saturate(calc(1.8 + var(--tilt) * .5)) contrast(1.05);
+  /* 继承上条背景；略抬不透明度，仍用 color-dodge（亮度已压） */
+  opacity: calc((0.38 + var(--o) * 0.62) * var(--holo-max, .9) * (0.52 + var(--tilt) * 0.48));
 }
 
 /* ---- 闪光星点 ---- */
@@ -852,14 +849,14 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   flex: 1;
   display: flex; flex-direction: column;
   min-height: 0;
-  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
-           max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+           max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
 }
 .holo-modal__bar {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; gap: 10px;
   flex: 0 0 auto;
-  margin-bottom: 8px;
-  min-height: 40px;
+  margin-bottom: 2px;
+  min-height: 34px;
 }
 .holo-modal__back {
   appearance: none; border: 0; background: transparent;
@@ -875,16 +872,16 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto minmax(180px, 260px);
+  grid-template-columns: 28px minmax(0, 1fr) 28px minmax(150px, 200px);
   grid-template-areas: "prev card next side";
-  gap: 6px 8px;
+  gap: 2px 4px;
   align-items: center;
   overflow: auto;
 }
 .holo-modal__nav {
   appearance: none; border: 0; background: transparent;
-  color: rgba(255,255,255,.82); font-size: 42px; line-height: 1;
-  width: 40px; height: 64px; cursor: pointer;
+  color: rgba(255,255,255,.82); font-size: 36px; line-height: 1;
+  width: 28px; height: 56px; cursor: pointer;
   text-shadow: 0 2px 10px rgba(0,0,0,.5);
   align-self: center;
   position: sticky; top: 40%;
@@ -897,11 +894,11 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   grid-area: card;
   min-width: 0; min-height: 0;
   display: flex; justify-content: center; align-items: center;
-  /* 列表卡约 150–168；弹层约 2×，并限制高度以免裁切 */
-  --card-w: clamp(300px, min(52vw, 360px), 400px);
+  /* 尽量占满可视高度：宽 = min(视口宽份额, 由高度反推的 2:3 宽) */
+  --card-w: clamp(340px, min(58vw, calc((100dvh - 72px) * 2 / 3), calc((100vh - 72px) * 2 / 3)), 560px);
   --card-h: calc(var(--card-w) * 3 / 2);
-  min-height: calc(var(--card-h) + 12px);
-  padding: 4px 0 12px;
+  min-height: 0;
+  padding: 0;
 }
 .holo-modal__card-host > div { position: relative; z-index: 2; }
 .holo-modal__card-host .label { display: none !important; }
@@ -915,32 +912,36 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   align-self: stretch;
   display: flex; flex-direction: column;
   justify-content: center;
-  padding: 8px 2px 8px 6px;
+  padding: 2px 0 2px 2px;
   overflow-y: auto;
-  max-height: min(88vh, 920px);
+  max-height: min(92vh, 960px);
 }
 
 @media (min-width: 1100px) {
+  .holo-modal__layout {
+    grid-template-columns: 28px minmax(0, 1fr) 28px minmax(160px, 210px);
+  }
   .holo-modal__card-host {
-    --card-w: clamp(320px, min(36vw, 400px), 420px);
+    --card-w: clamp(380px, min(46vw, calc((100dvh - 64px) * 2 / 3), calc((100vh - 64px) * 2 / 3)), 620px);
     --card-h: calc(var(--card-w) * 3 / 2);
   }
 }
 @media (max-width: 899px) {
   .holo-modal__layout {
-    grid-template-columns: 36px minmax(0, 1fr) 36px;
+    grid-template-columns: 28px minmax(0, 1fr) 28px;
     grid-template-rows: auto auto;
     grid-template-areas:
       "prev card next"
       "side side side";
     align-items: start;
+    gap: 4px;
   }
   .holo-modal__card-host {
-    --card-w: clamp(280px, min(72vw, 360px), 380px);
+    --card-w: clamp(300px, min(84vw, calc((100dvh - 200px) * 2 / 3), calc((100vh - 200px) * 2 / 3)), 440px);
     --card-h: calc(var(--card-w) * 3 / 2);
   }
-  .holo-modal__side-host { justify-content: flex-start; max-height: none; }
-  .holo-modal__nav { font-size: 34px; width: 32px; height: 48px; position: static; }
+  .holo-modal__side-host { justify-content: flex-start; max-height: none; padding: 4px 0 8px; }
+  .holo-modal__nav { font-size: 30px; width: 28px; height: 44px; position: static; }
 }
 
 body.modal-open { overflow: hidden; }
