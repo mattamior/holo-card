@@ -2,6 +2,6 @@
 
 Updated: 2026-10-12
 
-1. Principal QA on Pages: `#lv=5&focus=yinglong` — 脚注 `NO. 出处` / `YL-001 等缀 ★★★`；细框约 1.25%；倾斜时奶油框带有独立镭射。`#lv=1` 无奶油框、无框带镭射。
+1. Principal QA on Pages: `#lv=1&focus=yinglong` — tighter corners, no thick rim, foot 卡牌号+出处 / empty pill / ★. `#lv=5&focus=yinglong` — thin cream rim + rim laser; foot ★★★★★.
 2. Portrait L3 sequence frames when art arrives; keep region_warp rejected.
 3. Foil amplitude further only from Principal feedback.

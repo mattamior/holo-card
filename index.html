@@ -24,7 +24,7 @@
 :root {
   --card-w: min(240px, 68vw);   /* 卡片宽度 */
   --card-h: calc(var(--card-w) * 3 / 2);  /* 竖版 2:3，对齐参考视频卡牌 */
-  --card-radius: 5% / 3.4%;   /* 圆角 */
+  --card-radius: 3% / 2%;   /* 圆角：对齐王者参考，更紧的圆角矩形（约宽 3%） */
   --persp: 800;                 /* 透视距离（px，无单位）：越小 3D 感越夸张 */
 
   /* ---- 各层深度（px，无单位；负数在卡面后方，正数浮在卡面前方） ---- */
@@ -402,10 +402,39 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 .card__body b { display: block; font-size: 1.05em; margin-bottom: 2px; color: #fff; }
 .card__foot {
   position: absolute; left: 6%; right: 6%; bottom: 2.4%;
-  font-size: .78em; display: flex; justify-content: space-between; align-items: center;
-  opacity: .7; letter-spacing: .04em;
-  color: rgba(230,226,240,.75);
+  font-size: .72em; display: flex; justify-content: space-between; align-items: center;
+  gap: 4%;
+  opacity: .78; letter-spacing: .03em;
+  color: rgba(230,226,240,.78);
 }
+.card__foot-id {
+  flex: 1 1 auto; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-align: left;
+}
+.card__foot-pill {
+  flex: 0 0 auto;
+  width: 14%; max-width: 2.6em; min-width: 1.4em;
+  height: .72em;
+  border-radius: 999px;
+  border: 1px solid rgba(230,226,240,.28);
+  background: rgba(255,255,255,.04);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+.card__foot-stars {
+  flex: 0 0 auto;
+  letter-spacing: .12em;
+  text-align: right;
+  color: rgba(255, 232, 170, .92);
+  text-shadow: 0 0 6px rgba(255, 200, 120, .25);
+}
+/* 星级 = 当前卡闪卡特效等级（data-lv 1–5） */
+.card__foot-stars::before { content: "★"; }
+.card[data-lv="2"] .card__foot-stars::before { content: "★★"; }
+.card[data-lv="3"] .card__foot-stars::before { content: "★★★"; }
+.card[data-lv="4"] .card__foot-stars::before { content: "★★★★"; }
+.card[data-lv="5"] .card__foot-stars::before { content: "★★★★★"; }
+.card:not([data-lv]) .card__foot-stars::before { content: "★★★"; }
 
 /* ---------- 角色层 ---------- */
 .layer--char {
@@ -1074,10 +1103,10 @@ body.no-glare .glare,      .card.no-glare .glare      { display: none !important
   display: none;
   opacity: 0;
 }
-/* 顶角跟卡片椭圆圆角（减掉贴边 inset）；底边贴描述带保持直角 */
+/* 顶角跟卡片椭圆圆角 3%/2%（减掉贴边 inset）；底边贴描述带保持直角 */
 .card.no-rim .win {
-  --nr-rx: max(0px, calc(var(--card-w) * 0.05 - var(--win-l) * var(--card-w)));
-  --nr-ry: max(0px, calc(var(--card-h) * 0.034 - var(--win-t) * var(--card-h)));
+  --nr-rx: max(0px, calc(var(--card-w) * 0.03 - var(--win-l) * var(--card-w)));
+  --nr-ry: max(0px, calc(var(--card-h) * 0.02 - var(--win-t) * var(--card-h)));
   border-radius: var(--nr-rx) / var(--nr-ry);
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
@@ -1090,8 +1119,8 @@ body.no-glare .glare,      .card.no-glare .glare      { display: none !important
   content: none !important;
 }
 .card.no-rim .layer--char {
-  --nr-rx: max(0px, calc(var(--card-w) * 0.05 - var(--win-l) * var(--card-w)));
-  --nr-ry: max(0px, calc(var(--card-h) * 0.034 - var(--win-t) * var(--card-h)));
+  --nr-rx: max(0px, calc(var(--card-w) * 0.03 - var(--win-l) * var(--card-w)));
+  --nr-ry: max(0px, calc(var(--card-h) * 0.02 - var(--win-t) * var(--card-h)));
   border-radius: var(--nr-rx) / var(--nr-ry);
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
@@ -1181,8 +1210,17 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
   bottom: 1.45%;
   color: rgba(58, 50, 40, .82);
   opacity: .92;
-  letter-spacing: .05em;
-  font-size: .72em;
+  letter-spacing: .04em;
+  font-size: .68em;
+}
+.card[data-lv="5"]:not(.no-rim) .card__foot-pill {
+  border-color: rgba(58, 50, 40, .28);
+  background: rgba(255,255,255,.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+}
+.card[data-lv="5"]:not(.no-rim) .card__foot-stars {
+  color: rgba(120, 78, 18, .88);
+  text-shadow: none;
 }
 .card[data-lv="5"]:not(.no-rim) .card__rim {
   display: block !important;
@@ -2305,7 +2343,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           <div class="layer layer--text">
             <div class="card__head"><span>应龙</span><small>传说</small></div>
             <div class="card__body">龙有翼者也。黄帝令应龙攻蚩尤于冀州之野，应龙畜水；杀蚩尤与夸父，不得复上，处南极，故下数旱。旱而为应龙之状，乃得大雨。其后去南方，故南方多雨。</div>
-            <div class="card__foot"><span>NO. 出处</span><span>YL-001 等缀 ★★★</span></div>
+            <div class="card__foot"><span class="card__foot-id">YL-001 · 山海经·大荒东经</span><span class="card__foot-pill" aria-hidden="true"></span><span class="card__foot-stars" aria-label="星级"></span></div>
           </div>
           <div class="layer layer--char">
             <img class="photo-char" src="assets/yinglong/char.png" alt="" width="630" height="880" decoding="async" />
@@ -2388,7 +2426,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           <div class="layer layer--text">
             <div class="card__head"><span>霜晶龙</span><small>HP 120</small></div>
             <div class="card__body"><b>冰棱吐息 · 60</b>令对手的下一回合无法撤退。彩虹镭射只在极光夜空里流动，立绘留在窗内。</div>
-            <div class="card__foot"><span>NO. 出处</span><span>001/004 等缀 ★★</span></div>
+            <div class="card__foot"><span class="card__foot-id">DR-001 · 冰棱吐息</span><span class="card__foot-pill" aria-hidden="true"></span><span class="card__foot-stars" aria-label="星级"></span></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
@@ -2499,7 +2537,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           <div class="layer layer--text">
             <div class="card__head"><span>焰尾狐</span><small>HP 90</small></div>
             <div class="card__body"><b>流星焰 · 40×</b>掷 3 次硬币，每次正面造成 40 点伤害。亮片只在晚霞里闪，立绘留在窗内。</div>
-            <div class="card__foot"><span>NO. 出处</span><span>002/004 等缀 ★★★</span></div>
+            <div class="card__foot"><span class="card__foot-id">FX-002 · 流星焰</span><span class="card__foot-pill" aria-hidden="true"></span><span class="card__foot-stars" aria-label="星级"></span></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
@@ -2611,7 +2649,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           <div class="layer layer--text">
             <div class="card__head"><span>星尘狐</span><small>HP 90</small></div>
             <div class="card__body"><b>流星雨 · 40×</b>亮片只在卡缘一圈闪，插画保持哑光；星辰徽记浮在窗口前方。</div>
-            <div class="card__foot"><span>NO. 出处</span><span>003/004 等缀 ★★</span></div>
+            <div class="card__foot"><span class="card__foot-id">SF-003 · 流星雨</span><span class="card__foot-pill" aria-hidden="true"></span><span class="card__foot-stars" aria-label="星级"></span></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 100 100" aria-hidden="true">
@@ -2692,7 +2730,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           <div class="layer layer--text">
             <div class="card__head"><span>金曜狮王</span><small>HP 250</small></div>
             <div class="card__body"><b>王者咆哮 · 200</b>反闪：卡框与文字区拉丝金箔，插画保持哑光；烈日徽记浮在窗口前方。</div>
-            <div class="card__foot"><span>NO. 出处</span><span>004/004 等缀 ★★★</span></div>
+            <div class="card__foot"><span class="card__foot-id">LN-004 · 王者咆哮</span><span class="card__foot-pill" aria-hidden="true"></span><span class="card__foot-stars" aria-label="星级"></span></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 100 100" aria-hidden="true">
@@ -3013,7 +3051,7 @@ const LEVEL_INFO = {
   2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（框内）；高光。1–4 级真无边框（无奶油衬底）。', on: ['tilt', 'depth', 'glare'] },
   3: { name: '动态画面', desc: '动态画面：立绘主体在动——应龙躯体微呼吸+鬃/翼/眼光；霜晶龙颈呼吸；焰尾狐躯体+摆尾/耳/眨眼；星尘狐星辰摆转；金曜狮王徽记脉动。环境在 4 级。真无边框。', on: ['tilt', 'depth', 'glare', 'anim'] },
   4: { name: '专属特效', desc: '专属特效：环境在动（云雾/极光/星云等）与稀有光晕。真无边框。', on: ['tilt', 'depth', 'glare', 'anim', 'rarity'] },
-  5: { name: '镀闪卡面', desc: '镀闪卡面：镭射箔面、压纹、闪点；珍珠银奶油细外框（约 1.25% 边宽、内缘深线、框带独立镭射）；脚注 NO./等缀。', on: FX_KEYS },
+  5: { name: '镀闪卡面', desc: '镀闪卡面：镭射箔面、压纹、闪点；珍珠银奶油细外框（约 1.25% 边宽、内缘深线、框带独立镭射）；脚注卡牌号+出处 / 空槽 / 星级=特效等级。', on: FX_KEYS },
 };
 const presetOf = (n) => Object.fromEntries(FX_KEYS.map(k => [k, LEVEL_INFO[n].on.includes(k)]));
 /** 每张卡自己的等级（localStorage 映射）；列表缩略图与弹层各自反映 */
