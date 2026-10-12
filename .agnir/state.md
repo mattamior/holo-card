@@ -1,11 +1,12 @@
 # Current State — holo-card (all-in-one)
 
-Updated: 2026-10-12 (Asia/Shanghai) — 应龙 4:3 铺满修复
+Updated: 2026-10-12 (Asia/Shanghai) — 其它卡 L3/L4 对齐应龙标准
 
 ## Project
 Web holographic trading-card effects (zero-deps CSS + optional WebGL). Canonical work lives on branch `feature/all-in-one`; Pages preview: https://mattamior.github.io/holo-card/all-in-one/
 
 ## Shipped recently
+- **Align:** 霜晶龙/焰尾狐/星尘狐/金曜狮王 L3=主体动、L4=环境动（极光雪/夕阳/星云/日芒等从 anim 迁到 rarity）；应龙守卫与 lore 未动。审计：`/workspace/holo-l3l4-audit.md`。
 - **Fix:** 应龙插画窗 4:3 铺满（prep 裁 16:9→4:3 + cover；L3 非 4:3 序列拒播）。证据：`.agnir/evidence/yinglong-4x3-fill-2026-10-12.png`。
 - **应龙 (Yinglong)** legendary card: art + copy grounded in 《山海经·大荒东经》/《大荒北经》 (no invented lore).
 - Illustration window is **landscape 4:3**; `art.jpg` is **960×720** (`landscape-4x3`) with `object-fit: cover` — fills window, no letterbox.
