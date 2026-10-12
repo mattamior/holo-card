@@ -7,8 +7,8 @@
     720
   ],
   "art_size": [
-    630,
-    880
+    960,
+    540
   ],
   "name": "应龙",
   "rarity": "ur",
@@ -18,5 +18,6 @@
   "guopu_note": "应龙，龙有翼者也。（有翼依郭璞注/广雅）",
   "art_note": "白金鸟羽为项目画风，勿写成经文",
   "copy_file": "/workspace/yinglong-card-copy.md",
-  "note": "plate d0d06c99 (eye glow softened, divine gold kept); lore from yinglong-card-copy.md"
+  "note": "full plate for object-fit:contain in window; no portrait crop",
+  "art_mode": "full-landscape-contain"
 }

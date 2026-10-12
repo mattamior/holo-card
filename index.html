@@ -367,12 +367,14 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .card__head small { font-size: .73em; font-weight: 700; }
 .card__body {
-  position: absolute; left: 6%; right: 6%; top: 61%; bottom: 10%;
+  position: absolute; left: 6%; right: 6%; top: 61%;
+  bottom: auto; height: auto; max-height: 22%;
   background: var(--panel, rgba(255,255,255,.82));
   border-radius: 4px;
-  padding: 5% 7%;
-  line-height: 1.5;
+  padding: 2.2% 5.5% 2.4%;
+  line-height: 1.35;
   box-shadow: 0 6px 14px rgba(0,0,0,.28);
+  overflow: hidden;
 }
 .card__body b { display: block; font-size: 1.14em; margin-bottom: 3px; }
 .card__foot {
@@ -635,16 +637,20 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   --ring: rgba(60,40,8,.4);
 }
 .card[data-card="yinglong"] {
-  --breakout: 0;                /* 应龙亦不超框 */
+  --breakout: 0;
+  --bleed: 0px;                 /* contain 必须贴窗，出血会裁掉头尾 */
+  --win-t: .11;
+  --win-h: .37;                 /* 肖像卡内 ≈16:9 窗，横图 contain 几乎无黑边 */
   --frame: linear-gradient(160deg, #f4efe4, #c4b59a 40%, #8a7a5c 70%, #e8dcc4);
   --frame-pattern: radial-gradient(circle at 50% 0%, rgba(255,230,170,.35), transparent 55%);
   --panel: rgba(18,14,10,.82);
   --ink: #fff6e8;
   --head-shadow: rgba(0,0,0,.4);
   --ring: rgba(255,220,160,.4);
-  --yl-pos: 52% 44%;
+  --art-bg: #2a2e36;            /* contain 留边时的风暴底 */
+  --yl-pos: 50% 50%;
 }
-/* 照片卡：窗口底图 + 破框角色层（透明 PNG）；破框层只透出上沿，窗内交给底图，换图只替 assets/yinglong/* */
+/* 照片卡通用 */
 .win__bg > img.photo-art {
   position: absolute; inset: calc(var(--bleed) * -1);
   width: calc(100% + 2 * var(--bleed)); height: calc(100% + 2 * var(--bleed));
@@ -657,9 +663,23 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   display: block; pointer-events: none;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,.4));
 }
-/* 破框层：只保留探出卡框上沿的部分，窗内与底图重合处淡出，避免双影 */
-/* 应龙不破框：窗口只用 art.jpg，隐藏 cutout 角色层避免叠影 */
+/* 应龙：整幅横图 contain，看见全身；不破框；win__bg 也不出血 */
 .card[data-card="yinglong"] .layer--char { display: none; }
+.card[data-card="yinglong"] .win__bg,
+.card[data-card="yinglong"] .win__mid {
+  inset: 0;
+}
+.card[data-card="yinglong"] .win__bg > img.photo-art {
+  inset: 0; width: 100%; height: 100%;
+  object-fit: contain;
+  object-position: var(--yl-pos);
+}
+.card[data-card="yinglong"] .card__body {
+  top: 51%;                      /* 贴着 16:9 窗下沿 */
+  max-height: 16%;
+  padding: 1.6% 5.5% 1.8%;
+  line-height: 1.35;
+}
 /* 神性体积光动画层 */
 .an-godrays {
   position: absolute; inset: -2%; pointer-events: none;
@@ -694,6 +714,7 @@ body:not(.no-anim) .an-godrays { animation: an-godrays 9s ease-in-out infinite a
 
 body.focus-one .stage { --cols: 1; justify-content: center;
   --card-w: clamp(280px, min(72vw, 420px), 440px);
+  --card-h: calc(var(--card-w) * 88 / 63);  /* 与 --card-w 同作用域，避免只拉宽不拉高 */
   padding-top: calc(var(--card-h) * max(0, var(--breakout) - var(--win-t)) + 36px);
 }
 body.focus-one .stage > div[hidden] { display: none !important; }
@@ -1613,7 +1634,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
             <div class="foil foil--frame"></div>
             <div class="win">
               <div class="win__bg">
-                <img class="photo-art" src="assets/yinglong/art.jpg" alt="" width="630" height="880" decoding="async" />
+                <img class="photo-art" src="assets/yinglong/art.jpg" alt="" width="960" height="540" decoding="async" />
                 <div class="an-ov an-godrays" aria-hidden="true"></div>
                 <div class="foil foil--art"></div>
               </div>
