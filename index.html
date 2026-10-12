@@ -699,7 +699,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 .card[data-card="yinglong"] {
   --breakout: 0;
   --bleed: 0px;
-  /* 竖版插画窗：与全局一致；4:3 母图 cover 裁切铺满 */
+  /* 竖版插画窗默认；L1–4 .no-rim / L5 细框规则会覆盖 --win-* */
   --win-t: .035;
   --win-h: .62;
   --frame: linear-gradient(160deg, #f4efe4, #c4b59a 40%, #8a7a5c 70%, #e8dcc4);
@@ -1049,7 +1049,38 @@ body.modal-open .fx__adv > summary { display: flex !important; }
 body.no-foil  .foil,       .card.no-foil  .foil       { display: none !important; }
 body.no-etch  .card__etch, .card.no-etch  .card__etch { display: none !important; }
 body.no-glare .glare,      .card.no-glare .glare      { display: none !important; }
-/* L1–4 无卡缘边框（.card.no-rim）；仅 L5 显示半细 rim + 纸缘。等级类挂在 .card，勿用 body.no-rim 管列表。 */
+/* ---------- 边框真相：厚奶油/金边 = .layer--frame 衬底（由 --win-* 留白露出）+ .win::after 描边环。
+   .card__rim 只是边缘高光，不是那圈厚框。等级类挂在 .card，勿用 body.no-rim 管列表。 ---------- */
+
+/* L1–4 真·无边框：内容贴边（≤~1% 留白），关掉奶油衬底与窗口描边环 */
+.card.no-rim {
+  --win-l: .01;
+  --win-t: .01;
+  --win-w: .98;
+  --win-h: .64;
+  --frame: #141018; /* 吞掉香槟/金渐变，残余缝不再读成厚框 */
+}
+.card.no-rim .layer--frame {
+  background: #141018;
+}
+.card.no-rim .layer--frame::before {
+  display: none;
+  opacity: 0;
+}
+.card.no-rim .win::after {
+  display: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  content: none !important;
+}
+.card.no-rim .card__foot {
+  left: 2.2%;
+  right: 2.2%;
+}
+.card.no-rim .card__body {
+  bottom: 5.2%;
+  padding: 4% 4.5%;
+}
 body.no-rim   .card__rim, body.no-rim .layer--edge,
 .card.no-rim  .card__rim, .card.no-rim .layer--edge {
   display: none !important;
@@ -1058,7 +1089,25 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
   box-shadow: none !important;
   background: none !important;
 }
-/* L5：无 .no-rim 时强制可见细 rim（避免被其它规则盖掉） */
+
+/* L5 细边框：衬底约半厚（左右合计 ~3%），窗口环 1px，保留细 rim 高光 */
+.card[data-lv="5"]:not(.no-rim) {
+  --win-l: .015;
+  --win-t: .012;
+  --win-w: .97;
+  --win-h: .63;
+}
+.card[data-lv="5"]:not(.no-rim) .win::after {
+  border-width: 1px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.1),
+    inset 0 3px 8px rgba(0,0,0,.35),
+    inset 0 0 12px rgba(0,0,0,.18);
+}
+.card[data-lv="5"]:not(.no-rim) .card__foot {
+  left: 3.2%;
+  right: 3.2%;
+}
 .card[data-lv="5"]:not(.no-rim) .card__rim {
   display: block !important;
   visibility: visible !important;
@@ -2850,11 +2899,11 @@ function glEffects() { return { foil: fx.foil, etch: fx.etch, rim: fx.rim, glare
 const LEVEL_KEY = 'holo-card:all-in-one:level'; // legacy single; migrated into per-card map
 const CARD_LEVELS_KEY = 'holo-card:all-in-one:card-levels';
 const LEVEL_INFO = {
-  1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。无边框。', on: [] },
-  2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（框内）；高光。1–4 级无卡缘边框。', on: ['tilt', 'depth', 'glare'] },
-  3: { name: '动态画面', desc: '动态画面：立绘主体在动——应龙躯体微呼吸+鬃/翼/眼光；霜晶龙颈呼吸；焰尾狐躯体+摆尾/耳/眨眼；星尘狐星辰摆转；金曜狮王徽记脉动。环境在 4 级。无边框。', on: ['tilt', 'depth', 'glare', 'anim'] },
-  4: { name: '专属特效', desc: '专属特效：环境在动（云雾/极光/星云等）与稀有光晕。无边框。', on: ['tilt', 'depth', 'glare', 'anim', 'rarity'] },
-  5: { name: '镀闪卡面', desc: '镀闪卡面：镭射箔面、压纹、闪点，并显示细边框（约为旧版一半粗细）。', on: FX_KEYS },
+  1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。真无边框（无奶油衬底 / 无窗环）。', on: [] },
+  2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（框内）；高光。1–4 级真无边框（无奶油衬底）。', on: ['tilt', 'depth', 'glare'] },
+  3: { name: '动态画面', desc: '动态画面：立绘主体在动——应龙躯体微呼吸+鬃/翼/眼光；霜晶龙颈呼吸；焰尾狐躯体+摆尾/耳/眨眼；星尘狐星辰摆转；金曜狮王徽记脉动。环境在 4 级。真无边框。', on: ['tilt', 'depth', 'glare', 'anim'] },
+  4: { name: '专属特效', desc: '专属特效：环境在动（云雾/极光/星云等）与稀有光晕。真无边框。', on: ['tilt', 'depth', 'glare', 'anim', 'rarity'] },
+  5: { name: '镀闪卡面', desc: '镀闪卡面：镭射箔面、压纹、闪点，并显示细边框（约 1.5% 金/奶油衬底 + 1px 窗环，约为旧版一半以下）。', on: FX_KEYS },
 };
 const presetOf = (n) => Object.fromEntries(FX_KEYS.map(k => [k, LEVEL_INFO[n].on.includes(k)]));
 /** 每张卡自己的等级（localStorage 映射）；列表缩略图与弹层各自反映 */
