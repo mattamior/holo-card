@@ -707,7 +707,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 
 /* =========================================================
-   列表 → 单卡预览（对齐山海经图鉴：默认缩略图网格，点击进详情）
+   列表 + 弹窗预览（对齐山海经图鉴：列表常驻，点击弹层看全息卡）
    ========================================================= */
 .list-bar {
   width: min(100%, 1280px);
@@ -813,46 +813,102 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-.detail-bar {
-  width: min(100%, 1520px);
-  display: none;
-  align-items: center; gap: 12px;
-  margin: 0 0 12px; padding: 0 4px;
+/* 默认：卡牌舞台停在页外（供开包模板 / 弹窗搬入），列表常驻 */
+.shell--parked {
+  position: fixed !important;
+  left: -9999px !important;
+  top: 0 !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  display: block !important;
 }
-.detail-bar__back {
-  appearance: none; border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06); color: #e8e8f0;
-  font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 10px; cursor: pointer;
+
+.holo-modal[hidden] { display: none !important; }
+.holo-modal {
+  position: fixed; inset: 0; z-index: 40;
+  display: grid; place-items: center;
+  padding: 12px;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+           max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
 }
-.detail-bar__back:hover { background: rgba(255,255,255,.1); }
-.detail-bar__back:focus-visible { outline: 2px solid #c6b8ff; outline-offset: 2px; }
-.detail-bar__title { margin: 0; font-size: 14px; opacity: .7; }
+.holo-modal__backdrop {
+  position: absolute; inset: 0;
+  background: rgba(4, 5, 10, .72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.holo-modal__panel {
+  position: relative; z-index: 1;
+  width: min(1100px, 100%);
+  max-height: min(94vh, 960px);
+  overflow: auto;
+  border: 1px solid rgba(210,195,255,.22);
+  border-radius: 18px;
+  background: #121019;
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
+  padding: 16px 16px 20px;
+}
+.holo-modal__close {
+  position: absolute; top: 10px; right: 12px; z-index: 5;
+  width: 36px; height: 36px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.45); color: #f0eef8;
+  font-size: 22px; line-height: 1; cursor: pointer;
+}
+.holo-modal__close:hover { background: rgba(255,255,255,.12); }
+.holo-modal__close:focus-visible { outline: 2px solid #c6b8ff; outline-offset: 2px; }
+.holo-modal__title {
+  margin: 0 40px 12px 4px;
+  font-size: 1.05rem; font-weight: 600; letter-spacing: .06em;
+  color: #f0ebe8;
+}
+.holo-modal__host { min-width: 0; }
 
-body.view-list .shell { display: none !important; }
-body.view-list .detail-bar { display: none !important; }
-body.view-list .card-list { display: grid; }
-body.view-list .list-bar { display: flex; }
-
-body.view-detail .card-list,
-body.view-detail .list-bar { display: none !important; }
-body.view-detail .detail-bar { display: flex; }
-body.view-detail .stage {
+/* 弹窗内：单卡 + 侧栏 */
+body.modal-open { overflow: hidden; }
+body.modal-open .shell {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  width: 100%; max-width: none; margin: 0;
+}
+body.modal-open .shell .stage {
   --cols: 1; justify-content: center;
-  --card-w: clamp(280px, min(72vw, 420px), 440px);
+  --card-w: clamp(240px, min(58vw, 360px), 400px);
   --card-h: calc(var(--card-w) * 88 / 63);
-  padding-top: calc(var(--card-h) * max(0, var(--breakout) - var(--win-t)) + 36px);
+  padding-top: calc(var(--card-h) * max(0, var(--breakout) - var(--win-t)) + 28px);
+  row-gap: 12px;
 }
-body.view-detail .stage > div[hidden] { display: none !important; }
-body.view-detail header.mast h1 { font-size: 1.15rem; }
-/* 详情保留侧栏等级 / 特效；窄屏仍是面板在上 */
+body.modal-open .shell .stage > div[hidden] { display: none !important; }
+body.modal-open .shell .side {
+  width: min(100%, 720px);
+  position: static; max-height: none; overflow: visible;
+}
+body.modal-open .shell .main { width: 100%; }
 @media (min-width: 900px) {
-  body.view-detail .shell {
+  body.modal-open .shell {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--side-w, 268px);
+    grid-template-columns: minmax(0, 1fr) min(280px, 32%);
     grid-template-areas: "main side";
+    gap: 16px 18px;
+    align-items: start;
+  }
+  body.modal-open .shell .main { grid-area: main; }
+  body.modal-open .shell .side {
+    grid-area: side; width: auto;
+    position: sticky; top: 0;
+    max-height: min(82vh, 860px);
+    overflow-y: auto;
+  }
+  body.modal-open .shell .stage {
+    --card-w: clamp(260px, min(42vw, 380px), 420px);
+    --card-h: calc(var(--card-w) * 88 / 63);
   }
 }
-
+@media (max-width: 899px) {
+  body.modal-open .holo-modal__panel { padding-top: 44px; }
+}
 
 /* =========================================================
    控制面板的开关
@@ -1771,24 +1827,28 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
 
 </style>
 </head>
-<body class="view-list">
+<body>
   <header class="mast">
     <h1>全息闪卡 · 汇总版</h1>
-    <p class="tip">点选卡片进入全息预览；等级与特效在详情侧栏调节。默认列表浏览，深链可用 <code>#lv=3&amp;focus=yinglong</code>。</p>
+    <p class="tip">点选卡片弹窗预览全息卡面；弹窗内可调等级与特效。深链可用 <code>#lv=3&amp;focus=yinglong</code>。</p>
   </header>
 
   <div class="list-bar" id="list-bar">
-    <p class="list-bar__hint">图鉴列表 · 点击查看全息卡面</p>
+    <p class="list-bar__hint">图鉴列表 · 点击弹窗查看全息卡面</p>
     <button type="button" class="list-bar__pack" id="list-pack" aria-haspopup="dialog">✦ 开包（5 张）</button>
   </div>
   <main id="card-list" class="card-list" aria-label="闪卡列表"></main>
 
-  <div class="detail-bar" id="detail-bar">
-    <button type="button" class="detail-bar__back" id="detail-back">← 返回图鉴</button>
-    <p class="detail-bar__title" id="detail-title">单卡预览</p>
+  <div id="holo-modal" class="holo-modal" hidden role="dialog" aria-modal="true" aria-labelledby="holo-modal-title">
+    <div class="holo-modal__backdrop" id="holo-modal-backdrop" tabindex="-1"></div>
+    <div class="holo-modal__panel">
+      <button type="button" class="holo-modal__close" id="holo-modal-close" aria-label="关闭">×</button>
+      <h2 class="holo-modal__title" id="holo-modal-title">全息预览</h2>
+      <div class="holo-modal__host" id="holo-modal-host"></div>
+    </div>
   </div>
 
-  <div class="shell">
+  <div class="shell shell--parked" id="shell">
   <aside class="side">
   <details class="fx" id="fx" open>
     <summary><span class="fx__title">⚙ 特效控制</span><span class="fx__sum" id="fx-sum">CSS 模式 · 全部开启</span><span class="fx__chev" aria-hidden="true">▾</span></summary>
@@ -2992,16 +3052,22 @@ window.addEventListener('hashchange', () => {
 
 // 供无头 / 自测脚本调用（不改变正常行为）
 
-/* ---------- 列表 → 单卡预览（默认图鉴网格；#focus=slug 进详情） ---------- */
-const TIP_DEFAULT = '点选卡片进入全息预览；等级与特效在详情侧栏调节。默认列表浏览，深链可用 #lv=3&focus=yinglong。';
+/* ---------- 列表 + 弹窗预览（#focus=slug 打开弹层；列表常驻） ---------- */
+const TIP_DEFAULT = '点选卡片弹窗预览全息卡面；弹窗内可调等级与特效。深链可用 #lv=3&focus=yinglong。';
 const TIP_BY_CARD = {
-  yinglong: '应龙（《山海经·大荒东经》 / 《大荒北经》）。悬停 / 拖动看箔面；侧栏调等级。Esc 或「返回图鉴」回列表。',
+  yinglong: '应龙（《山海经·大荒东经》 / 《大荒北经》）。悬停 / 拖动看箔面；右侧调等级。Esc / 点遮罩 / × 关闭。',
 };
 const CLIST_MARK = { dragon: '❄', fox: '🦊', stardust: '✦', lion: '☀', yinglong: '🐉' };
 const tipEl = document.querySelector('header .tip');
 const cardListEl = $('#card-list');
-const detailTitle = $('#detail-title');
-let viewMode = 'list'; // list | detail
+const holoModal = $('#holo-modal');
+const holoModalHost = $('#holo-modal-host');
+const holoModalTitle = $('#holo-modal-title');
+const shellEl = $('#shell');
+const shellHome = document.createComment('shell-home');
+shellEl.after(shellHome);
+
+let modalOpen = false;
 let focusedCard = null;
 
 function cardWraps() { return $$('#css-view > div'); }
@@ -3065,60 +3131,78 @@ function buildCardList() {
   cardListEl.appendChild(frag);
 }
 
-function setView(mode, key) {
-  viewMode = mode;
-  focusedCard = mode === 'detail' ? key : null;
-  document.body.classList.toggle('view-list', mode === 'list');
-  document.body.classList.toggle('view-detail', mode === 'detail');
-  document.body.classList.remove('focus-one');
+function parkShell() {
+  if (shellEl.parentElement === holoModalHost) {
+    shellHome.after(shellEl);
+  }
+  shellEl.classList.add('shell--parked');
+}
+
+function mountShellInModal() {
+  shellEl.classList.remove('shell--parked');
+  holoModalHost.appendChild(shellEl);
+}
+
+function openCardDetail(key, { syncHash = true } = {}) {
+  if (!key || !$(`.card[data-card="${key}"]`)) return;
+  focusedCard = key;
   for (const wrap of cardWraps()) {
     const c = wrap.querySelector('.card');
-    if (mode === 'detail') wrap.hidden = !(c && c.dataset.card === key);
-    else wrap.hidden = false;
+    wrap.hidden = !(c && c.dataset.card === key);
   }
-  if (tipEl) {
-    tipEl.textContent = (mode === 'detail' && TIP_BY_CARD[key]) || TIP_DEFAULT;
-  }
-  if (detailTitle) {
-    const name = key && $(`.card[data-card="${key}"] .card__head span`)?.textContent?.trim();
-    detailTitle.textContent = name ? `${name} · 全息预览` : '单卡预览';
-  }
-  if (mode === 'list') {
-    for (const c of cards) c.settle?.(true);
-  }
-  // 详情进视口后 IntersectionObserver 会摘掉 is-off；列表时 stage 已隐藏
-  writeHash({ focus: mode === 'detail' ? key : null });
-}
+  const name = $(`.card[data-card="${key}"] .card__head span`)?.textContent?.trim() || key;
+  if (holoModalTitle) holoModalTitle.textContent = `${name} · 全息预览`;
+  if (tipEl) tipEl.textContent = TIP_BY_CARD[key] || TIP_DEFAULT;
 
-function openCardDetail(key) {
-  if (!key || !$(`.card[data-card="${key}"]`)) return;
-  setView('detail', key);
-  // 窄屏：展开特效面板，方便调等级
+  mountShellInModal();
+  holoModal.hidden = false;
+  document.body.classList.add('modal-open');
+  document.body.classList.remove('view-list', 'view-detail', 'focus-one');
+  modalOpen = true;
+
   const fxPanel = $('#fx');
-  if (fxPanel && matchMedia('(max-width: 899px)').matches) fxPanel.open = true;
-  try { $(`.card[data-card="${key}"]`).scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch { /* */ }
+  if (fxPanel) fxPanel.open = true;
+
+  try { $('#holo-modal-close')?.focus({ preventScroll: true }); } catch { /* */ }
+
+  if (syncHash) writeHash({ focus: key });
+  // 下一帧让 IO 看到弹窗内卡片
+  requestAnimationFrame(() => {
+    const card = $(`.card[data-card="${key}"]`);
+    card?.classList.remove('is-off');
+    const self = cards.find(c => c.el === card);
+    if (self) { self.visible = true; self.aura?.classList.remove('is-off'); }
+  });
 }
 
-function closeCardDetail() {
-  if (viewMode !== 'detail') return;
-  setView('list', null);
-  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { window.scrollTo(0, 0); }
+function closeCardDetail({ syncHash = true } = {}) {
+  if (!modalOpen && holoModal.hidden) return;
+  modalOpen = false;
+  focusedCard = null;
+  holoModal.hidden = true;
+  document.body.classList.remove('modal-open', 'view-detail', 'focus-one');
+  parkShell();
+  for (const wrap of cardWraps()) wrap.hidden = false;
+  for (const c of cards) c.settle?.(true);
+  if (tipEl) tipEl.textContent = TIP_DEFAULT;
+  if (syncHash) writeHash({ focus: null });
 }
 
 buildCardList();
+parkShell();
 {
   const bootFocus = readHash().focus;
-  if (bootFocus && $(`.card[data-card="${bootFocus}"]`)) openCardDetail(bootFocus);
-  else setView('list', null);
+  if (bootFocus && $(`.card[data-card="${bootFocus}"]`)) openCardDetail(bootFocus, { syncHash: false });
 }
 
-$('#detail-back')?.addEventListener('click', closeCardDetail);
+$('#holo-modal-close')?.addEventListener('click', () => closeCardDetail());
+$('#holo-modal-backdrop')?.addEventListener('click', () => closeCardDetail());
 $('#list-pack')?.addEventListener('click', () => openPack());
 
 window.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (packOpen) return;
-  if (viewMode === 'detail') {
+  if (modalOpen) {
     e.preventDefault();
     closeCardDetail();
   }
@@ -3126,24 +3210,15 @@ window.addEventListener('keydown', (e) => {
 
 window.addEventListener('hashchange', () => {
   const h = readHash();
-  if (h.focus && h.focus !== focusedCard) openCardDetail(h.focus);
-  else if (!h.focus && viewMode === 'detail') {
-    // 仅清 focus，不二次 writeHash（由浏览器后退触发）
-    viewMode = 'list';
-    focusedCard = null;
-    document.body.classList.add('view-list');
-    document.body.classList.remove('view-detail', 'focus-one');
-    for (const wrap of cardWraps()) wrap.hidden = false;
-    if (tipEl) tipEl.textContent = TIP_DEFAULT;
-    for (const c of cards) c.settle?.(true);
-  }
+  if (h.focus && h.focus !== focusedCard) openCardDetail(h.focus, { syncHash: false });
+  else if (!h.focus && modalOpen) closeCardDetail({ syncHash: false });
 });
 
 window.__holoAio = {
   CONFIG, cards, gyro, fx, applyFx, setMode, setLevel, get level() { return level; }, mapOrientation, enableGyro, disableGyro,
   get mode() { return mode; },
   openPack, get pack() { return pack; },
-  openCardDetail, closeCardDetail, get viewMode() { return viewMode; }, get focusedCard() { return focusedCard; },
+  openCardDetail, closeCardDetail, get viewMode() { return modalOpen ? 'detail' : 'list'; }, get focusedCard() { return focusedCard; }, get modalOpen() { return modalOpen; },
   simulateOrientation(beta, gamma) { onDeviceOrientation({ beta, gamma }); },
 };
 
