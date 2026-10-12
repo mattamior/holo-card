@@ -42,7 +42,7 @@ export const CARDS = {
     // 只闪插画：卡框不带箔（箔光全部在远景层上）
     foil: (m) => ({ r: m.frame * 0.12, b: 0 }),
     etch: 'lattice',
-    layered: { foil: 'rainbow', breakout: true },
+    layered: { foil: 'rainbow', breakout: false },
   },
   fox: {
     name: '焰尾狐', hp: 'HP 90',
@@ -55,7 +55,7 @@ export const CARDS = {
     symbol: drawStars,
     foil: (m) => ({ r: 0, b: 0 }),
     etch: 'lattice',
-    layered: { foil: 'sparkle', breakout: true },
+    layered: { foil: 'sparkle', breakout: false },
   },
   star: {
     name: '星尘狐', hp: 'HP 90',

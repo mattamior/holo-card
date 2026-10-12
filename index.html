@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>全息闪卡 · Holo Card · 汇总版（全部特效）</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect x=%223%22 y=%221%22 width=%2210%22 height=%2214%22 rx=%222%22 fill=%22%239a7bff%22/%3E%3C/svg%3E" />
-<meta name="description" content="全息闪卡汇总版：箔面镭射、局部 mask、蚀刻压纹、边缘光与纸张厚度、多层视差与角色破框、陀螺仪体感，可一键切到 WebGL 渲染（同样分层破框），还能开卡包。" />
+<meta name="description" content="全息闪卡汇总版：箔面镭射、局部 mask、蚀刻压纹、边缘光与纸张厚度、多层视差（窗内分层，不破框）、陀螺仪体感，可一键切到 WebGL 渲染（同样分层、不破框），还能开卡包。" />
 <!-- Three.js 只在切到 WebGL 模式时才会被 import()；importmap 本身不下载任何东西 -->
 <script type="importmap">
 { "imports": { "three": "./vendor/three-holo.min.js" } }
@@ -16,8 +16,8 @@
      · 经典版 main            → 三种箔面（彩虹镭射 / 闪光星点 / 金属拉丝）、高光、弹簧手感
      · feature/gyro           → 陀螺仪体感（与指针共用同一套弹簧）
      · feature/foil-mask      → 局部镭射 mask（art / border / inverse）、蚀刻压纹、边缘光、纸张厚度
-     · feature/parallax       → 多层视差（真 3D 平面 + 窗口内等效深度）与角色破框
-     · feature/webgl          → WebGL 模式（同页切换，切过去时才加载 three；四张卡同样分层 + 破框，见 js/holo.js）
+     · feature/parallax       → 多层视差（真 3D 平面 + 窗口内等效深度）（窗内分层，不破框）
+     · feature/webgl          → WebGL 模式（同页切换，切过去时才加载 three；四张卡同样分层（不破框），见 js/holo.js）
      · 开卡包                  → 全屏覆盖层（js/pack.js，点「开包」时才加载）：撕包 → 抽卡 → 翻牌 → 稀有度演出 → 结果页
    全局可调参数都在 :root 里；交互参数在脚本的 CONFIG 里。
    ========================================================= */
@@ -42,8 +42,8 @@
   --win-h: .46;
   --bleed: 18px;                /* 远景/中景出血：配合更浅的 z，减少窗缘外溢感 */
 
-  /* ---- 破框（克制：只允许少量顶部探出，不是整卡效果跑出框外） ---- */
-  --breakout: .035;             /* 极轻破框：只允许上沿一点点探出（约卡高 3.5%） */
+  /* ---- 破框（关闭） ---- */
+  --breakout: 0;                /* 不超框：角色层与窗口齐平，不探出卡框 */
   --char-fade: 12%;             /* 角色底部渐隐长度 */
 
   /* ---- 彩虹镭射色板（略降饱和，避免“霓虹灯”感） ---- */
@@ -217,7 +217,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   justify-content: center;
   column-gap: 40px;
   row-gap: calc(var(--card-h) * var(--breakout) + 18px);
-  padding-top: calc(var(--card-h) * (var(--breakout) - var(--win-t)) + 22px);
+  padding-top: calc(var(--card-h) * max(0, var(--breakout) - var(--win-t)) + 22px);
 }
 @media (max-width: 619px)  { .stage { --cols: 1; } }
 .label { text-align: center; margin-top: 16px; font-size: 13px; opacity: .72; }
@@ -256,15 +256,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   -webkit-tap-highlight-color: transparent;
   user-select: none; -webkit-user-select: none;
 }
-/* 破框热区：角色探出卡框上沿的那一截不在 .card 盒子里，用透明伪元素把热区向上扩展 */
-.card[data-break="top"]::after {
-  content: "";
-  position: absolute;
-  left:  calc(var(--win-l) * 100% - 8px);
-  right: calc((1 - var(--win-l) - var(--win-w)) * 100% - 8px);
-  top:   calc((var(--win-t) - var(--breakout)) * 100% - 8px);
-  bottom: calc(100% - 2px);
-}
+/* 破框热区已移除：汇总版全部卡不超框 */
 .card__rotator {
   position: relative;
   width: 100%; height: 100%;
@@ -398,8 +390,9 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   /* 底部渐隐：角色下沿柔和地融进中景，不出现切割直线 */
   -webkit-mask-image: linear-gradient(to top, transparent 0, rgba(0,0,0,.35) calc(var(--char-fade) * .45), #000 var(--char-fade));
           mask-image: linear-gradient(to top, transparent 0, rgba(0,0,0,.35) calc(var(--char-fade) * .45), #000 var(--char-fade));
-  /* 左右不越出窗口宽；顶部靠 --breakout 少量探出 */
-  overflow: visible;
+  /* 不超框：裁进窗口 */
+  overflow: hidden;
+  border-radius: 3px;
 }
 .layer--char > svg {
   position: absolute; inset: 0; width: 100%; height: 100%; display: block;
@@ -411,6 +404,8 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   top: calc(var(--win-t) * 100%);
   height: calc(var(--win-h) * 100%);
   -webkit-mask-image: none; mask-image: none;
+  overflow: hidden; /* SVG/立绘不得画出窗口 */
+  border-radius: 3px;
 }
 .card[data-break="none"] .layer--char > svg { inset: 14% 20%; width: 60%; height: 72%; filter: drop-shadow(0 6px 8px rgba(0,0,0,.45)); }
 
@@ -418,9 +413,9 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 .layer--fg {
   --z: var(--z-fg);
   left: 0; width: 100%;
-  /* 粒子主区在卡内；顶部只允许与破框同量级的轻微探出 */
-  top: calc((var(--win-t) - var(--breakout)) * 100%);
-  height: calc((1 - var(--win-t) + var(--breakout)) * 100%);
+  /* 粒子主区在卡内，不向上超窗 */
+  top: calc(var(--win-t) * 100%);
+  height: calc((1 - var(--win-t)) * 100%);
   /* 左右与底裁进卡缘，避免整圈特效飞出框外 */
   clip-path: inset(0 1.5% 0 1.5%);
 }
@@ -640,7 +635,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   --ring: rgba(60,40,8,.4);
 }
 .card[data-card="yinglong"] {
-  --breakout: .04;              /* 应龙极轻探出：红框外几乎不见大半个头 */
+  --breakout: 0;                /* 应龙亦不超框 */
   --frame: linear-gradient(160deg, #f4efe4, #c4b59a 40%, #8a7a5c 70%, #e8dcc4);
   --frame-pattern: radial-gradient(circle at 50% 0%, rgba(255,230,170,.35), transparent 55%);
   --panel: rgba(18,14,10,.82);
@@ -663,12 +658,8 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   filter: drop-shadow(0 4px 6px rgba(0,0,0,.4));
 }
 /* 破框层：只保留探出卡框上沿的部分，窗内与底图重合处淡出，避免双影 */
-.card[data-card="yinglong"] .layer--char {
-  -webkit-mask-image: linear-gradient(to bottom,
-    #000 0%, #000 6%, rgba(0,0,0,.7) 10%, rgba(0,0,0,.2) 16%, transparent 22%);
-          mask-image: linear-gradient(to bottom,
-    #000 0%, #000 6%, rgba(0,0,0,.7) 10%, rgba(0,0,0,.2) 16%, transparent 22%);
-}
+/* 应龙不破框：窗口只用 art.jpg，隐藏 cutout 角色层避免叠影 */
+.card[data-card="yinglong"] .layer--char { display: none; }
 /* 神性体积光动画层 */
 .an-godrays {
   position: absolute; inset: -2%; pointer-events: none;
@@ -687,9 +678,23 @@ body:not(.no-anim) .an-godrays { animation: an-godrays 9s ease-in-out infinite a
   0%   { opacity: .72; transform: scale(1) translate(0,0); }
   100% { opacity: .95; transform: scale(1.04) translate(-1%, 1%); }
 }
+
+/* 原破框立绘卡：改为窗内铺满（不探出），不要徽记那种缩小居中 */
+.card[data-card="dragon"][data-break="none"] .layer--char > svg,
+.card[data-card="fox"][data-break="none"] .layer--char > svg,
+.card[data-card="fox"][data-break="none"] .layer--char .fx-part {
+  inset: 0; width: 100%; height: 100%;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,.35));
+}
+.card[data-card="fox"][data-break="none"] .layer--char {
+  /* fox split parts need full window */
+  -webkit-mask-image: linear-gradient(to top, transparent 0, rgba(0,0,0,.35) calc(var(--char-fade) * .45), #000 var(--char-fade));
+          mask-image: linear-gradient(to top, transparent 0, rgba(0,0,0,.35) calc(var(--char-fade) * .45), #000 var(--char-fade));
+}
+
 body.focus-one .stage { --cols: 1; justify-content: center;
   --card-w: clamp(280px, min(72vw, 420px), 440px);
-  padding-top: calc(var(--card-h) * (var(--breakout) - var(--win-t)) + 36px);
+  padding-top: calc(var(--card-h) * max(0, var(--breakout) - var(--win-t)) + 36px);
 }
 body.focus-one .stage > div[hidden] { display: none !important; }
 body.focus-one .side { display: none; }
@@ -707,8 +712,8 @@ body.no-glare .glare      { display: none; }
 body.no-rim   .card__rim, body.no-rim .layer--edge { display: none; }
 /* 关掉视差破框：各层几乎贴回卡面（保留极小的层间距，保证前后顺序稳定），角色和粒子裁回卡内 */
 body.no-depth .card { --depth: .02; }
-body.no-depth .card[data-break="top"]::after { display: none; }
-body.no-depth .card[data-break="top"] .layer--char {
+body.no-depth .card[data-break="none"]::after { display: none; }
+body.no-depth .card[data-break="none"] .layer--char {
   clip-path: inset(calc(var(--breakout) / (var(--win-h) + var(--breakout)) * 100%) 0 0 0);
 }
 body.no-depth .layer--fg {
@@ -1003,8 +1008,8 @@ body:not(.no-anim) .card[data-card="lion"] .layer--char > svg { animation: an-pu
 
 /* 应龙：神性光带呼吸、云雾漂移、鬃毛柔光摇曳、金尘微粒（框内；body.no-anim 关闭） */
 body:not(.no-anim) .card[data-card="yinglong"] .st-yl-fog { display: none; }
-body:not(.no-anim) .card[data-card="yinglong"] .layer--char > img.photo-char {
-  transform-origin: 50% 72%;
+body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art {
+  transform-origin: 50% 55%;
   animation: an-yl-breathe 5.2s ease-in-out infinite alternate;
 }
 @keyframes an-yl-breathe {
@@ -1574,7 +1579,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
         <summary><span>高级 · 单项开关</span><span class="fx__chev" aria-hidden="true">▾</span></summary>
         <div class="fx__row" role="group" aria-label="特效开关">
           <button type="button" class="sw" data-fx="tilt"   aria-pressed="true"><i></i>倾斜</button>
-          <button type="button" class="sw" data-fx="depth"  aria-pressed="true"><i></i>视差破框</button>
+          <button type="button" class="sw" data-fx="depth"  aria-pressed="true"><i></i>视差</button>
           <button type="button" class="sw" data-fx="glare"  aria-pressed="true"><i></i>高光</button>
           <button type="button" class="sw" data-fx="rim"    aria-pressed="true"><i></i>边缘光</button>
           <button type="button" class="sw" data-fx="anim"   aria-pressed="true"><i></i>动态画面</button>
@@ -1598,9 +1603,9 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
   <!-- ===================== CSS 模式 ===================== -->
   <main class="stage" id="css-view">
 
-    <!-- ================= 卡 0：应龙 · 大荒东经 · 传说镀闪 · 破框 ================= -->
+    <!-- ================= 卡 0：应龙 · 大荒东经 · 传说镀闪 · 窗内 ================= -->
     <div>
-      <div class="card" data-card="yinglong" data-rarity="ur" data-effect="rainbow" data-mask="art" data-break="top">
+      <div class="card" data-card="yinglong" data-rarity="ur" data-effect="rainbow" data-mask="art" data-break="none">
         <div class="card__rotator">
           <div class="layer layer--shadow"></div>
           <div class="layer layer--edge"></div>
@@ -1665,12 +1670,12 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           </div>
         </div>
       </div>
-      <div class="label">① 应龙<b class="rbadge" data-r="ur" data-theme="yinglong">传说</b><small>彩虹镭射 · 神性光 · 动态画面 · 轻破框</small></div>
+      <div class="label">① 应龙<b class="rbadge" data-r="ur" data-theme="yinglong">传说</b><small>彩虹镭射 · 神性光 · 动态画面</small></div>
     </div>
 
-    <!-- ================= 卡 1：霜晶龙 · 彩虹镭射 · 只闪插画 · 龙头破框 ================= -->
+    <!-- ================= 卡 1：霜晶龙 · 彩虹镭射 · 只闪插画 · 窗内立绘 ================= -->
     <div>
-      <div class="card" data-card="dragon" data-rarity="r" data-effect="rainbow" data-mask="art" data-break="top">
+      <div class="card" data-card="dragon" data-rarity="r" data-effect="rainbow" data-mask="art" data-break="none">
         <div class="card__rotator">
           <div class="layer layer--shadow"></div>
           <div class="layer layer--edge"></div>
@@ -1728,7 +1733,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           </div>
           <div class="layer layer--text">
             <div class="card__head"><span>霜晶龙</span><small>HP 120</small></div>
-            <div class="card__body"><b>冰棱吐息 · 60</b>令对手的下一回合无法撤退。彩虹镭射只在极光夜空里流动，龙头探出卡框。</div>
+            <div class="card__body"><b>冰棱吐息 · 60</b>令对手的下一回合无法撤退。彩虹镭射只在极光夜空里流动，立绘留在窗内。</div>
             <div class="card__foot"><span>All-in-one · Rainbow</span><span>001/004 ★★</span></div>
           </div>
           <div class="layer layer--char">
@@ -1789,12 +1794,12 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           </div>
         </div>
       </div>
-      <div class="label">② 霜晶龙<b class="rbadge" data-r="r">稀有</b><small>彩虹镭射 · 只闪插画 · 龙头破框</small></div>
+      <div class="label">② 霜晶龙<b class="rbadge" data-r="r">稀有</b><small>彩虹镭射 · 只闪插画 · 窗内立绘</small></div>
     </div>
 
-    <!-- ================= 卡 2：焰尾狐 · 闪光星点 · 只闪插画 · 狐耳破框 ================= -->
+    <!-- ================= 卡 2：焰尾狐 · 闪光星点 · 只闪插画 · 窗内立绘 ================= -->
     <div>
-      <div class="card" data-card="fox" data-rarity="ur" data-effect="sparkle" data-mask="art" data-break="top">
+      <div class="card" data-card="fox" data-rarity="ur" data-effect="sparkle" data-mask="art" data-break="none">
         <div class="card__rotator">
           <div class="layer layer--shadow"></div>
           <div class="layer layer--edge"></div>
@@ -1839,7 +1844,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           </div>
           <div class="layer layer--text">
             <div class="card__head"><span>焰尾狐</span><small>HP 90</small></div>
-            <div class="card__body"><b>流星焰 · 40×</b>掷 3 次硬币，每次正面造成 40 点伤害。亮片只在晚霞里闪，狐耳探出卡框。</div>
+            <div class="card__body"><b>流星焰 · 40×</b>掷 3 次硬币，每次正面造成 40 点伤害。亮片只在晚霞里闪，立绘留在窗内。</div>
             <div class="card__foot"><span>All-in-one · Sparkle</span><span>002/004 ★★★</span></div>
           </div>
           <div class="layer layer--char">
@@ -1903,7 +1908,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           </div>
         </div>
       </div>
-      <div class="label">③ 焰尾狐<b class="rbadge" data-r="ur" data-theme="fox">传说</b><small>闪光星点 · 只闪插画 · 狐耳破框</small></div>
+      <div class="label">③ 焰尾狐<b class="rbadge" data-r="ur" data-theme="fox">传说</b><small>闪光星点 · 只闪插画 · 窗内立绘</small></div>
     </div>
 
     <!-- ================= 卡 3：星尘狐 · 闪光星点 · 只闪边框 · 徽记浮层 ================= -->
@@ -2070,8 +2075,8 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
     <canvas id="gl" aria-label="可交互的 3D 全息闪卡（WebGL）"></canvas>
     <p class="gl__status" id="gl-status">正在加载 WebGL 渲染器…</p>
     <nav class="gl__pick" aria-label="选择卡面">
-      <button type="button" data-card="dragon" aria-pressed="true">霜晶龙 · 破框<b class="rbadge" data-r="r">稀有</b></button>
-      <button type="button" data-card="fox" aria-pressed="false">焰尾狐 · 破框<b class="rbadge" data-r="ur" data-theme="fox">传说</b></button>
+      <button type="button" data-card="dragon" aria-pressed="true">霜晶龙 · 窗内<b class="rbadge" data-r="r">稀有</b></button>
+      <button type="button" data-card="fox" aria-pressed="false">焰尾狐 · 窗内<b class="rbadge" data-r="ur" data-theme="fox">传说</b></button>
       <button type="button" data-card="star" aria-pressed="false">星尘狐 · 边框箔<b class="rbadge" data-r="r">稀有</b></button>
       <button type="button" data-card="sun" aria-pressed="false">金曜狮王 · 反闪金箔<b class="rbadge" data-r="ur" data-theme="lion">传说</b></button>
       <span class="sep" aria-hidden="true"></span>
@@ -2104,7 +2109,7 @@ const CONFIG = {
 };
 const STORE_KEY = 'holo-card:all-in-one:fx';   // 开关状态记在 localStorage（体感需要用户手势授权，不记）
 const FX_KEYS = ['tilt', 'depth', 'glare', 'rim', 'anim', 'rarity', 'foil', 'etch'];
-const FX_NAMES = { foil: '镭射', etch: '压纹', rim: '边缘光', depth: '视差破框', glare: '高光', rarity: '专属特效', tilt: '倾斜', anim: '动态画面', gyro: '体感' };
+const FX_NAMES = { foil: '镭射', etch: '压纹', rim: '边缘光', depth: '视差', glare: '高光', rarity: '专属特效', tilt: '倾斜', anim: '动态画面', gyro: '体感' };
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const clamp = (v, min = 0, max = 100) => Math.min(max, Math.max(min, v));
@@ -2344,7 +2349,7 @@ function glEffects() { return { foil: fx.foil, etch: fx.etch, rim: fx.rim, glare
 const LEVEL_KEY = 'holo-card:all-in-one:level';
 const LEVEL_INFO = {
   1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。', on: [] },
-  2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（效果主要在框内），角色仅轻微破框；加上高光与卡缘边缘光 / 纸张厚度。', on: ['tilt', 'depth', 'glare', 'rim'] },
+  2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（全部在框内，不破框）；加上高光与卡缘边缘光 / 纸张厚度。', on: ['tilt', 'depth', 'glare', 'rim'] },
   3: { name: '动态画面', desc: '动态画面：立绘本身在动——应龙鬃毛/神性光/云雾；霜晶龙颈呼吸与雪落；狐狸摆尾眨眼；星辰摆转；烈日光芒流转。', on: ['tilt', 'depth', 'glare', 'rim', 'anim'] },
   4: { name: '专属特效', desc: '专属特效：每张卡定制的粒子与环境光（冰晶寒雾 / 火星暖光 / 星尘拖尾 / 金尘日芒），含稀有光晕与徽章。', on: ['tilt', 'depth', 'glare', 'rim', 'anim', 'rarity'] },
   5: { name: '镀闪卡面', desc: '镀闪卡面：整张卡随角度流动的镭射箔面、压纹与闪点——全部特效叠满。', on: FX_KEYS },
