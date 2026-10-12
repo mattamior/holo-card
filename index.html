@@ -3342,10 +3342,24 @@ wireListClicks();
 }
 
 $('#holo-modal-close')?.addEventListener('click', () => closeCardDetail());
-$('#holo-modal-backdrop')?.addEventListener('click', () => closeCardDetail());
 $('#modal-prev')?.addEventListener('click', () => cycleCard(-1));
 $('#modal-next')?.addEventListener('click', () => cycleCard(1));
 $('#list-pack')?.addEventListener('click', () => openPack());
+
+/** 点空白关闭：遮罩 / 布局空隙 / 卡槽与侧栏的空白衬底；点卡面或等级控件不关 */
+function isModalEmptyChrome(el) {
+  if (!el || !el.classList) return false;
+  return el.id === 'holo-modal'
+    || el.id === 'holo-modal-backdrop'
+    || el.classList.contains('holo-modal__ui')
+    || el.classList.contains('holo-modal__layout')
+    || el.classList.contains('holo-modal__card-host')
+    || el.classList.contains('holo-modal__side-host');
+}
+holoModal?.addEventListener('click', (e) => {
+  if (!modalOpen) return;
+  if (isModalEmptyChrome(e.target)) closeCardDetail();
+});
 
 window.addEventListener('keydown', (e) => {
   if (packOpen) return;
