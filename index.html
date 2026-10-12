@@ -674,6 +674,12 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   object-fit: contain;
   object-position: var(--yl-pos);
 }
+.card[data-card="yinglong"] .win__bg > img.photo-art--wing {
+  z-index: 2;
+  -webkit-mask-image: radial-gradient(ellipse 58% 62% at 70% 30%, #000 0%, #000 38%, transparent 72%);
+          mask-image: radial-gradient(ellipse 58% 62% at 70% 30%, #000 0%, #000 38%, transparent 72%);
+  pointer-events: none;
+}
 .card[data-card="yinglong"] .card__body {
   top: 51%;                      /* 贴着 16:9 窗下沿 */
   max-height: 36%;               /* 长文填满描述区，勿再压矮留白 */
@@ -1028,19 +1034,38 @@ body:not(.no-anim) .card[data-card="stardust"] .layer--char > svg { animation: a
 body:not(.no-anim) .card[data-card="lion"] .layer--char > svg { animation: an-pulse 4.5s ease-in-out infinite alternate; }
 @keyframes an-pulse { from { transform: scale(.985); } to { transform: scale(1.03); } }
 
-/* 应龙：神性光带呼吸、云雾漂移、鬃毛柔光摇曳、金尘微粒（框内；body.no-anim 关闭） */
+/* 应龙 L3：动态画面 = 立绘主体在动（颈身轻摆 + 翼羽呼吸，框内；body.no-anim 关闭）
+   L4：云雾/鬃毛柔光/金尘/神性光带 = 环境层，见下方 body.no-rarity 门控 */
 body:not(.no-anim) .card[data-card="yinglong"] .st-yl-fog { display: none; }
-body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art {
-  transform-origin: 50% 55%;
-  animation: an-yl-breathe 5.2s ease-in-out infinite alternate;
+body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art:not(.photo-art--wing) {
+  transform-origin: 34% 48%;
+  animation: an-yl-body 4.8s ease-in-out infinite alternate;
+  will-change: transform;
 }
-@keyframes an-yl-breathe {
-  from { transform: translateY(0) scale(1, 1); }
-  to   { transform: translateY(-1.1%) scale(1.012, 1.028); }
+@keyframes an-yl-body {
+  from { transform: translate(0%, 0.35%) rotate(-1.15deg) scale(1.004, 0.992); }
+  to   { transform: translate(0.55%, -0.7%) rotate(1.25deg) scale(1.014, 1.02); }
 }
-.an-yl-mist { will-change: transform, opacity; }
-.an-yl-mist--a { animation: an-yl-mist-a 14s ease-in-out infinite alternate; }
-.an-yl-mist--b { animation: an-yl-mist-b 18s ease-in-out infinite alternate; }
+body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art--wing {
+  transform-origin: 58% 28%;
+  animation: an-yl-wing 3.5s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes an-yl-wing {
+  from { transform: rotate(-2.1deg) scale(0.978, 0.955) translate(-0.4%, 0.6%); }
+  to   { transform: rotate(2.4deg) scale(1.03, 1.055) translate(0.5%, -1.0%); }
+}
+
+/* 应龙 L4 环境层（专属特效 / rarity）：无 rarity 时整组隐藏 */
+body.no-rarity .card[data-card="yinglong"] .an-yl-mist,
+body.no-rarity .card[data-card="yinglong"] .an-yl-mane,
+body.no-rarity .card[data-card="yinglong"] .an-yl-embers,
+body.no-rarity .card[data-card="yinglong"] .an-godrays {
+  display: none !important;
+}
+body:not(.no-rarity) .card[data-card="yinglong"] .an-yl-mist { will-change: transform, opacity; }
+body:not(.no-rarity) .card[data-card="yinglong"] .an-yl-mist--a { animation: an-yl-mist-a 14s ease-in-out infinite alternate; }
+body:not(.no-rarity) .card[data-card="yinglong"] .an-yl-mist--b { animation: an-yl-mist-b 18s ease-in-out infinite alternate; }
 @keyframes an-yl-mist-a {
   from { transform: translate(-5%, 2%) scale(1); opacity: .55; }
   to   { transform: translate(6%, -3%) scale(1.06); opacity: .95; }
@@ -1049,7 +1074,7 @@ body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art {
   from { transform: translate(4%, -2%) scale(1.04); opacity: .9; }
   to   { transform: translate(-5%, 3%) scale(.96); opacity: .5; }
 }
-.an-yl-mane {
+body:not(.no-rarity) .card[data-card="yinglong"] .an-yl-mane {
   background:
     radial-gradient(ellipse 42% 28% at 28% 18%, rgba(255,236,200,.42) 0%, rgba(255,220,160,.12) 45%, transparent 70%),
     radial-gradient(ellipse 30% 22% at 42% 12%, rgba(255,250,230,.28) 0%, transparent 65%);
@@ -1061,8 +1086,8 @@ body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art {
   from { opacity: .35; transform: rotate(-2.2deg) scale(.96) translate(-1%, 1%); }
   to   { opacity: .95; transform: rotate(2.8deg) scale(1.06) translate(2%, -1%); }
 }
-.an-yl-embers { overflow: hidden; }
-.an-yl-embers i {
+body:not(.no-rarity) .card[data-card="yinglong"] .an-yl-embers { overflow: hidden; }
+body:not(.no-rarity) .card[data-card="yinglong"] .an-yl-embers i {
   position: absolute; left: var(--x); top: var(--y);
   width: calc(var(--card-w) * .028); aspect-ratio: 1; margin: calc(var(--card-w) * -.014);
   background: radial-gradient(circle, #fff6d0 0%, rgba(255,210,140,.7) 35%, rgba(255,200,120,0) 70%);
@@ -1073,8 +1098,7 @@ body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art {
   40% { opacity: 1; transform: translate3d(calc(var(--card-w) * .02), calc(var(--card-w) * -.04), 0) scale(1); }
   70% { opacity: .55; transform: translate3d(calc(var(--card-w) * -.015), calc(var(--card-w) * -.07), 0) scale(.7); }
 }
-/* 神性体积光：比默认更明显的呼吸（template 里的 .an-godrays） */
-body:not(.no-anim) .card[data-card="yinglong"] .an-godrays {
+body:not(.no-rarity) .card[data-card="yinglong"] .an-godrays {
   animation: an-yl-godrays 7.5s ease-in-out infinite alternate;
 }
 @keyframes an-yl-godrays {
@@ -1636,6 +1660,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
             <div class="win">
               <div class="win__bg">
                 <img class="photo-art" src="assets/yinglong/art.jpg" alt="" width="960" height="540" decoding="async" />
+                <img class="photo-art photo-art--wing" src="assets/yinglong/art.jpg" alt="" width="960" height="540" decoding="async" aria-hidden="true" />
                 <div class="an-ov an-godrays" aria-hidden="true"></div>
                 <div class="foil foil--art"></div>
               </div>
@@ -1692,7 +1717,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           </div>
         </div>
       </div>
-      <div class="label">① 应龙<b class="rbadge" data-r="ur" data-theme="yinglong">传说</b><small>彩虹镭射 · 神性光 · 动态画面</small></div>
+      <div class="label">① 应龙<b class="rbadge" data-r="ur" data-theme="yinglong">传说</b><small>彩虹镭射 · 颈身翼摆 · 神性光</small></div>
     </div>
 
     <!-- ================= 卡 1：霜晶龙 · 彩虹镭射 · 只闪插画 · 窗内立绘 ================= -->
@@ -2372,8 +2397,8 @@ const LEVEL_KEY = 'holo-card:all-in-one:level';
 const LEVEL_INFO = {
   1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。', on: [] },
   2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（全部在框内，不破框）；加上高光与卡缘边缘光 / 纸张厚度。', on: ['tilt', 'depth', 'glare', 'rim'] },
-  3: { name: '动态画面', desc: '动态画面：立绘本身在动——应龙鬃毛/神性光/云雾；霜晶龙颈呼吸与雪落；狐狸摆尾眨眼；星辰摆转；烈日光芒流转。', on: ['tilt', 'depth', 'glare', 'rim', 'anim'] },
-  4: { name: '专属特效', desc: '专属特效：每张卡定制的粒子与环境光（冰晶寒雾 / 火星暖光 / 星尘拖尾 / 金尘日芒），含稀有光晕与徽章。', on: ['tilt', 'depth', 'glare', 'rim', 'anim', 'rarity'] },
+  3: { name: '动态画面', desc: '动态画面：立绘本身在动——应龙颈身轻摆与翼羽呼吸；霜晶龙颈呼吸与雪落；狐狸摆尾眨眼；星辰摆转；烈日光芒流转。云雾/金尘/神性光带等环境层在 4 级专属特效。', on: ['tilt', 'depth', 'glare', 'rim', 'anim'] },
+  4: { name: '专属特效', desc: '专属特效：环境在动——应龙云雾/鬃毛柔光/金尘/神性光带；以及冰晶寒雾、火星暖光、星尘拖尾、金尘日芒等，含稀有光晕与徽章。', on: ['tilt', 'depth', 'glare', 'rim', 'anim', 'rarity'] },
   5: { name: '镀闪卡面', desc: '镀闪卡面：整张卡随角度流动的镭射箔面、压纹与闪点——全部特效叠满。', on: FX_KEYS },
 };
 const presetOf = (n) => Object.fromEntries(FX_KEYS.map(k => [k, LEVEL_INFO[n].on.includes(k)]));
