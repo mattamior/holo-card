@@ -1,16 +1,15 @@
 # Current State — holo-card (all-in-one)
 
-Updated: 2026-10-12 (Asia/Shanghai) — unbreak a30dee8 cream-ghost / broken tilt silhouette
+Updated: 2026-10-12 (Asia/Shanghai) — L5 face foil restored + rim laser retune
 
 ## Project
 Branch `feature/all-in-one`; Pages: https://mattamior.github.io/holo-card/all-in-one/
 
 ## Shipped (this checkpoint)
-1. **Unbreak a30dee8 tilt regression:** Principal「你改崩了」— cream `#ebe9e2` painted on `.card` / `.card__rotator`, `.layer--frame { scale(1.02) }`, win 4px cream overlap, and cream `--art-bg`/`--win-fill` caused asymmetrical cream ghost / double-frame under preserve-3d tilt.
-2. **Dial-back (kept footer):** Reverted card/rotator cream fills; removed frame `scale(1.02)`; win flush to matte (no cream box-shadow/overlap); restore dark `--art-bg: #2a2e36` (no cream win-fill). Kept opaque cream **only** inside clipped `.layer--frame` matte + lighter inner-line + hard-light rim laser.
-3. **Black-seam without ghost:** Yinglong `--bleed: 10px` + shallower `--z-bg/-28` `--z-mid/-12` + art/layers ~103% overscale (was 106%/28px bleed). L5 thin cream ~1.25% + rim laser; L1–4 no-rim; corners ~3%/2%.
-4. **Footer unchanged (Principal markup):** Left `NO.n`; center 出处; right ★=`data-lv`; no pill.
+1. **Face foil restored (Principal「卡面的镭射光怎么还没加上去」):** `.foil--art` was present but gated visually — `mix-blend-mode: color` on cream/gold Yinglong art read as almost invisible. Not `.no-foil` / not `display:none`. Switched rainbow art to `color-dodge` + dimmed brightness/contrast/saturate; boosted `::after` overlay rainbow sweep; L5 ensures `display:block` + higher tilt opacity. Foil stays inside `.win` clip.
+2. **Rim laser retune (「边框镭射再调整」):** L5 `.foil--frame` + `--mask-rim-l5` — blend `hard-light`→`overlay` (less white-only wash on cream), higher `--far`/band, saturate/contrast up, opacity floor raised. Thin cream ~1.25% unchanged.
+3. **Baseline intact:** No cream on `.card`/`.card__rotator`, no `scale(1.02)` frame, Yinglong `--bleed: 10px`; footer `NO.n` / centered 出处 / ★; L1–4 no-rim.
 
 ## Verified
-- CSS: card/rotator bg transparent; frame transform identity; win dark fill; foot `NO.1 山海经·大荒东经` + stars.
-- Evidence: `.agnir/evidence/yinglong-l5-unbreak-left.png`, `yinglong-l5-unbreak-right.png` — no cream ghost slab; no black matte-join seam.
+- Diag: L5 yinglong `noFoil=false`; `.foil--art` display block, color-dodge, opacity~0.9 under tilt; `.foil--frame` display block, overlay.
+- Evidence: `.agnir/evidence/yinglong-l5-face-rim-laser-tilt-a.png`, `yinglong-l5-face-rim-laser-tilt-b.png` — visible face rainbow + rim rainbow under tilt.

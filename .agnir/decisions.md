@@ -25,3 +25,5 @@ Updated: 2026-10-12
 
 - **2026-10-12** — Unbreak a30dee8: do **not** paint cream on `.card` / `.card__rotator` or `scale()` the whole `.layer--frame` to hide tilt seams — those protrude as ghost layers under preserve-3d. Opaque cream stays **inside** clipped L5 frame matte only. Prevent art/rim black seam via modest `--bleed` (~10px), shallower win z, and ~103% art overscale inside the win clip; keep dark `--art-bg` under art. Footer NO.n / centered 出处 / ★ kept. Supersedes “cream underlays + L5 frame scale(1.02)” durability claim from earlier same-day decision.
 
+- **2026-10-12** — L5 face laser: rainbow `.foil--art` must use a luminance-aware blend (`color-dodge` + dimmed brightness), not `mix-blend-mode: color` alone — color on cream/gold Yinglong art is effectively invisible. Keep foil inside `.win`; L5 `display:block` when foil on. Rim laser: `overlay` (not hard-light+bright) so cream rim reads rainbow hues instead of washing white-only.
+

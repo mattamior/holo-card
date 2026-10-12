@@ -639,32 +639,40 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   opacity: calc((0.72 + var(--o) * 0.28) * var(--holo-max) * (0.7 + var(--tilt) * 0.3));
 }
 .card[data-effect="rainbow"] .foil--art {
-  mix-blend-mode: color;
-  opacity: calc((0.55 + var(--o) * 0.4) * (0.62 + var(--tilt) * 0.38));
-  filter: saturate(calc(2.2 + var(--tilt) * .7)) contrast(1.12);
+  /* Face laser: color-dodge + dimmed brightness so rainbow reads on cream/gold art
+     (mix-blend color alone looked invisible on Yinglong L5). Stays inside .win clip. */
+  --far: .34;
+  --band-half: 28%;
+  mix-blend-mode: color-dodge;
+  opacity: calc((0.44 + var(--o) * 0.52) * (0.55 + var(--tilt) * 0.45));
+  filter: brightness(calc(.7 + var(--tilt) * .1)) contrast(1.42) saturate(calc(2.1 + var(--tilt) * .6));
 }
 .card[data-effect="rainbow"] .foil--frame {
   mix-blend-mode: soft-light;
   opacity: calc((0.68 + var(--o) * 0.32) * (0.72 + var(--tilt) * 0.28));
 }
-/* 再叠一层硬光扫带（伪元素不可用时用第二 foil 通道：提高 art 对比） */
+/* Second rainbow sweep on art — soft-light hue bands over the dodge layer */
 .card[data-effect="rainbow"] .foil--art::after {
   content: "";
   position: absolute; inset: 0;
   background: repeating-linear-gradient(var(--holo-angle, 115deg),
-    hsla(290,90%,70%,.0) 0%,
-    hsla(190,95%,65%,.35) calc(var(--band, 4%) * 1),
-    hsla(140,90%,60%,.35) calc(var(--band, 4%) * 2),
-    hsla(50,95%,60%,.35) calc(var(--band, 4%) * 3),
-    hsla(350,90%,65%,.35) calc(var(--band, 4%) * 4),
-    hsla(290,90%,70%,.0) calc(var(--band, 4%) * 5));
-  background-size: 300% 300%;
+    hsla(290,95%,68%,.0) 0%,
+    hsla(190,100%,62%,.55) calc(var(--band, 3.6%) * 1),
+    hsla(145,95%,58%,.55) calc(var(--band, 3.6%) * 2),
+    hsla(48,100%,58%,.55) calc(var(--band, 3.6%) * 3),
+    hsla(350,95%,62%,.55) calc(var(--band, 3.6%) * 4),
+    hsla(290,95%,68%,.0) calc(var(--band, 3.6%) * 5));
+  background-size: 280% 280%;
   background-position:
-    clamp(0%, calc(var(--sheen) * 1.1%), 100%)
-    clamp(0%, calc((100 - var(--sheen)) * 0.7% + 12%), 100%);
-  mix-blend-mode: soft-light;
-  opacity: calc(0.45 + var(--tilt) * 0.4 + var(--o) * 0.2);
+    clamp(0%, calc(var(--sheen) * 1.15%), 100%)
+    clamp(0%, calc((100 - var(--sheen)) * 0.75% + 10%), 100%);
+  mix-blend-mode: overlay;
+  opacity: calc(0.55 + var(--tilt) * 0.4 + var(--o) * 0.2);
   pointer-events: none;
+  -webkit-mask-image: var(--band-mask);
+          mask-image: var(--band-mask);
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
 }
 
 /* ---- 闪光星点 ---- */
@@ -1254,8 +1262,8 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
 .card[data-lv="5"]:not(.no-rim) .foil--frame {
   display: block;
   z-index: 5;
-  --far: .4;
-  --band-half: 28%;
+  --far: .55;
+  --band-half: 34%;
   -webkit-mask-image: var(--band-mask), var(--mask-rim-l5);
           mask-image: var(--band-mask), var(--mask-rim-l5);
   -webkit-mask-size: 100% 100%, 100% 100%;
@@ -1264,21 +1272,29 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
           mask-repeat: no-repeat;
   -webkit-mask-composite: source-in;
           mask-composite: intersect;
-  /* hard-light rim laser on cream matte (pre-a30dee8 look); soft-light looked washed/disconnected */
-  mix-blend-mode: hard-light;
-  opacity: calc((0.58 + var(--o) * 0.38) * (0.42 + var(--tilt) * 0.58));
-  filter: saturate(calc(2.6 + var(--tilt) * .7)) contrast(1.28) brightness(calc(1.04 + var(--tilt) * .08));
+  /* Rim laser on cream: overlay keeps rainbow hues (hard-light+bright washed white-only) */
+  mix-blend-mode: overlay;
+  opacity: calc((0.72 + var(--o) * 0.28) * (0.48 + var(--tilt) * 0.52));
+  filter: saturate(calc(3.1 + var(--tilt) * .9)) contrast(1.36) brightness(calc(.98 + var(--tilt) * .06));
   pointer-events: none;
 }
 .card[data-lv="5"]:not(.no-rim)[data-effect="rainbow"] .foil--frame {
-  mix-blend-mode: hard-light;
-  opacity: calc((0.62 + var(--o) * 0.35) * (0.4 + var(--tilt) * 0.6));
-  filter: saturate(calc(2.9 + var(--tilt) * .8)) contrast(1.32) brightness(calc(1.06 + var(--tilt) * .1));
+  mix-blend-mode: overlay;
+  opacity: calc((0.82 + var(--o) * 0.18) * (0.55 + var(--tilt) * 0.45));
+  filter: saturate(calc(3.6 + var(--tilt) * 1.1)) contrast(1.45) brightness(calc(.98 + var(--tilt) * .1));
 }
 .card[data-lv="5"]:not(.no-rim)[data-effect="sparkle"] .foil--frame,
 .card[data-lv="5"]:not(.no-rim)[data-effect="metal"] .foil--frame {
   mix-blend-mode: overlay;
-  opacity: calc((0.58 + var(--o) * 0.38) * (0.42 + var(--tilt) * 0.58));
+  opacity: calc((0.7 + var(--o) * 0.3) * (0.48 + var(--tilt) * 0.52));
+}
+/* L5 face foil: always on when foil enabled (not accidentally gated by mask=art / no-rim) */
+.card[data-lv="5"]:not(.no-foil) .foil--art {
+  display: block;
+  z-index: 4;
+}
+.card[data-lv="5"]:not(.no-foil)[data-effect="rainbow"] .foil--art {
+  opacity: calc((0.48 + var(--o) * 0.5) * (0.58 + var(--tilt) * 0.42));
 }
 .card.no-rim .foil--frame {
   /* 无边卡不露框带镭射（即便误开 foil） */
