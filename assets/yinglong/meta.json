@@ -1,5 +1,5 @@
 {
-  "source_hash": "e8dafeeb6f0a24318410d59c8a5b73f6fee143bc6dce24c60c4bc8bb9be4d7db",
+  "source_hash": "d0d06c994a2d83e9c71eeab2dcc1ccafc5e0342965d3885477bb145a8087cfbe",
   "source": "/workspace/shanhaijing-style-lock-dragon.jpg",
   "crop_left": 408,
   "crop_size": [
@@ -13,5 +13,10 @@
   "name": "应龙",
   "rarity": "ur",
   "cutout": "rembg",
-  "note": "locked divine-light plate e8dafeeb; do not swap head-only regen until user confirms"
+  "card_blurb": "有翼之龙。助黄帝杀蚩尤与夸父，处南极；旱时仿其形，乃得大雨。",
+  "card_source_line": "《山海经·大荒东经》 / 《大荒北经》",
+  "guopu_note": "应龙，龙有翼者也。（有翼依郭璞注/广雅）",
+  "art_note": "白金鸟羽为项目画风，勿写成经文",
+  "copy_file": "/workspace/yinglong-card-copy.md",
+  "note": "plate d0d06c99 (eye glow softened, divine gold kept); lore from yinglong-card-copy.md"
 }
