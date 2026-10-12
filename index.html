@@ -639,7 +639,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   --breakout: 0;
   --bleed: 0px;
   --win-t: .12;
-  --win-h: .4725;               /* 插画窗 ≈ 4:3 横版（闪卡直接用横版母图 contain，不裁竖窗） */
+  --win-h: .4725;               /* 插画窗 ≈ 4:3 横版（母图 landscape-4x3 铺满，无 letterbox） */
   --frame: linear-gradient(160deg, #f4efe4, #c4b59a 40%, #8a7a5c 70%, #e8dcc4);
   --frame-pattern: radial-gradient(circle at 50% 0%, rgba(255,230,170,.35), transparent 55%);
   --panel: rgba(18,14,10,.82);
@@ -647,7 +647,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   --head-shadow: rgba(0,0,0,.4);
   --ring: rgba(255,220,160,.4);
   --art-bg: #2a2e36;
-  --yl-pos: 50% 50%;
+  --yl-pos: 50% 45%;
 }
 /* 照片卡通用 */
 .win__bg > img.photo-art {
@@ -662,7 +662,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   display: block; pointer-events: none;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,.4));
 }
-/* 应龙：整幅横图 contain，看见全身；不破框；win__bg 也不出血 */
+/* 应龙：4:3 横版母图铺满插画窗，无 letterbox；不破框；win__bg 也不出血 */
 .card[data-card="yinglong"] .layer--char { display: none; }
 .card[data-card="yinglong"] .win__bg,
 .card[data-card="yinglong"] .win__mid {
@@ -670,8 +670,9 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .card[data-card="yinglong"] .win__bg > img.photo-art {
   inset: 0; width: 100%; height: 100%;
-  object-fit: contain;
-  object-position: var(--yl-pos);
+  /* 4:3 铺满，无 letterbox；cover + 微调焦点，残余比例差也不露灰边 */
+  object-fit: cover;
+  object-position: var(--yl-pos, 50% 45%);
 }
 /* 神性体积光动画层 */
 .an-godrays {
@@ -1638,7 +1639,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
             <div class="foil foil--frame"></div>
             <div class="win">
               <div class="win__bg">
-                <img class="photo-art" src="assets/yinglong/art.jpg" alt="" width="960" height="540" decoding="async" />
+                <img class="photo-art" src="assets/yinglong/art.jpg" alt="" width="960" height="720" decoding="async" />
                 <div class="an-ov an-godrays" aria-hidden="true"></div>
                 <div class="foil foil--art"></div>
               </div>
@@ -2821,6 +2822,71 @@ function ylProbeImage(url) {
   });
 }
 
+/** Load naturalWidth/Height; null on error. */
+function ylProbeImageSize(url) {
+  return new Promise((resolve) => {
+    const im = new Image();
+    im.onload = () => resolve({ w: im.naturalWidth, h: im.naturalHeight });
+    im.onerror = () => resolve(null);
+    im.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+  });
+}
+
+/** True when frame aspect ≈ 4:3 (tolerance ~0.08). Portrait 3:4 fails. */
+function ylAspectIsLandscape4x3(w, h, tol = 0.08) {
+  if (!w || !h) return false;
+  const target = 4 / 3;
+  return Math.abs(w / h - target) <= tol;
+}
+
+/**
+ * Reject L3 sequences/sheets whose frame aspect is not ~4:3.
+ * Playing 3:4 region_warp frames inside the 4:3 window reintroduces letterbox / bad crop.
+ * Returns anim unchanged, or null (caller keeps static art.jpg).
+ */
+async function ylGuardLandscape4x3(anim, meta) {
+  if (!anim) return null;
+  const targetNote = 'L3 awaits landscape 4:3 sequences matching art.jpg window; keeping static art.jpg';
+  if (anim.kind === 'sequence') {
+    let w = 0, h = 0;
+    if (Array.isArray(meta.size) && meta.size.length >= 2) {
+      w = Number(meta.size[0]) || 0;
+      h = Number(meta.size[1]) || 0;
+    }
+    if (!ylAspectIsLandscape4x3(w, h)) {
+      const sz = await ylProbeImageSize(anim.urls[0]);
+      if (sz) { w = sz.w; h = sz.h; }
+    }
+    if (!ylAspectIsLandscape4x3(w, h)) {
+      console.info(`[yinglong] L3 guard: sequence frame ${w}×${h} aspect≠4:3 — ${targetNote}`);
+      return null;
+    }
+    return anim;
+  }
+  // sheet
+  let w = 0, h = 0;
+  if (Array.isArray(anim.size) && anim.size.length >= 2) {
+    w = Number(anim.size[0]) || 0;
+    h = Number(anim.size[1]) || 0;
+  } else if (Array.isArray(meta.size) && meta.size.length >= 2) {
+    w = Number(meta.size[0]) || 0;
+    h = Number(meta.size[1]) || 0;
+  }
+  // sheet full image size ÷ cols/rows ≈ frame size when meta.size missing
+  if (!ylAspectIsLandscape4x3(w, h) && anim.cols && anim.rows) {
+    const sz = await ylProbeImageSize(anim.sheet);
+    if (sz) {
+      w = Math.round(sz.w / anim.cols);
+      h = Math.round(sz.h / anim.rows);
+    }
+  }
+  if (!ylAspectIsLandscape4x3(w, h)) {
+    console.info(`[yinglong] L3 guard: sheet frame ${w}×${h} aspect≠4:3 — ${targetNote}`);
+    return null;
+  }
+  return anim;
+}
+
 async function ylDiscoverSequence(max = 48) {
   const urls = [];
   for (let i = 1; i <= max; i++) {
@@ -2957,13 +3023,18 @@ async function initYinglongSprite() {
   img.dataset.staticSrc = img.getAttribute('src') || 'assets/yinglong/art.jpg';
   if (wing) wing.hidden = true; // 废弃扭曲叠层
 
-  const anim = await ylLoadAnim();
+  const animRaw = await ylLoadAnim();
+  const animMeta = (await ylFetchJson(YL_ANIM_BASE + 'meta.json')) || {};
+  const anim = await ylGuardLandscape4x3(animRaw, animMeta);
   const getActive = () => !document.body.classList.contains('no-anim') && !reduceMotion.matches;
 
   if (!anim) {
     document.body.classList.add('yl-sprite-missing');
     document.body.classList.remove('yl-sprite-ready', 'yl-sprite-sheet');
-    console.info('[yinglong] L3 anim: no sequence/sheet in assets/yinglong/anim/; static art.jpg (no fake warp layers).');
+    if (!animRaw) {
+      console.info('[yinglong] L3 anim: no sequence/sheet in assets/yinglong/anim/; static art.jpg (no fake warp layers).');
+    }
+    // else: guard already logged why (non-4:3 frames)
     return { ready: false };
   }
 

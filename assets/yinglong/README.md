@@ -1,6 +1,6 @@
 # 应龙卡面素材
 
-- `art.jpg` — 插画窗静帧 / 序列帧缺失时的降级图（横图 contain）
+- `art.jpg` — 插画窗静帧 / 序列帧缺失时的降级图（**4:3 横版**，cover 铺满，无 letterbox）
 - `char.png` — 破框角色层（汇总版应龙不破框，已隐藏）
 - `source.jpg` / `prep.py` / `meta.json` — 裁切与核对
 - `anim/` — **L3 动态画面**真序列帧或 sprite sheet（见 `anim/README.md`）
