@@ -222,3 +222,9 @@ Pages 的发布来源是 GitHub Actions（workflow：[`.github/workflows/pages.y
 
 ## 致谢
 思路参考 [simeydotme/pokemon-cards-css](https://github.com/simeydotme/pokemon-cards-css)。卡面均为 CSS 与内联 SVG 绘制，无外部图片素材。
+
+## Agnir Project Instructions
+
+This section is a **backward-compatible locator only**. Canonical Agnir activation and Project-operation instructions live in [`AGNIR.md`](./AGNIR.md). Do not duplicate or fork that procedure here.
+
+Fresh activation path: `AGENTS.md` → `AGNIR.md` → `AGNIR.yaml` → declared `.agnir/` memory.
