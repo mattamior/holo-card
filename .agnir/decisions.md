@@ -22,3 +22,6 @@ Updated: 2026-10-12
 
 - **2026-10-12** — Tilt black seam: not only parallax bleed; preserve-3d foreshortening leaves paint holes past `.layer--frame`. Durable fix = cream underlays + L5 frame `scale(1.02)` + win bleed/overscale; rim laser soft-light. Do not restore thick gold matte.
 - **2026-10-12** — Footer: left `NO.n` (list order), center 出处 alone, right ★=`data-lv`; remove empty pill/capsule. Supersedes 卡牌号+出处 left-joined string.
+
+- **2026-10-12** — Unbreak a30dee8: do **not** paint cream on `.card` / `.card__rotator` or `scale()` the whole `.layer--frame` to hide tilt seams — those protrude as ghost layers under preserve-3d. Opaque cream stays **inside** clipped L5 frame matte only. Prevent art/rim black seam via modest `--bleed` (~10px), shallower win z, and ~103% art overscale inside the win clip; keep dark `--art-bg` under art. Footer NO.n / centered 出处 / ★ kept. Supersedes “cream underlays + L5 frame scale(1.02)” durability claim from earlier same-day decision.
+

@@ -745,22 +745,21 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .card[data-card="yinglong"] {
   --breakout: 0;
-  /* Cover win__bg parallax at maxTilt 11°; was 0 → black seam under tilt */
-  --bleed: 28px;
-  /* shallower win parallax: less edge pull under rotateY (still stereo, less seam risk) */
+  /* modest bleed + shallower z: cover parallax edge without cream ghost outside silhouette */
+  --bleed: 10px;
   --z-bg: -28;
   --z-mid: -12;
   /* 竖版插画窗默认；L1–4 .no-rim / L5 细框规则会覆盖 --win-* */
   --win-t: .035;
   --win-h: .62;
-  --win-fill: #ebe9e2;
   --frame: linear-gradient(160deg, #f4efe4, #c4b59a 40%, #8a7a5c 70%, #e8dcc4);
   --frame-pattern: radial-gradient(circle at 50% 0%, rgba(255,230,170,.35), transparent 55%);
   --panel: rgba(18,14,10,.82);
   --ink: #fff6e8;
   --head-shadow: rgba(0,0,0,.4);
   --ring: rgba(255,220,160,.4);
-  --art-bg: #ebe9e2;
+  /* dark under art only — cream belongs on L5 matte ring, not card body / win fill */
+  --art-bg: #2a2e36;
   --yl-pos: 50% 28%;
 }
 /* 照片卡通用 */
@@ -776,17 +775,16 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   display: block; pointer-events: none;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,.4));
 }
-/* 应龙：竖版窗内 cover；不破框；win__bg/mid 用 --bleed 出血，倾斜视差不露黑边 */
+/* 应龙：竖版窗内 cover；小出血 + 窗内微放大，贴住细框缝且不把奶油画到卡体外 */
 .card[data-card="yinglong"] .layer--char { display: none; }
 .card[data-card="yinglong"] .win__bg,
 .card[data-card="yinglong"] .win__mid {
   inset: calc(var(--bleed) * -1);
 }
-/* 铺满已出血的 win__bg；再略放大 ~3% 抗 preserve-3d 亚像素缝 + 分层 idle */
 .card[data-card="yinglong"] .win__bg > img.photo-art {
-  inset: -3%;
-  width: 106%;
-  height: 106%;
+  inset: -1.5%;
+  width: 103%;
+  height: 103%;
   object-fit: cover;
   object-position: var(--yl-pos, 50% 28%);
 }
@@ -1175,27 +1173,17 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
   --frame: linear-gradient(152deg, #f8f7f3 0%, #e9e7e0 22%, #d8d5ce 48%, #f0eee8 72%, #faf9f5 100%);
   --rim-cream: #ebe9e2;
 }
-/* Under rotateY the rotator AABB exceeds the projected face; holes must read cream, not page black */
-.card[data-lv="5"]:not(.no-rim) {
-  background: #ebe9e2;
-  border-radius: var(--card-radius);
-}
-.card[data-lv="5"]:not(.no-rim) .card__rotator {
-  background: #ebe9e2;
-  border-radius: var(--card-radius);
-}
+/* Frame matte stays cream; do NOT paint cream on .card/.card__rotator or scale(frame) —
+   those protrude as ghost layers under preserve-3d tilt. Opaque cream only inside clipped frame. */
 .card[data-lv="5"]:not(.no-rim) .layer--frame {
   background:
     linear-gradient(125deg, rgba(255,255,255,.55) 0%, transparent 42%, rgba(180,175,165,.22) 100%),
     linear-gradient(152deg, #f7f6f2 0%, #e6e3db 38%, #d2cfc7 62%, #f3f1eb 100%),
-    #ebe9e2; /* opaque cream base — no dark page/AA hole under tilt */
+    #ebe9e2;
   overflow: hidden;
   border-radius: var(--card-radius);
   clip-path: inset(0 round var(--card-radius));
   background-color: #ebe9e2;
-  /* expand ~2% under preserve-3d so foreshortened edge still covers (else page/card shows as black seam) */
-  transform: translateZ(0px) scale(1.02);
-  transform-origin: center center;
 }
 .card[data-lv="5"]:not(.no-rim) .layer--frame::before {
   opacity: .18;
@@ -1203,13 +1191,13 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
     repeating-linear-gradient(135deg, transparent 0 6px, rgba(255,255,255,.28) 6px 7px),
     linear-gradient(90deg, rgba(200,198,190,.15), transparent 40%, rgba(255,255,255,.2));
 }
-/* 内缘线：浅描，避免 tilt 下读成黑缝；略扩以贴住窗 */
+/* 内缘线：浅描贴窗（不扩几何），避免 tilt 下读成黑缝 */
 .card[data-lv="5"]:not(.no-rim) .layer--frame::after {
   content: "";
   position: absolute;
-  left: calc(var(--win-l) * 100% - 4px);
-  width: calc(var(--win-w) * 100% + 8px);
-  top: calc(var(--win-t) * 100% - 1px);
+  left: calc(var(--win-l) * 100%);
+  width: calc(var(--win-w) * 100%);
+  top: calc(var(--win-t) * 100%);
   bottom: 1.35%;
   border-radius: 1.35% / 0.9%;
   border: 1px solid rgba(70, 62, 52, .2);
@@ -1219,16 +1207,12 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
   pointer-events: none;
   z-index: 6;
 }
-/* 窗压进奶油 ~4px（外缘仍留细奶油+镭射）；底填奶油——露缝≠黑边 */
+/* Win flush to matte; dark fill under art only (matches --art-bg). Tiny AA cover via art overscale. */
 .card[data-lv="5"]:not(.no-rim) .win {
-  left: calc(var(--win-l) * 100% - 4px);
-  width: calc(var(--win-w) * 100% + 8px);
   border-radius: 1.35% / 0.9%;
   border-bottom-left-radius: 2px;
   border-bottom-right-radius: 2px;
   overflow: hidden;
-  background: #ebe9e2;
-  box-shadow: 0 0 0 3px #ebe9e2;
 }
 .card[data-lv="5"]:not(.no-rim) .win::after {
   border: none;
@@ -1236,9 +1220,6 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
     inset 0 0 0 1px rgba(50,44,36,.12),
     inset 0 2px 6px rgba(0,0,0,.18),
     inset 0 0 10px rgba(0,0,0,.08);
-}
-.card[data-lv="5"]:not(.no-rim) .win__bg {
-  background: #ebe9e2; /* not dark art-bg under translucent layer edges */
 }
 .card[data-lv="5"]:not(.no-rim) .card__body {
   bottom: 4.6%; /* 更瘦底框带 + 脚注 */
@@ -1283,16 +1264,16 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
           mask-repeat: no-repeat;
   -webkit-mask-composite: source-in;
           mask-composite: intersect;
-  /* soft-light keeps rim laser without crushing cream→black under tilt */
-  mix-blend-mode: soft-light;
-  opacity: calc((0.72 + var(--o) * 0.28) * (0.5 + var(--tilt) * 0.5));
-  filter: saturate(calc(2.4 + var(--tilt) * .6)) contrast(1.18) brightness(calc(1.08 + var(--tilt) * .08));
+  /* hard-light rim laser on cream matte (pre-a30dee8 look); soft-light looked washed/disconnected */
+  mix-blend-mode: hard-light;
+  opacity: calc((0.58 + var(--o) * 0.38) * (0.42 + var(--tilt) * 0.58));
+  filter: saturate(calc(2.6 + var(--tilt) * .7)) contrast(1.28) brightness(calc(1.04 + var(--tilt) * .08));
   pointer-events: none;
 }
 .card[data-lv="5"]:not(.no-rim)[data-effect="rainbow"] .foil--frame {
-  mix-blend-mode: soft-light;
-  opacity: calc((0.78 + var(--o) * 0.22) * (0.48 + var(--tilt) * 0.52));
-  filter: saturate(calc(2.7 + var(--tilt) * .7)) contrast(1.2) brightness(calc(1.1 + var(--tilt) * .1));
+  mix-blend-mode: hard-light;
+  opacity: calc((0.62 + var(--o) * 0.35) * (0.4 + var(--tilt) * 0.6));
+  filter: saturate(calc(2.9 + var(--tilt) * .8)) contrast(1.32) brightness(calc(1.06 + var(--tilt) * .1));
 }
 .card[data-lv="5"]:not(.no-rim)[data-effect="sparkle"] .foil--frame,
 .card[data-lv="5"]:not(.no-rim)[data-effect="metal"] .foil--frame {
@@ -1627,7 +1608,7 @@ body.no-rarity .an-heat, .card.no-rarity .an-heat {
 body:not(.no-anim) .card[data-card="yinglong"]:not(.no-anim) .st-yl-fog { display: none; }
 .card[data-card="yinglong"] .photo-art--wing { display: none !important; }
 .card[data-card="yinglong"] .photo-art-sheet {
-  position: absolute; inset: -3%; width: 106%; height: 106%;
+  position: absolute; inset: -1.5%; width: 103%; height: 103%;
   background-repeat: no-repeat; pointer-events: none; z-index: 2;
   background-size: cover;
   background-position: var(--yl-pos, 50% 28%);
@@ -1653,7 +1634,7 @@ body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .photo-art-sheet 
   transform: none !important;
 }
 .card[data-card="yinglong"] .yl-layers > img {
-  position: absolute; inset: -3%; width: 106%; height: 106%;
+  position: absolute; inset: -1.5%; width: 103%; height: 103%;
   object-fit: cover; object-position: var(--yl-pos, 50% 28%);
   display: block; pointer-events: none;
   /* 禁止滤镜叠影 */
