@@ -22,9 +22,9 @@
    全局可调参数都在 :root 里；交互参数在脚本的 CONFIG 里。
    ========================================================= */
 :root {
-  --card-w: min(256px, 70vw);   /* 卡片宽度（手机上两侧留白，方便滚动页面） */
-  --card-h: calc(var(--card-w) * 88 / 63);  /* 卡片高度（标准 TCG 卡 63:88） */
-  --card-radius: 4.5% / 3.2%;   /* 圆角 */
+  --card-w: min(240px, 68vw);   /* 卡片宽度 */
+  --card-h: calc(var(--card-w) * 3 / 2);  /* 竖版 2:3，对齐参考视频卡牌 */
+  --card-radius: 5% / 3.4%;   /* 圆角 */
   --persp: 800;                 /* 透视距离（px，无单位）：越小 3D 感越夸张 */
 
   /* ---- 各层深度（px，无单位；负数在卡面后方，正数浮在卡面前方） ---- */
@@ -35,11 +35,11 @@
   --z-fg: 34;                   /* 前景粒子：贴近卡面 */
   --depth: 1;                   /* 总深度倍率；「视差破框」关掉时接近 0 */
 
-  /* ---- 插画窗口位置（占卡片宽/高的比例） ---- */
-  --win-l: .06;
-  --win-t: .12;
-  --win-w: .88;
-  --win-h: .46;
+  /* ---- 插画窗口（竖版窗：约占卡面高度 ~62%，cover 裁切） ---- */
+  --win-l: .04;
+  --win-t: .035;
+  --win-w: .92;
+  --win-h: .62;
   --bleed: 18px;                /* 远景/中景出血：配合更浅的 z，减少窗缘外溢感 */
 
   /* ---- 破框（关闭） ---- */
@@ -352,33 +352,55 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 .win__mid { --z: var(--z-mid); }
 .win__bg > svg, .win__mid > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
-/* ---------- 文字层 ---------- */
+/* ---------- 文字层（参考王者卡牌：名压在插画下沿、描述带、细脚注） ---------- */
 .layer--text {
   --z: var(--z-text);
   inset: 0;
-  color: var(--ink, #1b1b22);
+  color: var(--ink, #f2f0f8);
   font-size: calc(var(--card-w) * .0393);   /* = 11px @ 280px 宽；下面全部用 em，随卡片缩放 */
+  pointer-events: none;
 }
+/* 名称叠在插画窗下沿（竖版插画窗） */
 .card__head {
-  position: absolute; left: 7%; right: 7%; top: 3.2%;
-  display: flex; justify-content: space-between; align-items: baseline;
-  font-weight: 800; font-size: 1.36em;
-  text-shadow: 0 1px 0 var(--head-shadow, rgba(255,255,255,.25));
+  position: absolute;
+  left: calc(var(--win-l) * 100%);
+  width: calc(var(--win-w) * 100%);
+  top: calc((var(--win-t) + var(--win-h)) * 100% - 2.1em);
+  display: flex; justify-content: center; align-items: center;
+  font-weight: 800; font-size: 1.55em; letter-spacing: .12em;
+  color: #fff;
+  text-shadow:
+    0 0 14px rgba(0,0,0,.85),
+    0 2px 6px rgba(0,0,0,.75),
+    0 0 2px rgba(0,0,0,.9);
+  z-index: 4;
 }
-.card__head small { font-size: .73em; font-weight: 700; }
+.card__head small {
+  display: none; /* 稀有度改由脚注 / 列表脚表达 */
+}
 .card__body {
-  position: absolute; left: 6%; right: 6%; top: 61%; bottom: 10%;
-  background: var(--panel, rgba(255,255,255,.82));
-  border-radius: 4px;
-  padding: 5% 7%;
-  line-height: 1.5;
-  box-shadow: 0 6px 14px rgba(0,0,0,.28);
+  position: absolute;
+  left: calc(var(--win-l) * 100%);
+  width: calc(var(--win-w) * 100%);
+  top: calc((var(--win-t) + var(--win-h)) * 100% + 0.8%);
+  bottom: 6.5%;
+  background: rgba(16, 14, 24, .82); /* 参考：深色半透明描述带（不跟浅色 panel） */
+  border-radius: 3px;
+  padding: 4.5% 6%;
+  line-height: 1.45;
+  color: rgba(242,240,248,.92);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
   overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
-.card__body b { display: block; font-size: 1.14em; margin-bottom: 3px; }
+.card__body b { display: block; font-size: 1.05em; margin-bottom: 2px; color: #fff; }
 .card__foot {
-  position: absolute; left: 7%; right: 7%; bottom: 3.5%;
-  font-size: .82em; display: flex; justify-content: space-between; opacity: .75;
+  position: absolute; left: 6%; right: 6%; bottom: 2.4%;
+  font-size: .78em; display: flex; justify-content: space-between; align-items: center;
+  opacity: .7; letter-spacing: .04em;
+  color: rgba(230,226,240,.75);
 }
 
 /* ---------- 角色层 ---------- */
@@ -638,8 +660,9 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 .card[data-card="yinglong"] {
   --breakout: 0;
   --bleed: 0px;
-  --win-t: .12;
-  --win-h: .4725;               /* 插画窗 ≈ 4:3 横版（母图 landscape-4x3 铺满，无 letterbox） */
+  /* 竖版插画窗：与全局一致；4:3 母图 cover 裁切铺满 */
+  --win-t: .035;
+  --win-h: .62;
   --frame: linear-gradient(160deg, #f4efe4, #c4b59a 40%, #8a7a5c 70%, #e8dcc4);
   --frame-pattern: radial-gradient(circle at 50% 0%, rgba(255,230,170,.35), transparent 55%);
   --panel: rgba(18,14,10,.82);
@@ -647,7 +670,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   --head-shadow: rgba(0,0,0,.4);
   --ring: rgba(255,220,160,.4);
   --art-bg: #2a2e36;
-  --yl-pos: 50% 45%;
+  --yl-pos: 50% 28%;
 }
 /* 照片卡通用 */
 .win__bg > img.photo-art {
@@ -662,7 +685,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   display: block; pointer-events: none;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,.4));
 }
-/* 应龙：4:3 横版母图铺满插画窗，无 letterbox；不破框；win__bg 也不出血 */
+/* 应龙：竖版窗内 cover 裁切（母图可横可竖）；不破框；win__bg 不出血 */
 .card[data-card="yinglong"] .layer--char { display: none; }
 .card[data-card="yinglong"] .win__bg,
 .card[data-card="yinglong"] .win__mid {
@@ -670,9 +693,8 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .card[data-card="yinglong"] .win__bg > img.photo-art {
   inset: 0; width: 100%; height: 100%;
-  /* 4:3 铺满，无 letterbox；cover + 微调焦点，残余比例差也不露灰边 */
   object-fit: cover;
-  object-position: var(--yl-pos, 50% 45%);
+  object-position: var(--yl-pos, 50% 28%);
 }
 /* 神性体积光动画层 */
 .an-godrays {
@@ -707,12 +729,12 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 
 /* =========================================================
-   列表 + 弹窗预览（对齐山海经图鉴：列表常驻，点击弹层看全息卡）
+   列表 + 弹窗预览（参考王者卡牌录像：肖像列表 / 左卡右等级弹层）
    ========================================================= */
 .list-bar {
   width: min(100%, 1280px);
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-  gap: 12px 16px; margin: 0 0 18px; padding: 0 4px;
+  gap: 12px 16px; margin: 0 0 20px; padding: 0 4px;
 }
 .list-bar__hint { margin: 0; font-size: 13px; opacity: .55; }
 .list-bar__pack {
@@ -728,43 +750,63 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 .card-list {
   width: min(100%, 1280px);
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
-  gap: 14px;
-  margin: 0 0 8px;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 18px 16px;
+  margin: 0 0 12px;
 }
-@media (min-width: 640px) {
-  .card-list { grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 18px; }
+@media (min-width: 720px) {
+  .card-list { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 22px 18px; }
 }
 
+/* 肖像磁贴：上插画+叠名 / 中描述带 / 下脚注（稀有色） */
 .clist-item {
   position: relative;
   display: flex; flex-direction: column;
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 14px;
-  background: #16141f;
+  aspect-ratio: 2 / 3;
+  border: 1.5px solid var(--clist-border, rgba(180,190,210,.35));
+  border-radius: 12px;
+  background: #12141c;
   overflow: hidden;
   cursor: pointer;
   text-align: left;
   color: inherit;
   padding: 0;
   font: inherit;
-  box-shadow: 0 4px 16px rgba(0,0,0,.28);
-  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+  box-shadow: 0 8px 22px rgba(0,0,0,.4);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 .clist-item:hover, .clist-item:focus-visible {
-  transform: translateY(-3px);
-  border-color: rgba(210,195,255,.35);
-  background: #1c1830;
+  transform: translateY(-4px);
+  border-color: var(--clist-border-hot, rgba(230,220,255,.55));
+  box-shadow: 0 14px 32px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06);
   outline: none;
+}
+.clist-item[data-r="r"] {
+  --clist-border: rgba(140,180,230,.45);
+  --clist-border-hot: rgba(170,210,255,.7);
+  --clist-foot: linear-gradient(90deg, #3a4a66, #5a6e8e 50%, #3a4a66);
+  --clist-foot-ink: #d8e6ff;
+}
+.clist-item[data-r="ur"] {
+  --clist-border: rgba(210,170,90,.55);
+  --clist-border-hot: rgba(255,214,130,.8);
+  --clist-foot: linear-gradient(90deg, #6a4a18, #b8903a 50%, #6a4a18);
+  --clist-foot-ink: #ffe9b8;
 }
 .clist-item__art {
   position: relative;
-  aspect-ratio: 3 / 4;
+  flex: 1 1 auto;
+  min-height: 0;
   background: linear-gradient(160deg, #1a1628, #0e0c14 70%);
   overflow: hidden;
 }
 .clist-item__art img {
-  width: 100%; height: 100%; object-fit: cover; display: block;
+  width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; display: block;
+}
+.clist-item__art::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 42%;
+  background: linear-gradient(to top, rgba(0,0,0,.72), transparent);
+  pointer-events: none; z-index: 1;
 }
 .clist-item__art--dragon {
   background:
@@ -790,30 +832,50 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 .clist-item__mark {
   position: absolute; inset: 0;
   display: grid; place-items: center;
-  font-size: clamp(2.4rem, 8vw, 3.2rem);
-  opacity: .55; pointer-events: none;
+  font-size: clamp(2.2rem, 7vw, 3rem);
+  opacity: .5; pointer-events: none;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,.45));
 }
-.clist-item__badge {
-  position: absolute; top: 10px; right: 10px;
-  padding: 3px 8px; border-radius: 999px;
-  font-size: .68rem; letter-spacing: .04em;
-  background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.12);
-  color: #c8c4d8; backdrop-filter: blur(6px);
+.clist-item__corner {
+  position: absolute; top: 8px; left: 8px; z-index: 2;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.18);
+  display: grid; place-items: center;
+  font-size: 10px; color: rgba(255,255,255,.7);
 }
-.clist-item__badge[data-r="r"] { color: #cfe6ff; border-color: rgba(160,200,255,.45); }
-.clist-item__badge[data-r="ur"] { color: #ffe6a8; border-color: rgba(255,214,130,.55); }
-.clist-item__body { padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 4px; min-height: 68px; }
 .clist-item__name {
-  margin: 0; font-size: 1.02rem; font-weight: 600; letter-spacing: .04em;
+  position: absolute; left: 6%; right: 6%; bottom: 8px; z-index: 2;
+  margin: 0; text-align: center;
+  font-size: 1.05rem; font-weight: 700; letter-spacing: .14em;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(0,0,0,.9), 0 2px 4px rgba(0,0,0,.8);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.clist-item__meta {
-  margin: 0; font-size: .75rem; color: rgba(200,196,220,.55);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.clist-item__desc {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 9px 10px 8px;
+  min-height: 2.7em;
+  font-size: .72rem; line-height: 1.4;
+  color: rgba(235,232,245,.88);
+  background: rgba(12,12,18,.82);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clist-item__foot {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 6px 8px;
+  text-align: center;
+  font-size: .68rem; letter-spacing: .16em;
+  color: var(--clist-foot-ink, #d8d4e8);
+  background: var(--clist-foot, linear-gradient(90deg, #2a2e3a, #3a4050 50%, #2a2e3a));
+  border-top: 1px solid rgba(255,255,255,.06);
 }
 
-/* 默认：卡牌舞台停在页外（供开包模板 / 弹窗搬入），列表常驻 */
+/* 舞台停放 */
 .shell--parked {
   position: fixed !important;
   left: -9999px !important;
@@ -826,89 +888,191 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   display: block !important;
 }
 
+/* ---------- 弹窗：全屏升级页感（左大卡 | 右等级） ---------- */
 .holo-modal[hidden] { display: none !important; }
 .holo-modal {
   position: fixed; inset: 0; z-index: 40;
-  display: grid; place-items: center;
-  padding: 12px;
-  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
-           max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  display: flex; flex-direction: column;
 }
 .holo-modal__backdrop {
   position: absolute; inset: 0;
-  background: rgba(4, 5, 10, .72);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(4, 5, 10, .62);
+  backdrop-filter: blur(18px) saturate(.85);
+  -webkit-backdrop-filter: blur(18px) saturate(.85);
 }
-.holo-modal__panel {
+.holo-modal__ui {
   position: relative; z-index: 1;
-  width: min(1100px, 100%);
-  max-height: min(94vh, 960px);
-  overflow: auto;
-  border: 1px solid rgba(210,195,255,.22);
-  border-radius: 18px;
-  background: #121019;
-  box-shadow: 0 20px 60px rgba(0,0,0,.55);
-  padding: 16px 16px 20px;
+  flex: 1;
+  display: flex; flex-direction: column;
+  min-height: 0;
+  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+           max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
 }
-.holo-modal__close {
-  position: absolute; top: 10px; right: 12px; z-index: 5;
-  width: 36px; height: 36px; border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.45); color: #f0eef8;
-  font-size: 22px; line-height: 1; cursor: pointer;
+.holo-modal__bar {
+  display: flex; align-items: center; gap: 12px;
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+  min-height: 40px;
 }
-.holo-modal__close:hover { background: rgba(255,255,255,.12); }
-.holo-modal__close:focus-visible { outline: 2px solid #c6b8ff; outline-offset: 2px; }
-.holo-modal__title {
-  margin: 0 40px 12px 4px;
-  font-size: 1.05rem; font-weight: 600; letter-spacing: .06em;
-  color: #f0ebe8;
+.holo-modal__back {
+  appearance: none; border: 0; background: transparent;
+  color: #f4f2fa; font: inherit; font-size: 16px; font-weight: 600;
+  letter-spacing: .06em; cursor: pointer; padding: 6px 4px;
 }
-.holo-modal__host { min-width: 0; }
+.holo-modal__back:hover { opacity: .85; }
+.holo-modal__back:focus-visible { outline: 2px solid #c6b8ff; outline-offset: 2px; border-radius: 6px; }
+.holo-modal__heading {
+  font-size: 15px; font-weight: 600; letter-spacing: .1em; opacity: .78;
+}
+.holo-modal__layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(220px, 320px);
+  grid-template-areas: "prev card next side";
+  gap: 8px 10px;
+  align-items: center;
+}
+.holo-modal__nav {
+  appearance: none; border: 0; background: transparent;
+  color: rgba(255,255,255,.82); font-size: 42px; line-height: 1;
+  width: 44px; height: 64px; cursor: pointer;
+  text-shadow: 0 2px 10px rgba(0,0,0,.5);
+  align-self: center;
+}
+.holo-modal__nav:hover { color: #fff; }
+.holo-modal__nav:focus-visible { outline: 2px solid #c6b8ff; outline-offset: 2px; border-radius: 8px; }
+.holo-modal__nav--prev { grid-area: prev; }
+.holo-modal__nav--next { grid-area: next; }
+.holo-modal__card-host {
+  grid-area: card;
+  min-width: 0; min-height: 0;
+  display: flex; justify-content: center; align-items: center;
+}
+.holo-modal__side-host {
+  grid-area: side;
+  min-width: 0; min-height: 0;
+  align-self: stretch;
+  display: flex; flex-direction: column;
+  justify-content: center;
+  padding: 8px 4px 8px 8px;
+}
 
-/* 弹窗内：单卡 + 侧栏 */
-body.modal-open { overflow: hidden; }
-body.modal-open .shell {
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  width: 100%; max-width: none; margin: 0;
-}
-body.modal-open .shell .stage {
-  --cols: 1; justify-content: center;
-  --card-w: clamp(240px, min(58vw, 360px), 400px);
-  --card-h: calc(var(--card-w) * 88 / 63);
-  padding-top: calc(var(--card-h) * max(0, var(--breakout) - var(--win-t)) + 28px);
-  row-gap: 12px;
-}
-body.modal-open .shell .stage > div[hidden] { display: none !important; }
-body.modal-open .shell .side {
-  width: min(100%, 720px);
-  position: static; max-height: none; overflow: visible;
-}
-body.modal-open .shell .main { width: 100%; }
-@media (min-width: 900px) {
-  body.modal-open .shell {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) min(280px, 32%);
-    grid-template-areas: "main side";
-    gap: 16px 18px;
-    align-items: start;
-  }
-  body.modal-open .shell .main { grid-area: main; }
-  body.modal-open .shell .side {
-    grid-area: side; width: auto;
-    position: sticky; top: 0;
-    max-height: min(82vh, 860px);
-    overflow-y: auto;
-  }
-  body.modal-open .shell .stage {
-    --card-w: clamp(260px, min(42vw, 380px), 420px);
-    --card-h: calc(var(--card-w) * 88 / 63);
-  }
-}
 @media (max-width: 899px) {
-  body.modal-open .holo-modal__panel { padding-top: 44px; }
+  .holo-modal__layout {
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "prev card next"
+      "side side side";
+    align-items: start;
+    overflow: auto;
+  }
+  .holo-modal__side-host { justify-content: flex-start; padding: 4px 0 12px; }
+  .holo-modal__nav { font-size: 34px; width: 36px; height: 48px; }
 }
+
+body.modal-open { overflow: hidden; }
+body.modal-open .mast,
+body.modal-open .list-bar,
+body.modal-open .card-list {
+  filter: blur(10px) brightness(.55);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 弹窗内卡舞台 */
+body.modal-open .main {
+  width: 100%;
+  display: flex; flex-direction: column; align-items: center;
+}
+body.modal-open .stage {
+  --cols: 1; justify-content: center;
+  --card-w: clamp(200px, min(48vw, 300px), 340px);
+  --card-h: calc(var(--card-w) * 3 / 2);
+  padding-top: calc(var(--card-h) * max(0, var(--breakout) - var(--win-t)) + 20px);
+  row-gap: 0;
+  margin: 0;
+}
+body.modal-open .stage > div[hidden] { display: none !important; }
+body.modal-open .stage .label { display: none !important; }
+body.modal-open #gl-view { width: min(100%, 420px); }
+@media (min-width: 900px) {
+  body.modal-open .stage {
+    --card-w: clamp(240px, min(32vw, 340px), 360px);
+    --card-h: calc(var(--card-w) * 3 / 2);
+  }
+}
+
+/* 右侧等级栏：参考升级页 */
+body.modal-open .side {
+  width: 100%;
+  position: static;
+  max-height: none;
+  overflow: visible;
+}
+body.modal-open .fx {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+body.modal-open .fx > summary { display: none !important; }
+body.modal-open .fx__body {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 4px 2px 8px;
+}
+body.modal-open .lv__tabs {
+  display: flex; align-items: center; gap: 18px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  padding-bottom: 8px;
+}
+body.modal-open .lv__tab {
+  appearance: none; border: 0; background: transparent;
+  color: rgba(230,226,240,.45); font: inherit; font-size: 14px;
+  letter-spacing: .12em; padding: 4px 2px 8px; cursor: default;
+  position: relative;
+}
+body.modal-open .lv__tab.is-on {
+  color: #fff; cursor: default;
+}
+body.modal-open .lv__tab.is-on::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -9px;
+  height: 2px; background: #fff; border-radius: 2px;
+}
+body.modal-open .lv__tab:disabled { opacity: .35; cursor: default; }
+body.modal-open .lv__head .lv__title { display: none; }
+body.modal-open .lv__list { gap: 6px; }
+body.modal-open .fx .lv__row {
+  grid-template-columns: 3.4em 1fr;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(232,232,240,.55);
+}
+body.modal-open .fx .lv__row .lv__pips { display: none; }
+body.modal-open .fx .lv__row b { font-size: 15px; font-weight: 700; }
+body.modal-open .fx .lv__row span { font-size: 14px; letter-spacing: .08em; justify-self: start; }
+body.modal-open .fx .lv__row[aria-checked="true"] {
+  color: #fff;
+  background: rgba(255,255,255,.14);
+  border-color: transparent;
+  box-shadow: none;
+}
+body.modal-open .fx .lv__row:hover { background: rgba(255,255,255,.08); color: #eee; }
+body.modal-open .lv__desc {
+  font-size: 12px; opacity: .55; min-height: 0;
+  margin-top: 4px;
+}
+body.modal-open .fx__row[aria-label="渲染模式"],
+body.modal-open .fx__adv,
+body.modal-open .fx__hint {
+  opacity: .85;
+}
+body.modal-open .fx__adv > summary { display: flex !important; }
 
 /* =========================================================
    控制面板的开关
@@ -1251,7 +1415,7 @@ body.yl-layers-ready:not(.no-anim) .card[data-card="yinglong"] .yl-layers { disp
 body.yl-layers-ready:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art { opacity: 0; }
 .card[data-card="yinglong"] .yl-layers > img {
   position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; object-position: var(--yl-pos, 50% 45%);
+  object-fit: cover; object-position: var(--yl-pos, 50% 28%);
   display: block; pointer-events: none;
 }
 .card[data-card="yinglong"] .yl-layers .yl-l-body { z-index: 1; }
@@ -1443,8 +1607,8 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
 .pk {
   --ray: 255,224,160;   /* 放射光颜色（演出主题色，JS 按卡写入） */
   --leak: 255,214,140;  /* 卡后光晕颜色 */
-  --pk-w: min(230px, 62vw, calc((100vh - 250px) * .716));   /* 翻牌时卡片宽度（.716 = 63/88） */
-  --pk-w: min(230px, 62vw, calc((100svh - 250px) * .716));
+  --pk-w: min(230px, 62vw, calc((100vh - 250px) * (2 / 3)));   /* 翻牌竖版 2:3 */
+  --pk-w: min(230px, 62vw, calc((100svh - 250px) * (2 / 3)));
   --pack-w: calc(var(--pk-w) * 1.12);
   --pack-h: calc(var(--pack-w) * 1.52);
   position: fixed; inset: 0; z-index: 50;
@@ -1512,7 +1676,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
 /* LEGENDARY 字样：逐字渐变金（各字共用一条流光，按字序延迟 → 流光从左往右扫过） */
 .pk__title {
   position: absolute; left: 50%; z-index: 6;
-  bottom: calc(54% + var(--pk-w) * 88 / 63 * .54 + 58px);   /* 卡（放大 1.08）上沿再让出破框角色的高度 */
+  bottom: calc(54% + var(--pk-w) * 3 / 2 * .54 + 58px);   /* 卡（放大 1.08）上沿再让出破框角色的高度 */
   transform: translateX(-50%);
   text-align: center; white-space: nowrap; pointer-events: none; opacity: 0;
 }
@@ -1584,7 +1748,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
 }
 .pk__badge {
   position: absolute; left: 50%; z-index: 6;
-  top: calc(46% - var(--pk-w) * 88 / 63 * .66 - 40px);   /* 卡片上沿再往上让出破框角色的高度 */
+  top: calc(46% - var(--pk-w) * 3 / 2 * .66 - 40px);   /* 卡片上沿再往上让出破框角色的高度 */
   transform: translateX(-50%);
   padding: 5px 14px; border-radius: 999px; white-space: nowrap;
   font-size: 13px; font-weight: 700; letter-spacing: .08em;
@@ -1677,14 +1841,14 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
 .pk.is-busy .pk__stack:focus::after { opacity: 0; }
 .pk-card {
   position: absolute; left: 50%; top: 50%;
-  width: var(--pk-w); height: calc(var(--pk-w) * 88 / 63);
-  margin-left: calc(var(--pk-w) / -2); margin-top: calc(var(--pk-w) * 88 / 63 / -2);
+  width: var(--pk-w); height: calc(var(--pk-w) * 3 / 2);
+  margin-left: calc(var(--pk-w) / -2); margin-top: calc(var(--pk-w) * 3 / 2 / -2);
   perspective: 1000px;
 }
 .pk-card__flip { position: absolute; inset: 0; }
 .pk-face { position: absolute; inset: 0; }
 /* 卡片克隆的尺寸：--card-h 在 :root 里是按根元素的 --card-w 算好再继承下来的，换了宽度必须同时重算高度 */
-.pk-face--front { --card-w: var(--pk-w); --card-h: calc(var(--card-w) * 88 / 63); }
+.pk-face--front { --card-w: var(--pk-w); --card-h: calc(var(--card-w) * 3 / 2); }
 .pk-face--front[hidden], .pk-face--back[hidden] { display: none; }
 .pk-back {
   position: absolute; inset: 0; border-radius: 4.5% / 3.2%; overflow: hidden;
@@ -1764,13 +1928,13 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
   --res-w: 148px;
   display: grid; grid-template-columns: repeat(5, var(--res-w));
   gap: calc(var(--res-w) * .28) 22px;
-  padding-top: calc(var(--res-w) * 88 / 63 * .16 + 10px);   /* 破框角色的头顶空间 */
+  padding-top: calc(var(--res-w) * 3 / 2 * .16 + 10px);   /* 破框角色的头顶空间 */
   margin: 8px 0 18px;
 }
 .pk-cell { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .pk .pk-cell__btn {   /* 两个类：压过上面通用的 .pk button 样式 */
   all: unset; display: block; cursor: zoom-in; border-radius: 8px;
-  --card-w: var(--res-w); --card-h: calc(var(--card-w) * 88 / 63);
+  --card-w: var(--res-w); --card-h: calc(var(--card-w) * 3 / 2);
 }
 .pk .pk-cell__btn { position: relative; }
 /* 结果页：稀有 / 传说卡常驻柔光 + 几颗慢慢闪的微光 */
@@ -1809,9 +1973,9 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
   padding: 60px 12px 20px;
 }
 .pk__zoom[hidden] { display: none; }
-.pk__zoom-box { --card-w: min(280px, 72vw, calc((100vh - 260px) * .716)); --card-w: min(280px, 72vw, calc((100svh - 260px) * .716));
-  --card-h: calc(var(--card-w) * 88 / 63); width: 100%; display: flex; justify-content: center;
-  padding-top: calc(var(--card-w) * 88 / 63 * .16); }
+.pk__zoom-box { --card-w: min(280px, 72vw, calc((100vh - 260px) * (2 / 3))); --card-w: min(280px, 72vw, calc((100svh - 260px) * (2 / 3)));
+  --card-h: calc(var(--card-w) * 3 / 2); width: 100%; display: flex; justify-content: center;
+  padding-top: calc(var(--card-w) * 3 / 2 * .16); }
 .pk__zoom-box.gl { padding-top: 0; }
 .pk__zoom p { margin: 0; font-size: 12.5px; opacity: .65; text-align: center; }
 
@@ -1830,21 +1994,28 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
 <body>
   <header class="mast">
     <h1>全息闪卡 · 汇总版</h1>
-    <p class="tip">点选卡片弹窗预览全息卡面；弹窗内可调等级与特效。深链可用 <code>#lv=3&amp;focus=yinglong</code>。</p>
+    <p class="tip">点选卡片弹窗预览（左卡右等级）。深链可用 <code>#lv=3&amp;focus=yinglong</code>。</p>
   </header>
 
   <div class="list-bar" id="list-bar">
-    <p class="list-bar__hint">图鉴列表 · 点击弹窗查看全息卡面</p>
+    <p class="list-bar__hint">卡牌图鉴 · 点击升级预览</p>
     <button type="button" class="list-bar__pack" id="list-pack" aria-haspopup="dialog">✦ 开包（5 张）</button>
   </div>
   <main id="card-list" class="card-list" aria-label="闪卡列表"></main>
 
   <div id="holo-modal" class="holo-modal" hidden role="dialog" aria-modal="true" aria-labelledby="holo-modal-title">
     <div class="holo-modal__backdrop" id="holo-modal-backdrop" tabindex="-1"></div>
-    <div class="holo-modal__panel">
-      <button type="button" class="holo-modal__close" id="holo-modal-close" aria-label="关闭">×</button>
-      <h2 class="holo-modal__title" id="holo-modal-title">全息预览</h2>
-      <div class="holo-modal__host" id="holo-modal-host"></div>
+    <div class="holo-modal__ui">
+      <header class="holo-modal__bar">
+        <button type="button" class="holo-modal__back" id="holo-modal-close">← 卡牌</button>
+        <span class="holo-modal__heading" id="holo-modal-title">卡牌预览</span>
+      </header>
+      <div class="holo-modal__layout">
+        <button type="button" class="holo-modal__nav holo-modal__nav--prev" id="modal-prev" aria-label="上一张">‹</button>
+        <div class="holo-modal__card-host" id="holo-modal-card-host"></div>
+        <button type="button" class="holo-modal__nav holo-modal__nav--next" id="modal-next" aria-label="下一张">›</button>
+        <div class="holo-modal__side-host" id="holo-modal-side-host"></div>
+      </div>
     </div>
   </div>
 
@@ -1854,7 +2025,15 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
     <summary><span class="fx__title">⚙ 特效控制</span><span class="fx__sum" id="fx-sum">CSS 模式 · 全部开启</span><span class="fx__chev" aria-hidden="true">▾</span></summary>
     <div class="fx__body">
       <div class="lv" id="lv">
-        <div class="lv__head"><span class="lv__title" id="lv-title">卡面等级</span><span class="lv__tag" id="lv-tag" hidden>自定义</span></div>
+        <div class="lv__head">
+          <div class="lv__tabs" role="tablist" aria-label="预览面板">
+            <button type="button" class="lv__tab is-on" role="tab" aria-selected="true">等级</button>
+            <button type="button" class="lv__tab" role="tab" aria-selected="false" disabled title="暂未开放">统计</button>
+            <button type="button" class="lv__tab" role="tab" aria-selected="false" disabled title="暂未开放">百科</button>
+          </div>
+          <span class="lv__title" id="lv-title">卡面等级</span>
+          <span class="lv__tag" id="lv-tag" hidden>自定义</span>
+        </div>
         <div class="lv__list" role="radiogroup" aria-labelledby="lv-title">
           <button type="button" class="lv__row" role="radio" data-lv="5" aria-checked="true"  tabindex="0"><b>5级</b><span>镀闪卡面</span><i class="lv__pips" aria-hidden="true"><s></s><s></s><s></s><s></s><s></s></i></button>
           <button type="button" class="lv__row" role="radio" data-lv="4" aria-checked="false" tabindex="-1"><b>4级</b><span>专属特效</span><i class="lv__pips" aria-hidden="true"><s></s><s></s><s></s><s></s></i></button>
@@ -3052,44 +3231,58 @@ window.addEventListener('hashchange', () => {
 
 // 供无头 / 自测脚本调用（不改变正常行为）
 
-/* ---------- 列表 + 弹窗预览（#focus=slug 打开弹层；列表常驻） ---------- */
-const TIP_DEFAULT = '点选卡片弹窗预览全息卡面；弹窗内可调等级与特效。深链可用 #lv=3&focus=yinglong。';
+/* ---------- 列表 + 弹窗预览（左卡右等级；‹ › 切换；#focus= 深链） ---------- */
+const TIP_DEFAULT = '点选卡片弹窗预览（左卡右等级）。深链可用 #lv=3&focus=yinglong。';
 const TIP_BY_CARD = {
-  yinglong: '应龙（《山海经·大荒东经》 / 《大荒北经》）。悬停 / 拖动看箔面；右侧调等级。Esc / 点遮罩 / × 关闭。',
+  yinglong: '应龙（《山海经·大荒东经》 / 《大荒北经》）。‹ › 切换卡牌；右侧调等级。← 卡牌 / Esc / 遮罩关闭。',
 };
 const CLIST_MARK = { dragon: '❄', fox: '🦊', stardust: '✦', lion: '☀', yinglong: '🐉' };
 const tipEl = document.querySelector('header .tip');
 const cardListEl = $('#card-list');
 const holoModal = $('#holo-modal');
-const holoModalHost = $('#holo-modal-host');
+const cardHost = $('#holo-modal-card-host');
+const sideHost = $('#holo-modal-side-host');
 const holoModalTitle = $('#holo-modal-title');
 const shellEl = $('#shell');
+const mainEl = shellEl.querySelector('.main');
+const sideEl = shellEl.querySelector('.side');
 const shellHome = document.createComment('shell-home');
 shellEl.after(shellHome);
 
 let modalOpen = false;
 let focusedCard = null;
+let cardOrder = [];
 
 function cardWraps() { return $$('#css-view > div'); }
+
+function shortDesc(text, max = 42) {
+  const t = String(text || '').replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  return t.slice(0, max - 1) + '…';
+}
 
 function buildCardList() {
   if (!cardListEl || cardListEl.childElementCount) return;
   const frag = document.createDocumentFragment();
+  cardOrder = [];
   for (const wrap of cardWraps()) {
     const card = wrap.querySelector('.card');
     if (!card) continue;
     const id = card.dataset.card;
+    cardOrder.push(id);
     const rarity = card.dataset.rarity || 'r';
     const name = card.querySelector('.card__head span')?.textContent?.trim() || id;
     const rarityLabel = card.querySelector('.card__head small')?.textContent?.trim()
       || (rarity === 'ur' ? '传说' : '稀有');
-    const meta = wrap.querySelector('.label small')?.textContent?.trim() || '';
+    const bodyText = card.querySelector('.card__body')?.textContent?.trim() || '';
+    const footSrc = card.querySelector('.card__foot span')?.textContent?.trim() || '';
     const artSrc = card.querySelector('img.photo-art')?.getAttribute('src');
 
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'clist-item';
     btn.dataset.card = id;
+    btn.dataset.r = rarity;
     btn.setAttribute('aria-label', `${name}，${rarityLabel}`);
 
     const art = document.createElement('div');
@@ -3108,23 +3301,25 @@ function buildCardList() {
       mark.textContent = CLIST_MARK[id] || '◆';
       art.appendChild(mark);
     }
-    const badge = document.createElement('span');
-    badge.className = 'clist-item__badge';
-    badge.dataset.r = rarity;
-    badge.textContent = rarityLabel;
-    art.appendChild(badge);
+    const corner = document.createElement('span');
+    corner.className = 'clist-item__corner';
+    corner.setAttribute('aria-hidden', 'true');
+    corner.textContent = '✦';
+    const nm = document.createElement('h3');
+    nm.className = 'clist-item__name';
+    nm.textContent = name;
+    art.append(corner, nm);
 
-    const body = document.createElement('div');
-    body.className = 'clist-item__body';
-    const h = document.createElement('h3');
-    h.className = 'clist-item__name';
-    h.textContent = name;
-    const p = document.createElement('p');
-    p.className = 'clist-item__meta';
-    p.textContent = meta || rarityLabel;
-    body.append(h, p);
+    const desc = document.createElement('p');
+    desc.className = 'clist-item__desc';
+    desc.textContent = shortDesc(bodyText, 48);
 
-    btn.append(art, body);
+    const foot = document.createElement('p');
+    foot.className = 'clist-item__foot';
+    const srcShort = (footSrc || rarityLabel).replace(/^《|》$/g, '');
+    foot.textContent = `— ${srcShort.length > 14 ? rarityLabel : srcShort} —`;
+
+    btn.append(art, desc, foot);
     btn.addEventListener('click', () => openCardDetail(id));
     frag.appendChild(btn);
   }
@@ -3132,7 +3327,10 @@ function buildCardList() {
 }
 
 function parkShell() {
-  if (shellEl.parentElement === holoModalHost) {
+  // 还原 side → main 顺序进 shell
+  if (sideEl && sideEl.parentElement !== shellEl) shellEl.appendChild(sideEl);
+  if (mainEl && mainEl.parentElement !== shellEl) shellEl.appendChild(mainEl);
+  if (shellEl.parentElement !== shellHome.parentElement || shellEl.previousSibling !== shellHome) {
     shellHome.after(shellEl);
   }
   shellEl.classList.add('shell--parked');
@@ -3140,39 +3338,42 @@ function parkShell() {
 
 function mountShellInModal() {
   shellEl.classList.remove('shell--parked');
-  holoModalHost.appendChild(shellEl);
+  // shell 本体仍停在原位（空壳），主区与侧栏分别挂进弹窗两列
+  if (mainEl) cardHost.appendChild(mainEl);
+  if (sideEl) sideHost.appendChild(sideEl);
+}
+
+function showFocusedCard(key) {
+  for (const wrap of cardWraps()) {
+    const c = wrap.querySelector('.card');
+    wrap.hidden = !(c && c.dataset.card === key);
+  }
+  requestAnimationFrame(() => {
+    const card = $(`.card[data-card="${key}"]`);
+    card?.classList.remove('is-off');
+    const self = cards.find(c => c.el === card);
+    if (self) { self.visible = true; self.aura?.classList.remove('is-off'); self.settle?.(true); }
+  });
 }
 
 function openCardDetail(key, { syncHash = true } = {}) {
   if (!key || !$(`.card[data-card="${key}"]`)) return;
   focusedCard = key;
-  for (const wrap of cardWraps()) {
-    const c = wrap.querySelector('.card');
-    wrap.hidden = !(c && c.dataset.card === key);
-  }
+  showFocusedCard(key);
   const name = $(`.card[data-card="${key}"] .card__head span`)?.textContent?.trim() || key;
-  if (holoModalTitle) holoModalTitle.textContent = `${name} · 全息预览`;
+  if (holoModalTitle) holoModalTitle.textContent = '卡牌预览';
   if (tipEl) tipEl.textContent = TIP_BY_CARD[key] || TIP_DEFAULT;
 
   mountShellInModal();
   holoModal.hidden = false;
   document.body.classList.add('modal-open');
-  document.body.classList.remove('view-list', 'view-detail', 'focus-one');
   modalOpen = true;
 
   const fxPanel = $('#fx');
   if (fxPanel) fxPanel.open = true;
 
   try { $('#holo-modal-close')?.focus({ preventScroll: true }); } catch { /* */ }
-
   if (syncHash) writeHash({ focus: key });
-  // 下一帧让 IO 看到弹窗内卡片
-  requestAnimationFrame(() => {
-    const card = $(`.card[data-card="${key}"]`);
-    card?.classList.remove('is-off');
-    const self = cards.find(c => c.el === card);
-    if (self) { self.visible = true; self.aura?.classList.remove('is-off'); }
-  });
 }
 
 function closeCardDetail({ syncHash = true } = {}) {
@@ -3180,12 +3381,19 @@ function closeCardDetail({ syncHash = true } = {}) {
   modalOpen = false;
   focusedCard = null;
   holoModal.hidden = true;
-  document.body.classList.remove('modal-open', 'view-detail', 'focus-one');
+  document.body.classList.remove('modal-open');
   parkShell();
   for (const wrap of cardWraps()) wrap.hidden = false;
   for (const c of cards) c.settle?.(true);
   if (tipEl) tipEl.textContent = TIP_DEFAULT;
   if (syncHash) writeHash({ focus: null });
+}
+
+function cycleCard(delta) {
+  if (!cardOrder.length) return;
+  const i = Math.max(0, cardOrder.indexOf(focusedCard));
+  const next = cardOrder[(i + delta + cardOrder.length) % cardOrder.length];
+  openCardDetail(next);
 }
 
 buildCardList();
@@ -3197,15 +3405,16 @@ parkShell();
 
 $('#holo-modal-close')?.addEventListener('click', () => closeCardDetail());
 $('#holo-modal-backdrop')?.addEventListener('click', () => closeCardDetail());
+$('#modal-prev')?.addEventListener('click', () => cycleCard(-1));
+$('#modal-next')?.addEventListener('click', () => cycleCard(1));
 $('#list-pack')?.addEventListener('click', () => openPack());
 
 window.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape') return;
   if (packOpen) return;
-  if (modalOpen) {
-    e.preventDefault();
-    closeCardDetail();
-  }
+  if (!modalOpen) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeCardDetail(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); cycleCard(-1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); cycleCard(1); }
 });
 
 window.addEventListener('hashchange', () => {
@@ -3252,16 +3461,18 @@ function ylProbeImageSize(url) {
   });
 }
 
-/** True when frame aspect ≈ 4:3 (tolerance ~0.08). Portrait 3:4 fails. */
-function ylAspectIsLandscape4x3(w, h, tol = 0.08) {
+/** True when frame is portrait-ish (~2:3 … 3:4) for the vertical art window. */
+function ylAspectIsPortraitCard(w, h) {
   if (!w || !h) return false;
-  const target = 4 / 3;
-  return Math.abs(w / h - target) <= tol;
+  const r = w / h;
+  return r >= 0.55 && r <= 0.82;
 }
+/** @deprecated name kept as alias during transition */
+const ylAspectIsLandscape4x3 = ylAspectIsPortraitCard;
 
 /**
  * Reject L3 packs that are region_warp / warp (Principal rejected), or whose
- * frame aspect is not ~4:3. Returns anim unchanged, or null (static art.jpg).
+ * frame aspect is not portrait for the card window. Returns anim or null.
  */
 async function ylGuardLandscape4x3(anim, meta) {
   if (!anim) return null;
@@ -3277,7 +3488,7 @@ async function ylGuardLandscape4x3(anim, meta) {
     console.info('[yinglong] L3 guard: status=awaiting-non-warp — keeping static art.jpg');
     return null;
   }
-  const targetNote = 'L3 awaits non-warp landscape 4:3 sequences matching art.jpg; keeping static art.jpg';
+  const targetNote = 'L3 awaits non-warp portrait sequences for the vertical window; keeping static art.jpg';
   if (anim.kind === 'sequence') {
     let w = 0, h = 0;
     if (Array.isArray(meta.size) && meta.size.length >= 2) {
@@ -3289,7 +3500,7 @@ async function ylGuardLandscape4x3(anim, meta) {
       if (sz) { w = sz.w; h = sz.h; }
     }
     if (!ylAspectIsLandscape4x3(w, h)) {
-      console.info(`[yinglong] L3 guard: sequence frame ${w}×${h} aspect≠4:3 — ${targetNote}`);
+      console.info(`[yinglong] L3 guard: sequence frame ${w}×${h} aspect≠portrait — ${targetNote}`);
       return null;
     }
     return anim;
@@ -3312,7 +3523,7 @@ async function ylGuardLandscape4x3(anim, meta) {
     }
   }
   if (!ylAspectIsLandscape4x3(w, h)) {
-    console.info(`[yinglong] L3 guard: sheet frame ${w}×${h} aspect≠4:3 — ${targetNote}`);
+    console.info(`[yinglong] L3 guard: sheet frame ${w}×${h} aspect≠portrait — ${targetNote}`);
     return null;
   }
   return anim;
@@ -3476,7 +3687,7 @@ async function initYinglongSprite() {
     if (!animRaw) {
       console.info('[yinglong] L3 anim: no sequence/sheet in assets/yinglong/anim/; static art.jpg (no fake warp layers).');
     }
-    // else: guard already logged why (non-4:3 frames)
+    // else: guard already logged why (non-portrait frames)
     return { ready: false };
   }
 

@@ -1,14 +1,15 @@
 # Current State — holo-card (all-in-one)
 
-Updated: 2026-10-12 (Asia/Shanghai) — 列表 + 弹窗全息预览（对齐山海经图鉴）
+Updated: 2026-10-12 (Asia/Shanghai) — 参考视频竖版布局：列表 + 弹窗（左卡右等级）
 
 ## Project
-Web holographic trading-card effects (zero-deps CSS + optional WebGL). Canonical work lives on branch `feature/all-in-one`; Pages preview: https://mattamior.github.io/holo-card/all-in-one/
+Web holographic trading-card effects (zero-deps CSS + optional WebGL). Branch `feature/all-in-one`; Pages: https://mattamior.github.io/holo-card/all-in-one/
 
 ## Shipped recently
-- **UX:** Default **card list grid**; click opens a **modal overlay** (list stays dimmed underneath) with the interactive holo + level/FX panel. Close via × / backdrop / Esc. Deep link `#lv=N&focus=slug` opens the modal on load. Pack opener on list bar; shell parks off-page until modal mounts it (FX DOM preserved).
-- **Yinglong L3 option C:** layered PNGs + CSS motion at L3+; region_warp quarantined.
-- Breakout off; foil = tilt strip sweep; L3 subject / L4 environment split.
+- **UX + proportions:** Portrait **2:3** cards (not TCG 63:88 / not landscape 4:3 art). List tiles match ref (art + name overlay + desc band + rarity footer). Modal = blurred list behind, 「← 卡牌」header, ‹ › cycle, left holo + right levels 5→1. Art window ~62% height, `object-fit: cover` upper focus.
+- Yinglong L3 option C layers still in portrait window; region_warp quarantined; L3 sequence guard now expects portrait frames.
+- Pack / deep link `#lv=&focus=` kept.
 
-## Repo layout notes
-- Source of truth: `mattamior/holo-card` branch `feature/all-in-one`.
+## Screenshots
+- `screenshots/ref-layout-list.png`
+- `screenshots/ref-layout-modal-yinglong-l3.png`

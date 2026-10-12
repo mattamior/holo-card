@@ -2,7 +2,7 @@
 
 Updated: 2026-10-12
 
-1. Spot-check Pages: list → modal → Esc/backdrop; `#lv=3&focus=yinglong`; pack from list while modal closed/open.
-2. When 美术专家 delivers landscape 4:3 Yinglong L3 sequence, lift L3 guard; mirror gallery.
-3. Optional richer thumbs for SVG-only demo cards.
-4. Foil polish only from Principal feedback; keep breakout off.
+1. Spot-check Pages portrait modal + list after deploy.
+2. When new Yinglong L3 frames arrive: prefer portrait for the vertical window; keep warp rejected.
+3. Optional: richer SVG-card list thumbs (photo covers).
+4. Foil polish / breakout only from Principal feedback.
