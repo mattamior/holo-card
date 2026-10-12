@@ -1,5 +1,5 @@
 {
-  "source_hash": "04f1122c16a82d05b4b57df341cc64ffc54aae8d2ba153574ee100bc681fe244",
+  "source_hash": "e8dafeeb6f0a24318410d59c8a5b73f6fee143bc6dce24c60c4bc8bb9be4d7db",
   "source": "/workspace/shanhaijing-style-lock-dragon.jpg",
   "crop_left": 408,
   "crop_size": [
@@ -13,5 +13,5 @@
   "name": "应龙",
   "rarity": "ur",
   "cutout": "rembg",
-  "note": "swap-friendly; re-run prep.py after replacing source plate"
+  "note": "locked divine-light plate e8dafeeb; do not swap head-only regen until user confirms"
 }
