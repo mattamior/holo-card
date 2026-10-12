@@ -15,3 +15,8 @@ Stack order (bottom→top): 00 → 04 → 02 → 01 → 03.
 Masks are automatic luminance/ROI extracts from the still — not hand-painted. If a layer is too thick/thin, ask 美术专家 to refine.
 
 Do **not** use region_warp anim/ for L3 while this path is active.
+
+## L3 motion
+- `00_body` / `.yl-l-body`: subtle idle breathe/sway (CSS)
+- mane / wingtips / eyeglow / light: existing light motion
+

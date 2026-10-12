@@ -1288,6 +1288,12 @@ body:not(.no-anim) .card[data-card="fox"] .layer--char > svg:not(.fx-part) { dis
 .layer--char .fx-part { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: block; filter: drop-shadow(0 10px 10px rgba(0,0,0,.45)); }
 .layer--char .fp-eyes { filter: none; }
 /* 原点按 viewBox 坐标换算到元素百分比（角色层宽高比固定：xMidYMax meet，纵向撑满） */
+.fp-body { transform-origin: 50% 88%; animation: an-fox-body 4.6s ease-in-out infinite alternate; }
+.fp-head { transform-origin: 50% 55%; animation: an-fox-body 4.6s ease-in-out infinite alternate; }
+@keyframes an-fox-body {
+  from { transform: translateY(0) scale(1, 1); }
+  to   { transform: translateY(-0.45%) scale(1.004, 1.016); }
+}
 .fp-tail { transform-origin: 63.3% 92.8%; animation: an-tail 3.4s ease-in-out infinite alternate; }
 @keyframes an-tail { from { transform: rotate(-3.5deg); } to { transform: rotate(4.5deg); } }
 .fp-ear--l { transform-origin: 41.1% 23.2%; animation: an-ear-l 6.4s ease-in-out infinite; }
@@ -1366,6 +1372,17 @@ body.yl-layers-ready:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.ph
 .card[data-card="yinglong"] .yl-layers .yl-l-wingtips { z-index: 3; }
 .card[data-card="yinglong"] .yl-layers .yl-l-mane { z-index: 4; }
 .card[data-card="yinglong"] .yl-layers .yl-l-eyeglow { z-index: 5; }
+
+/* L3 躯体：极小幅度呼吸/晃动（与鬃/翼/眼光叠层） */
+body:not(.no-anim).yl-layers-ready .card[data-card="yinglong"] .yl-l-body {
+  transform-origin: 48% 72%;
+  animation: yl-l-body 4.8s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes yl-l-body {
+  from { transform: translate(0, 0) scale(1, 1) rotate(-0.2deg); }
+  to   { transform: translate(0.15%, -0.55%) scale(1.007, 1.016) rotate(0.2deg); }
+}
 
 body:not(.no-anim).yl-layers-ready .card[data-card="yinglong"] .yl-l-mane {
   animation: yl-l-mane 3.5s ease-in-out infinite alternate;
@@ -2768,7 +2785,7 @@ const LEVEL_KEY = 'holo-card:all-in-one:level';
 const LEVEL_INFO = {
   1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。无边框。', on: [] },
   2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（框内）；高光。1–4 级无卡缘边框。', on: ['tilt', 'depth', 'glare'] },
-  3: { name: '动态画面', desc: '动态画面：立绘主体在动——应龙分层轻动；霜晶龙/狐/狮主体动。环境层在 4 级。无边框。', on: ['tilt', 'depth', 'glare', 'anim'] },
+  3: { name: '动态画面', desc: '动态画面：立绘主体在动——应龙躯体微呼吸+鬃/翼/眼光；霜晶龙颈呼吸；焰尾狐躯体+摆尾/耳/眨眼；星尘狐星辰摆转；金曜狮王徽记脉动。环境在 4 级。无边框。', on: ['tilt', 'depth', 'glare', 'anim'] },
   4: { name: '专属特效', desc: '专属特效：环境在动（云雾/极光/星云等）与稀有光晕。无边框。', on: ['tilt', 'depth', 'glare', 'anim', 'rarity'] },
   5: { name: '镀闪卡面', desc: '镀闪卡面：镭射箔面、压纹、闪点，并显示细边框（约为旧版一半粗细）。', on: FX_KEYS },
 };
