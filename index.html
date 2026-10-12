@@ -367,12 +367,11 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .card__head small { font-size: .73em; font-weight: 700; }
 .card__body {
-  position: absolute; left: 6%; right: 6%; top: 61%;
-  bottom: auto; height: auto; max-height: 22%;
+  position: absolute; left: 6%; right: 6%; top: 61%; bottom: 10%;
   background: var(--panel, rgba(255,255,255,.82));
   border-radius: 4px;
-  padding: 2.2% 5.5% 2.4%;
-  line-height: 1.35;
+  padding: 5% 7%;
+  line-height: 1.5;
   box-shadow: 0 6px 14px rgba(0,0,0,.28);
   overflow: hidden;
 }
@@ -638,17 +637,16 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .card[data-card="yinglong"] {
   --breakout: 0;
-  --bleed: 0px;                 /* contain 必须贴窗，出血会裁掉头尾 */
-  --win-t: .11;
-  --win-h: .37;                 /* 肖像卡内 ≈16:9 窗，横图 contain 几乎无黑边 */
+  --bleed: 0px;                 /* contain 贴窗，避免出血再裁 */
+  /* --win-t / --win-h 用全局 .12 / .46：恢复全貌改动前的高窗 + 正常描述区 */
   --frame: linear-gradient(160deg, #f4efe4, #c4b59a 40%, #8a7a5c 70%, #e8dcc4);
   --frame-pattern: radial-gradient(circle at 50% 0%, rgba(255,230,170,.35), transparent 55%);
   --panel: rgba(18,14,10,.82);
   --ink: #fff6e8;
   --head-shadow: rgba(0,0,0,.4);
   --ring: rgba(255,220,160,.4);
-  --art-bg: #2a2e36;            /* contain 留边时的风暴底 */
-  --yl-pos: 50% 50%;
+  --art-bg: #2a2e36;
+  --yl-pos: 52% 44%;
 }
 /* 照片卡通用 */
 .win__bg > img.photo-art {
@@ -673,19 +671,6 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   inset: 0; width: 100%; height: 100%;
   object-fit: contain;
   object-position: var(--yl-pos);
-}
-.card[data-card="yinglong"] .win__bg > img.photo-art--wing {
-  z-index: 2;
-  -webkit-mask-image: radial-gradient(ellipse 58% 62% at 70% 30%, #000 0%, #000 38%, transparent 72%);
-          mask-image: radial-gradient(ellipse 58% 62% at 70% 30%, #000 0%, #000 38%, transparent 72%);
-  pointer-events: none;
-}
-.card[data-card="yinglong"] .card__body {
-  top: 51%;                      /* 贴着 16:9 窗下沿 */
-  max-height: 36%;               /* 长文填满描述区，勿再压矮留白 */
-  padding: 2.4% 5.5% 2.6%;
-  line-height: 1.4;
-  font-size: .92em;              /* 略收字号，4 句能落进板 */
 }
 /* 神性体积光动画层 */
 .an-godrays {
@@ -1034,31 +1019,22 @@ body:not(.no-anim) .card[data-card="stardust"] .layer--char > svg { animation: a
 body:not(.no-anim) .card[data-card="lion"] .layer--char > svg { animation: an-pulse 4.5s ease-in-out infinite alternate; }
 @keyframes an-pulse { from { transform: scale(.985); } to { transform: scale(1.03); } }
 
-/* 应龙 L3：动态画面 = 立绘主体在动（颈身轻摆 + 翼羽呼吸，框内；body.no-anim 关闭）
-   L4：云雾/鬃毛柔光/金尘/神性光带 = 环境层，见下方 body.no-rarity 门控 */
+/* 应龙 L3：真序列帧 / sprite（见 yinglong-sprite.js）。无素材时静帧；禁用扭曲叠层假动效。 */
 body:not(.no-anim) .card[data-card="yinglong"] .st-yl-fog { display: none; }
-body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art:not(.photo-art--wing) {
-  transform-origin: 34% 48%;
-  animation: an-yl-body 4.8s ease-in-out infinite alternate;
-  will-change: transform;
+body.yl-sprite-ready:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art,
+body.yl-sprite-missing:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art,
+body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art {
+  animation: none !important; /* 禁止 an-yl-body / 旧 breathe */
+  transform: none;
 }
-@keyframes an-yl-body {
-  /* 幅度加大：一眼能看出颈身在摆（框内，win overflow:hidden） */
-  from { transform: translate(-0.5%, 0.6%) rotate(-2.3deg) scale(0.998, 0.978); }
-  to   { transform: translate(1.1%, -1.3%) rotate(2.5deg) scale(1.028, 1.04); }
+.card[data-card="yinglong"] .photo-art--wing { display: none !important; }
+.card[data-card="yinglong"] .photo-art-sheet {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  background-repeat: no-repeat; pointer-events: none; z-index: 2;
 }
-body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art--wing {
-  transform-origin: 58% 28%;
-  animation: an-yl-wing 3.5s ease-in-out infinite alternate;
-  will-change: transform;
-}
-@keyframes an-yl-wing {
-  /* 翼羽开合更明显，与身摆不同相位（周期已 3.5s vs 4.8s） */
-  from { transform: rotate(-3.8deg) scale(0.955, 0.91) translate(-0.7%, 1.1%); }
-  to   { transform: rotate(4.2deg) scale(1.055, 1.09) translate(0.9%, -1.6%); }
-}
+body.yl-sprite-sheet .card[data-card="yinglong"] .win__bg > img.photo-art { opacity: 0; }
 
-/* 应龙 L4 环境层（专属特效 / rarity）：无 rarity 时整组隐藏 */
+/* 应龙 L4 环境层（rarity）：云雾 / 鬃毛柔光 / 金尘 / 神性光带 */
 body.no-rarity .card[data-card="yinglong"] .an-yl-mist,
 body.no-rarity .card[data-card="yinglong"] .an-yl-mane,
 body.no-rarity .card[data-card="yinglong"] .an-yl-embers,
@@ -1662,7 +1638,6 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
             <div class="win">
               <div class="win__bg">
                 <img class="photo-art" src="assets/yinglong/art.jpg" alt="" width="960" height="540" decoding="async" />
-                <img class="photo-art photo-art--wing" src="assets/yinglong/art.jpg" alt="" width="960" height="540" decoding="async" aria-hidden="true" />
                 <div class="an-ov an-godrays" aria-hidden="true"></div>
                 <div class="foil foil--art"></div>
               </div>
@@ -2399,7 +2374,7 @@ const LEVEL_KEY = 'holo-card:all-in-one:level';
 const LEVEL_INFO = {
   1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。', on: [] },
   2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（全部在框内，不破框）；加上高光与卡缘边缘光 / 纸张厚度。', on: ['tilt', 'depth', 'glare', 'rim'] },
-  3: { name: '动态画面', desc: '动态画面：立绘本身在动——应龙颈身轻摆与翼羽呼吸；霜晶龙颈呼吸与雪落；狐狸摆尾眨眼；星辰摆转；烈日光芒流转。云雾/金尘/神性光带等环境层在 4 级专属特效。', on: ['tilt', 'depth', 'glare', 'rim', 'anim'] },
+  3: { name: '动态画面', desc: '动态画面：立绘本身在动——应龙真序列帧立绘循环（无素材时静帧）；霜晶龙颈呼吸与雪落；狐狸摆尾眨眼；星辰摆转；烈日光芒流转。云雾/金尘/神性光带等环境层在 4 级专属特效。', on: ['tilt', 'depth', 'glare', 'rim', 'anim'] },
   4: { name: '专属特效', desc: '专属特效：环境在动——应龙云雾/鬃毛柔光/金尘/神性光带；以及冰晶寒雾、火星暖光、星尘拖尾、金尘日芒等，含稀有光晕与徽章。', on: ['tilt', 'depth', 'glare', 'rim', 'anim', 'rarity'] },
   5: { name: '镀闪卡面', desc: '镀闪卡面：整张卡随角度流动的镭射箔面、压纹与闪点——全部特效叠满。', on: FX_KEYS },
 };
@@ -2824,6 +2799,203 @@ window.__holoAio = {
   openPack, get pack() { return pack; },
   simulateOrientation(beta, gamma) { onDeviceOrientation({ beta, gamma }); },
 };
+
+/* ---------- 应龙 L3：真序列帧 / sprite sheet（无素材则静帧，不用扭曲叠层冒充） ---------- */
+const YL_ANIM_BASE = 'assets/yinglong/anim/';
+
+async function ylFetchJson(url) {
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+function ylProbeImage(url) {
+  return new Promise((resolve) => {
+    const im = new Image();
+    im.onload = () => resolve(true);
+    im.onerror = () => resolve(false);
+    im.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+  });
+}
+
+async function ylDiscoverSequence(max = 48) {
+  const urls = [];
+  for (let i = 1; i <= max; i++) {
+    const name = 'f' + String(i).padStart(2, '0') + '.jpg';
+    const ok = await ylProbeImage(YL_ANIM_BASE + name);
+    if (!ok) break;
+    urls.push(YL_ANIM_BASE + name);
+  }
+  return urls;
+}
+
+async function ylLoadAnim() {
+  const meta = (await ylFetchJson(YL_ANIM_BASE + 'meta.json')) || {};
+  const fps = Math.max(1, Number(meta.fps) || 8);
+  const frameList = Array.isArray(meta.frames) ? meta.frames : null;
+  const frameCount = frameList ? frameList.length : (Number(meta.frames) || 0);
+  const format = meta.format || (meta.sheet ? 'sheet' : 'sequence');
+
+  // Prefer explicit sequence file list / f01…fNN (true L3). Sheet only if no sequence files.
+  let urls = [];
+  if (frameList && frameList.length) {
+    urls = frameList.map((name) => YL_ANIM_BASE + String(name).replace(/^\/+/, ''));
+  } else if (frameCount > 0) {
+    for (let i = 1; i <= frameCount; i++) {
+      urls.push(YL_ANIM_BASE + 'f' + String(i).padStart(2, '0') + '.jpg');
+    }
+  }
+  if (urls.length && !(await ylProbeImage(urls[0]))) urls = [];
+  if (!urls.length) urls = await ylDiscoverSequence();
+  if (urls.length) {
+    await Promise.all(urls.map((u) => ylProbeImage(u)));
+    return { kind: 'sequence', urls, frames: urls.length, fps };
+  }
+
+  if (format === 'sheet' || meta.sheet) {
+    const sheetName = meta.sheet || 'sheet.webp';
+    const sheet = YL_ANIM_BASE + sheetName;
+    const ok = await ylProbeImage(sheet);
+    const n = frameCount || 0;
+    if (!ok || n < 1 || !meta.cols || !meta.rows) {
+      console.info('[yinglong] sheet present but missing cols/rows or frames; skip sheet mode');
+      return null;
+    }
+    return {
+      kind: 'sheet',
+      sheet,
+      frames: n,
+      fps,
+      cols: meta.cols,
+      rows: meta.rows,
+      size: meta.size || null,
+    };
+  }
+  return null;
+}
+
+function ylStopSprite(state) {
+  if (!state) return;
+  if (state.raf) cancelAnimationFrame(state.raf);
+  state.raf = 0;
+  state.running = false;
+}
+
+function ylStartSequence(img, anim, getActive) {
+  const state = { raf: 0, running: true, i: 0, last: 0 };
+  const interval = 1000 / anim.fps;
+  const tick = (t) => {
+    if (!state.running) return;
+    const active = getActive();
+    if (!active) {
+      img.src = anim.urls[0];
+      state.i = 0;
+      state.last = t;
+    } else if (t - state.last >= interval) {
+      state.last = t;
+      state.i = (state.i + 1) % anim.urls.length;
+      img.src = anim.urls[state.i];
+    }
+    state.raf = requestAnimationFrame(tick);
+  };
+  img.src = anim.urls[0];
+  state.raf = requestAnimationFrame(tick);
+  return state;
+}
+
+function ylStartSheet(host, anim, getActive) {
+  // host is .win__bg; we overlay a div.photo-art-sheet
+  let sheetEl = host.querySelector('.photo-art-sheet');
+  if (!sheetEl) {
+    sheetEl = document.createElement('div');
+    sheetEl.className = 'photo-art-sheet';
+    sheetEl.setAttribute('aria-hidden', 'true');
+    host.appendChild(sheetEl);
+  }
+  const cols = anim.cols, rows = anim.rows, n = anim.frames;
+  sheetEl.style.backgroundImage = `url("${anim.sheet}")`;
+  sheetEl.style.backgroundSize = `${cols * 100}% ${rows * 100}%`;
+  const state = { raf: 0, running: true, i: 0, last: 0 };
+  const interval = 1000 / anim.fps;
+  const paint = (i) => {
+    const c = i % cols, r = Math.floor(i / cols) % rows;
+    sheetEl.style.backgroundPosition = `${(c / Math.max(1, cols - 1)) * 100}% ${(r / Math.max(1, rows - 1)) * 100}%`;
+    if (cols === 1) sheetEl.style.backgroundPositionX = '0%';
+    if (rows === 1) sheetEl.style.backgroundPositionY = '0%';
+    // safer grid positioning:
+    sheetEl.style.backgroundPosition = `${c * -100}% ${r * -100}%`;
+    sheetEl.style.backgroundSize = `${cols * 100}% ${rows * 100}%`;
+  };
+  paint(0);
+  const tick = (t) => {
+    if (!state.running) return;
+    const active = getActive();
+    if (!active) {
+      state.i = 0; paint(0); state.last = t;
+    } else if (t - state.last >= interval) {
+      state.last = t;
+      state.i = (state.i + 1) % n;
+      paint(state.i);
+    }
+    state.raf = requestAnimationFrame(tick);
+  };
+  state.raf = requestAnimationFrame(tick);
+  return { ...state, sheetEl };
+}
+
+async function initYinglongSprite() {
+  const card = document.querySelector('.card[data-card="yinglong"]');
+  if (!card) return null;
+  const img = card.querySelector('.win__bg > img.photo-art:not(.photo-art--wing)');
+  const wing = card.querySelector('.win__bg > img.photo-art--wing');
+  const bg = card.querySelector('.win__bg');
+  if (!img || !bg) return null;
+
+  img.dataset.staticSrc = img.getAttribute('src') || 'assets/yinglong/art.jpg';
+  if (wing) wing.hidden = true; // 废弃扭曲叠层
+
+  const anim = await ylLoadAnim();
+  const getActive = () => !document.body.classList.contains('no-anim') && !reduceMotion.matches;
+
+  if (!anim) {
+    document.body.classList.add('yl-sprite-missing');
+    document.body.classList.remove('yl-sprite-ready', 'yl-sprite-sheet');
+    console.info('[yinglong] L3 anim: no sequence/sheet in assets/yinglong/anim/; static art.jpg (no fake warp layers).');
+    return { ready: false };
+  }
+
+  document.body.classList.add('yl-sprite-ready');
+  document.body.classList.remove('yl-sprite-missing');
+  let playState = null;
+
+  if (anim.kind === 'sequence') {
+    document.body.classList.remove('yl-sprite-sheet');
+    playState = ylStartSequence(img, anim, getActive);
+    console.info(`[yinglong] L3 sprite sequence ready: ${anim.frames} frames @ ${anim.fps}fps`);
+  } else {
+    document.body.classList.add('yl-sprite-sheet');
+    img.style.opacity = '0'; // sheet div paints
+    playState = ylStartSheet(bg, anim, getActive);
+    console.info(`[yinglong] L3 sprite sheet ready: ${anim.frames} frames @ ${anim.fps}fps`);
+  }
+
+  return {
+    ready: true,
+    anim,
+    stop() { ylStopSprite(playState); },
+  };
+}
+
+window.__yinglongSprite = { init: initYinglongSprite };
+// boot after DOM; applyFx may toggle no-anim later — player reads body class each frame
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => { initYinglongSprite(); });
+} else {
+  initYinglongSprite();
+}
+
 
 </script>
 </body>

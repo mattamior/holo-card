@@ -1,0 +1,22 @@
+{
+  "frames": [
+    "f01.jpg",
+    "f02.jpg",
+    "f03.jpg",
+    "f04.jpg",
+    "f05.jpg",
+    "f06.jpg",
+    "f07.jpg",
+    "f08.jpg"
+  ],
+  "fps": 8,
+  "loop": true,
+  "size": [
+    768,
+    1024
+  ],
+  "aspect": "3:4",
+  "note": "idle: breath, mane/whiskers, wing tips, soft eye glow",
+  "source": "procedural_displacement_from_art.jpg",
+  "qa": "GenerateImage unavailable to executor; identity pixel-locked to art.jpg; motion is mesh-warp idle not AI-regen"
+}
