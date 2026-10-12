@@ -472,20 +472,20 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 
 /* 箔面可见区 = 斜向柔边光带（随 --sheen 平移），远处很淡；绝不用小圆 spotlight */
-.foil { --far: .1; --band-half: 18%; }
+.foil { --far: .22; --band-half: 22%; }
 .foil--art,
 .foil--frame {
-  /* 更宽的羽化，避免硬色带接缝 */
+  /* 环境虹彩 + 倾斜扫过的主带；羽化柔、可见面更宽 */
   --band-mask: linear-gradient(var(--band-angle),
     rgba(0,0,0, var(--far)) 0%,
-    rgba(0,0,0, var(--far)) calc(var(--sheen) * 1% - var(--band-half) - 14%),
-    rgba(0,0,0, .28)        calc(var(--sheen) * 1% - var(--band-half) - 4%),
-    rgba(0,0,0, .72)        calc(var(--sheen) * 1% - var(--band-half) * .45),
-    #000                    calc(var(--sheen) * 1% - 1%),
-    #000                    calc(var(--sheen) * 1% + 1%),
-    rgba(0,0,0, .72)        calc(var(--sheen) * 1% + var(--band-half) * .45),
-    rgba(0,0,0, .28)        calc(var(--sheen) * 1% + var(--band-half) + 4%),
-    rgba(0,0,0, var(--far)) calc(var(--sheen) * 1% + var(--band-half) + 14%),
+    rgba(0,0,0, calc(var(--far) + .08)) calc(var(--sheen) * 1% - var(--band-half) - 16%),
+    rgba(0,0,0, .4)         calc(var(--sheen) * 1% - var(--band-half) - 2%),
+    rgba(0,0,0, .85)        calc(var(--sheen) * 1% - var(--band-half) * .35),
+    #000                    calc(var(--sheen) * 1% - 1.5%),
+    #000                    calc(var(--sheen) * 1% + 1.5%),
+    rgba(0,0,0, .85)        calc(var(--sheen) * 1% + var(--band-half) * .35),
+    rgba(0,0,0, .4)         calc(var(--sheen) * 1% + var(--band-half) + 2%),
+    rgba(0,0,0, calc(var(--far) + .08)) calc(var(--sheen) * 1% + var(--band-half) + 16%),
     rgba(0,0,0, var(--far)) 100%);
   -webkit-mask-image: var(--band-mask);
           mask-image: var(--band-mask);
@@ -494,8 +494,8 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .foil--frame {
   --pointer-mask: var(--band-mask); /* 历史变量名：border 变体仍引用 */
-  --band-half: 18%;
-  --far: .18;
+  --band-half: 24%;
+  --far: .28;
 }
 
 /* ---------- 局部镭射 mask 变体 ---------- */
@@ -513,24 +513,22 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .card[data-mask="inverse"] .foil--art { display: none; }
 
-/* ---------- 高光：斜向柔光带扫过（盖住卡框与窗口，不盖文字和角色） ---------- */
+/* ---------- 高光：细扫光辅助；故意压低，避免盖住下层虹彩箔 ---------- */
 .glare {
-  --glare-strength: .58;
+  --glare-strength: .28;
   background:
     linear-gradient(var(--band-angle),
       transparent 0%,
-      transparent calc(var(--sheen) * 1% - 22%),
-      rgba(255,255,255, calc(var(--glare-strength) * .06)) calc(var(--sheen) * 1% - 14%),
-      rgba(255,255,255, calc(var(--glare-strength) * .28)) calc(var(--sheen) * 1% - 7%),
-      rgba(255,255,255, calc(var(--glare-strength) * .7))  calc(var(--sheen) * 1% - 2%),
-      rgba(255,255,255, calc(var(--glare-strength) * .9))  calc(var(--sheen) * 1%),
-      rgba(255,255,255, calc(var(--glare-strength) * .7))  calc(var(--sheen) * 1% + 2%),
-      rgba(255,255,255, calc(var(--glare-strength) * .28)) calc(var(--sheen) * 1% + 7%),
-      rgba(255,255,255, calc(var(--glare-strength) * .06)) calc(var(--sheen) * 1% + 14%),
-      transparent calc(var(--sheen) * 1% + 22%),
+      transparent calc(var(--sheen) * 1% - 18%),
+      rgba(255,255,255, calc(var(--glare-strength) * .08)) calc(var(--sheen) * 1% - 10%),
+      rgba(255,255,255, calc(var(--glare-strength) * .35)) calc(var(--sheen) * 1% - 3%),
+      rgba(255,255,255, calc(var(--glare-strength) * .55)) calc(var(--sheen) * 1%),
+      rgba(255,255,255, calc(var(--glare-strength) * .35)) calc(var(--sheen) * 1% + 3%),
+      rgba(255,255,255, calc(var(--glare-strength) * .08)) calc(var(--sheen) * 1% + 10%),
+      transparent calc(var(--sheen) * 1% + 18%),
       transparent 100%);
-  mix-blend-mode: overlay;
-  opacity: calc(var(--o) * 0.78 + var(--tilt) * 0.48);
+  mix-blend-mode: soft-light;
+  opacity: calc(var(--o) * 0.32 + var(--tilt) * 0.22);
 }
 
 /* ---------- 边缘光（假菲涅尔）：倾斜越大，卡缘越亮（来自 foil-mask） ---------- */
@@ -565,32 +563,39 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
    ========================================================= */
 /* ---- 彩虹镭射 ---- */
 .card[data-effect="rainbow"] .foil {
-  /* 虹彩：角度随倾斜，色带柔过渡，避免硬接缝 */
-  --holo-angle: calc(112deg + var(--rx) * 1.8deg - var(--ry) * 1.1deg);
-  --holo-speed: 0.92;
-  --band: 5.5%;
-  --scan: 1.25px;
-  --holo-max: .82;
+  /* 虹彩镭射：倾斜驱动色相扫过；soft-light 避免亮底 color-dodge 洗成白光 */
+  --holo-angle: calc(115deg + var(--rx) * 2.4deg - var(--ry) * 1.6deg);
+  --holo-speed: 1;
+  --band: 4.2%;
+  --scan: 1px;
+  --holo-max: .95;
   background-image:
     repeating-linear-gradient(90deg,
-      rgba(40,40,48,.0) 0, rgba(255,255,255,.07) var(--scan), rgba(40,40,48,.0) calc(var(--scan) * 2.4)),
+      transparent 0, rgba(255,255,255,.1) var(--scan), transparent calc(var(--scan) * 2.2)),
     repeating-linear-gradient(var(--holo-angle),
-      var(--c-violet) 0%,
-      var(--c-blue) calc(var(--band) * .9),
-      var(--c-green) calc(var(--band) * 1.85),
-      var(--c-yellow) calc(var(--band) * 2.75),
-      var(--c-red) calc(var(--band) * 3.65),
-      var(--c-violet) calc(var(--band) * 4.6),
-      var(--c-blue) calc(var(--band) * 5.5));
-  background-size: auto, 520% 520%;
+      #c45ef0 0%,
+      #3fbde8 calc(var(--band) * 1),
+      #4ce0a0 calc(var(--band) * 2),
+      #e8dc4a calc(var(--band) * 3),
+      #ec4a6a calc(var(--band) * 4),
+      #c45ef0 calc(var(--band) * 5),
+      #3fbde8 calc(var(--band) * 6));
+  background-size: auto, 400% 400%;
   background-position:
-    calc(var(--sheen) * -0.2px) 0,
+    calc(var(--sheen) * -0.35px) calc(var(--ry) * 0.4px),
     clamp(0%, calc(var(--sheen) * var(--holo-speed) * 1%), 100%)
-    clamp(0%, calc((100 - var(--sheen)) * var(--holo-speed) * 0.55% + 18%), 100%);
-  background-blend-mode: soft-light, normal;
-  filter: brightness(calc(.52 + var(--tilt) * .42)) contrast(1.08) saturate(calc(1.15 + var(--tilt) * .2));
-  mix-blend-mode: color-dodge;
-  opacity: calc((0.18 + var(--o) * 0.82) * var(--holo-max) * (0.4 + var(--tilt) * 0.6));
+    clamp(0%, calc((100 - var(--sheen)) * var(--holo-speed) * 0.7% + 16%), 100%);
+  background-blend-mode: overlay, normal;
+  /* 压亮度 + 提饱和：在亮插画上仍能看出色带，而不是一片白 */
+  filter: brightness(calc(.72 + var(--tilt) * .12)) contrast(1.2) saturate(calc(1.55 + var(--tilt) * .45));
+  mix-blend-mode: soft-light;
+  opacity: calc((0.42 + var(--o) * 0.58) * var(--holo-max) * (0.55 + var(--tilt) * 0.45));
+}
+/* 插画窗内再叠一层 color 混合，强化色相随指针偏移（不抬白） */
+.card[data-effect="rainbow"] .foil--art {
+  mix-blend-mode: color;
+  opacity: calc((0.28 + var(--o) * 0.5) * (0.45 + var(--tilt) * 0.55));
+  filter: saturate(calc(1.8 + var(--tilt) * .5)) contrast(1.05);
 }
 
 /* ---- 闪光星点 ---- */

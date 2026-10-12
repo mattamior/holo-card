@@ -1,17 +1,12 @@
 # Current State — holo-card (all-in-one)
 
-Updated: 2026-10-12 (Asia/Shanghai) — 真卡列表 + 透底弹层 2× + L5 细边框/箔面
+Updated: 2026-10-12 (Asia/Shanghai) — L5 镭射可见性修复（压白光 glare、虹彩 soft-light/color）
 
 ## Project
 Branch `feature/all-in-one`; Pages: https://mattamior.github.io/holo-card/all-in-one/
 
 ## Shipped
-- List uses **real `.card`** (same face as modal), small grid; click opens modal with **same node ~2×**.
-- Modal backdrop clearer (low dim + light blur); list visible behind.
-- **L1–4:** no rim (`rim` off in presets). **L5 only:** rim at ~½ prior thickness + polished foil (softer band, richer angle rainbow/glare).
-- Portrait 2:3; Yinglong L3 layers; warp quarantine; pack + `#lv=&focus=` kept.
-
-## Screenshots
-- `screenshots/ref-layout-list.png`
-- `screenshots/ref-layout-modal-yinglong-l3.png`
-- `screenshots/ref-layout-modal-yinglong-l5.png`
+- List = real `.card`; modal same node ~2×; clearer backdrop; empty chrome closes.
+- L1–4 no rim; L5 half-thin rim.
+- **L5 foil:** glare toned down; rainbow uses soft-light + art `color` blend so tilt shows iridescent bands (not white wash on bright art).
+- Portrait 2:3; Yinglong L3 layers; warp quarantine; pack + hash kept.
