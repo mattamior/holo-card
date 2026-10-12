@@ -535,19 +535,19 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 /* ---------- 边缘光（假菲涅尔）：倾斜越大，卡缘越亮（来自 foil-mask） ---------- */
 .card__rim {
   border-radius: inherit;
-  /* L5 边框：约为原先一半粗细（1.25 → .62） */
+  /* L5 细边框：约为原先一半粗细（1.25 → .62）；静止也可见一圈细亮边 */
   box-shadow:
-    inset 0 0 0 0.62px rgba(255,255,255, calc(var(--rim-idle) + var(--tilt) * (var(--rim-max) - var(--rim-idle)))),
-    inset 0 0 calc(6px + var(--tilt) * 8px) rgba(255,255,255, calc(var(--tilt) * .1));
+    inset 0 0 0 0.62px rgba(255,255,255, calc(0.22 + var(--rim-idle) + var(--tilt) * (var(--rim-max) - var(--rim-idle)))),
+    inset 0 0 calc(5px + var(--tilt) * 8px) rgba(255,255,255, calc(0.04 + var(--tilt) * .1));
   /* 朝向“光源”一侧的柔边高光：色标 0→22% 线性渐隐，没有硬边 */
   background: linear-gradient(
     calc(180deg - var(--rx) * 2.5deg + var(--ry) * 0.5deg),
-    rgba(255,255,255, calc(var(--tilt) * .24)) 0%,
+    rgba(255,255,255, calc(0.06 + var(--tilt) * .24)) 0%,
     transparent 22%,
     transparent 78%,
-    rgba(255,255,255, calc(var(--tilt) * .1)) 100%);
+    rgba(255,255,255, calc(0.03 + var(--tilt) * .1)) 100%);
   mix-blend-mode: soft-light;
-  opacity: calc(0.35 + var(--o) * 0.65);
+  opacity: calc(0.55 + var(--o) * 0.45);
 }
 
 /* ---------- 蚀刻压纹浮雕：静止时淡淡可见，悬停 + 倾斜时被点亮（来自 foil-mask） ---------- */
@@ -1049,9 +1049,24 @@ body.modal-open .fx__adv > summary { display: flex !important; }
 body.no-foil  .foil,       .card.no-foil  .foil       { display: none !important; }
 body.no-etch  .card__etch, .card.no-etch  .card__etch { display: none !important; }
 body.no-glare .glare,      .card.no-glare .glare      { display: none !important; }
-/* L1–4 无卡缘边框；仅 L5（未加 .no-rim）显示半细 rim + 纸缘 */
+/* L1–4 无卡缘边框（.card.no-rim）；仅 L5 显示半细 rim + 纸缘。等级类挂在 .card，勿用 body.no-rim 管列表。 */
 body.no-rim   .card__rim, body.no-rim .layer--edge,
-.card.no-rim  .card__rim, .card.no-rim .layer--edge { display: none !important; }
+.card.no-rim  .card__rim, .card.no-rim .layer--edge {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  box-shadow: none !important;
+  background: none !important;
+}
+/* L5：无 .no-rim 时强制可见细 rim（避免被其它规则盖掉） */
+.card[data-lv="5"]:not(.no-rim) .card__rim {
+  display: block !important;
+  visibility: visible !important;
+}
+.card[data-lv="5"]:not(.no-rim) .layer--edge {
+  display: block !important;
+  visibility: visible !important;
+}
 /* 关掉视差破框：各层几乎贴回卡面（保留极小的层间距，保证前后顺序稳定），角色和粒子裁回卡内 */
 body.no-depth .card, .card.no-depth { --depth: .02; }
 body.no-depth .card[data-break="none"]::after,
@@ -1413,15 +1428,15 @@ body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .photo-art-sheet 
 .card[data-card="yinglong"] .yl-layers .yl-l-mane { z-index: 4; }
 .card[data-card="yinglong"] .yl-layers .yl-l-eyeglow { z-index: 5; }
 
-/* L3 躯体呼吸（孔洞已从 body 抠出鬃/翼，叠层可动不重影） */
+/* L3 躯体呼吸：body 不打孔；鬃/翼小幅位移，避免与不透明底叠出硬边 */
 body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .yl-l-body {
   transform-origin: 48% 72%;
   animation: yl-l-body 4.2s ease-in-out infinite alternate;
   will-change: transform;
 }
 @keyframes yl-l-body {
-  from { transform: translate(0, 0) scale(1, 1) rotate(-0.45deg); }
-  to   { transform: translate(0.35%, -1.35%) scale(1.018, 1.042) rotate(0.45deg); }
+  from { transform: translate(0, 0) scale(1, 1) rotate(-0.35deg); }
+  to   { transform: translate(0.25%, -0.9%) scale(1.012, 1.028) rotate(0.35deg); }
 }
 
 body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .yl-l-mane {
@@ -1429,16 +1444,16 @@ body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .yl-l-mane {
   animation: yl-l-mane 3.2s ease-in-out infinite alternate;
 }
 @keyframes yl-l-mane {
-  from { transform: translate(-4px, 1px) rotate(-0.6deg); }
-  to   { transform: translate(5px, -2px) rotate(0.6deg); }
+  from { transform: translate(-1.5px, 0.5px) rotate(-0.35deg); }
+  to   { transform: translate(2px, -1px) rotate(0.35deg); }
 }
 body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .yl-l-wingtips {
   transform-origin: 70% 35%;
   animation: yl-l-wing 3.8s ease-in-out infinite alternate;
 }
 @keyframes yl-l-wing {
-  from { transform: translateY(-4px) rotate(-1deg); }
-  to   { transform: translateY(4px) rotate(1deg); }
+  from { transform: translateY(-1.5px) rotate(-0.4deg); }
+  to   { transform: translateY(1.5px) rotate(0.4deg); }
 }
 body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .yl-l-eyeglow {
   animation: yl-l-eye 2.6s ease-in-out infinite alternate;

@@ -11,5 +11,6 @@ Updated: 2026-10-12
 - **2026-10-12** — Card + art window are **portrait (2:3 / vertical)** matching Honor of Kings reference video; supersedes landscape 4:3 art-window lock. Source art may be landscape but is cover-cropped.
 - **2026-10-12** — L3 subject motion must include subtle looping **body** idle (Yinglong `00_body` / `.yl-l-body`), not only hair/wings/eyes; amplitude very small; no region_warp.
 - **2026-10-12** — Card levels are **per `data-card` id** (localStorage map), not a single global level. Modal level radios edit the focused card; list thumbs reflect each card’s saved level.
-- **2026-10-12** — Yinglong L3: never show static `art.jpg` and `.yl-layers` both opaque; body PNG punched under mane/wingtips to prevent ghosting when overlays move.
+- **2026-10-12** — Yinglong L3: never show static `art.jpg` and `.yl-layers` both opaque (mutual exclusion). ~~Body PNG punched under mane/wingtips~~ **superseded / rejected**: punch caused visible dark holes through semi-transparent overlays; restored unpunched `00_body` from `6f5c863`; anti-ghost = hide art.jpg + small overlay translate.
+- **2026-10-12** — Rim: L1–4 `.card.no-rim` (hide `.card__rim` + `.layer--edge`); L5 thin (~half) rim visible. Per-card via `.card` classes / `data-lv`, not body-only.
 - **2026-10-12** — Rim/foil/anim presets apply via **`.card.no-*`**, not only `body.no-*`, so L5 rim/foil can coexist with L3 cards in the same list.
