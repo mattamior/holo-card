@@ -19,3 +19,6 @@ Updated: 2026-10-12
 - **2026-10-12** — L5 cream rim **half again** vs prior ~2.5% → `--win-l/.0125` (~1.25%); pearl/silver-cream metallic (not `#141018` no-rim, not muddy champagne). Independent rim laser via L5 `.foil--frame` + `--mask-rim-l5` (hard-light); absent on L1–4 `.no-rim`/`.no-foil`.
 - **2026-10-12** — ~~`--card-radius: 5% / 3.4%`~~ **superseded**: HoK-tighter **`3% / 2%`** (~3% width); no-rim win top radii use 0.03/0.02 minus inset; keep `clip-path` on `.layer--frame` in sync under preserve-3d.
 - **2026-10-12** — ~~Footer left `NO. 出处` / right `{id} 等缀 ★…`~~ **superseded**: left **卡牌号+出处** (e.g. `YL-001 · 山海经·大荒东经`); center empty pill; right **星级** = flash-effect level (`data-lv` → 1–5 ★). Lore body unchanged.
+
+- **2026-10-12** — Tilt black seam: not only parallax bleed; preserve-3d foreshortening leaves paint holes past `.layer--frame`. Durable fix = cream underlays + L5 frame `scale(1.02)` + win bleed/overscale; rim laser soft-light. Do not restore thick gold matte.
+- **2026-10-12** — Footer: left `NO.n` (list order), center 出处 alone, right ★=`data-lv`; remove empty pill/capsule. Supersedes 卡牌号+出处 left-joined string.

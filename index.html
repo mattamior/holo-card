@@ -402,27 +402,36 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 .card__body b { display: block; font-size: 1.05em; margin-bottom: 2px; color: #fff; }
 .card__foot {
   position: absolute; left: 6%; right: 6%; bottom: 2.4%;
-  font-size: .72em; display: flex; justify-content: space-between; align-items: center;
-  gap: 4%;
+  font-size: .72em;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  column-gap: 2%;
   opacity: .78; letter-spacing: .03em;
   color: rgba(230,226,240,.78);
 }
-.card__foot-id {
-  flex: 1 1 auto; min-width: 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  text-align: left;
+.card__foot-no {
+  justify-self: start;
+  white-space: nowrap;
+  letter-spacing: .06em;
+  font-variant-numeric: tabular-nums;
 }
-.card__foot-pill {
-  flex: 0 0 auto;
-  width: 14%; max-width: 2.6em; min-width: 1.4em;
-  height: .72em;
-  border-radius: 999px;
-  border: 1px solid rgba(230,226,240,.28);
-  background: rgba(255,255,255,.04);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+.card__foot-src {
+  justify-self: center;
+  text-align: center;
+  white-space: nowrap;
+  overflow: visible;
+  max-width: none;
+  letter-spacing: .04em;
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
 }
+.card__foot-pill { display: none !important; } /* removed: empty capsule */
 .card__foot-stars {
-  flex: 0 0 auto;
+  justify-self: end;
   letter-spacing: .12em;
   text-align: right;
   color: rgba(255, 232, 170, .92);
@@ -507,6 +516,11 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 /* 箔面可见区 = 斜向柔边光带（随 --sheen 平移），远处很淡；绝不用小圆 spotlight */
 .foil { --far: .22; --band-half: 22%; }
 .foil--art { position: absolute; inset: 0; }
+.card[data-card="yinglong"] .foil--art {
+  /* inset 1px from win clip — avoids hard-light/color edge crushing to black at matte join */
+  inset: 1px;
+  border-radius: 1px;
+}
 .foil--art,
 .foil--frame {
   /* 环境虹彩 + 倾斜扫过的主带；羽化柔、可见面更宽 */
@@ -731,17 +745,22 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 }
 .card[data-card="yinglong"] {
   --breakout: 0;
-  --bleed: 0px;
+  /* Cover win__bg parallax at maxTilt 11°; was 0 → black seam under tilt */
+  --bleed: 28px;
+  /* shallower win parallax: less edge pull under rotateY (still stereo, less seam risk) */
+  --z-bg: -28;
+  --z-mid: -12;
   /* 竖版插画窗默认；L1–4 .no-rim / L5 细框规则会覆盖 --win-* */
   --win-t: .035;
   --win-h: .62;
+  --win-fill: #ebe9e2;
   --frame: linear-gradient(160deg, #f4efe4, #c4b59a 40%, #8a7a5c 70%, #e8dcc4);
   --frame-pattern: radial-gradient(circle at 50% 0%, rgba(255,230,170,.35), transparent 55%);
   --panel: rgba(18,14,10,.82);
   --ink: #fff6e8;
   --head-shadow: rgba(0,0,0,.4);
   --ring: rgba(255,220,160,.4);
-  --art-bg: #2a2e36;
+  --art-bg: #ebe9e2;
   --yl-pos: 50% 28%;
 }
 /* 照片卡通用 */
@@ -757,14 +776,17 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   display: block; pointer-events: none;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,.4));
 }
-/* 应龙：竖版窗内 cover 裁切（母图可横可竖）；不破框；win__bg 不出血 */
+/* 应龙：竖版窗内 cover；不破框；win__bg/mid 用 --bleed 出血，倾斜视差不露黑边 */
 .card[data-card="yinglong"] .layer--char { display: none; }
 .card[data-card="yinglong"] .win__bg,
 .card[data-card="yinglong"] .win__mid {
-  inset: 0;
+  inset: calc(var(--bleed) * -1);
 }
+/* 铺满已出血的 win__bg；再略放大 ~3% 抗 preserve-3d 亚像素缝 + 分层 idle */
 .card[data-card="yinglong"] .win__bg > img.photo-art {
-  inset: 0; width: 100%; height: 100%;
+  inset: -3%;
+  width: 106%;
+  height: 106%;
   object-fit: cover;
   object-position: var(--yl-pos, 50% 28%);
 }
@@ -1153,13 +1175,27 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
   --frame: linear-gradient(152deg, #f8f7f3 0%, #e9e7e0 22%, #d8d5ce 48%, #f0eee8 72%, #faf9f5 100%);
   --rim-cream: #ebe9e2;
 }
+/* Under rotateY the rotator AABB exceeds the projected face; holes must read cream, not page black */
+.card[data-lv="5"]:not(.no-rim) {
+  background: #ebe9e2;
+  border-radius: var(--card-radius);
+}
+.card[data-lv="5"]:not(.no-rim) .card__rotator {
+  background: #ebe9e2;
+  border-radius: var(--card-radius);
+}
 .card[data-lv="5"]:not(.no-rim) .layer--frame {
   background:
     linear-gradient(125deg, rgba(255,255,255,.55) 0%, transparent 42%, rgba(180,175,165,.22) 100%),
-    linear-gradient(152deg, #f7f6f2 0%, #e6e3db 38%, #d2cfc7 62%, #f3f1eb 100%);
+    linear-gradient(152deg, #f7f6f2 0%, #e6e3db 38%, #d2cfc7 62%, #f3f1eb 100%),
+    #ebe9e2; /* opaque cream base — no dark page/AA hole under tilt */
   overflow: hidden;
   border-radius: var(--card-radius);
   clip-path: inset(0 round var(--card-radius));
+  background-color: #ebe9e2;
+  /* expand ~2% under preserve-3d so foreshortened edge still covers (else page/card shows as black seam) */
+  transform: translateZ(0px) scale(1.02);
+  transform-origin: center center;
 }
 .card[data-lv="5"]:not(.no-rim) .layer--frame::before {
   opacity: .18;
@@ -1167,34 +1203,42 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
     repeating-linear-gradient(135deg, transparent 0 6px, rgba(255,255,255,.28) 6px 7px),
     linear-gradient(90deg, rgba(200,198,190,.15), transparent 40%, rgba(255,255,255,.2));
 }
-/* 内缘深线：包住插画窗 + 描述区，与无边深底形成分隔 */
+/* 内缘线：浅描，避免 tilt 下读成黑缝；略扩以贴住窗 */
 .card[data-lv="5"]:not(.no-rim) .layer--frame::after {
   content: "";
   position: absolute;
-  left: calc(var(--win-l) * 100%);
-  width: calc(var(--win-w) * 100%);
-  top: calc(var(--win-t) * 100%);
+  left: calc(var(--win-l) * 100% - 4px);
+  width: calc(var(--win-w) * 100% + 8px);
+  top: calc(var(--win-t) * 100% - 1px);
   bottom: 1.35%;
   border-radius: 1.35% / 0.9%;
-  border: 1px solid rgba(22, 18, 14, .42);
+  border: 1px solid rgba(70, 62, 52, .2);
   box-shadow:
-    inset 0 0 0 0.5px rgba(255,255,255,.22),
-    0 0 0 0.5px rgba(255,255,255,.1);
+    inset 0 0 0 0.5px rgba(255,255,255,.25),
+    0 0 0 0.5px rgba(255,255,255,.12);
   pointer-events: none;
   z-index: 6;
 }
+/* 窗压进奶油 ~4px（外缘仍留细奶油+镭射）；底填奶油——露缝≠黑边 */
 .card[data-lv="5"]:not(.no-rim) .win {
+  left: calc(var(--win-l) * 100% - 4px);
+  width: calc(var(--win-w) * 100% + 8px);
   border-radius: 1.35% / 0.9%;
   border-bottom-left-radius: 2px;
   border-bottom-right-radius: 2px;
   overflow: hidden;
+  background: #ebe9e2;
+  box-shadow: 0 0 0 3px #ebe9e2;
 }
 .card[data-lv="5"]:not(.no-rim) .win::after {
   border: none;
   box-shadow:
-    inset 0 0 0 1px rgba(20,16,12,.22),
-    inset 0 2px 6px rgba(0,0,0,.28),
-    inset 0 0 10px rgba(0,0,0,.12);
+    inset 0 0 0 1px rgba(50,44,36,.12),
+    inset 0 2px 6px rgba(0,0,0,.18),
+    inset 0 0 10px rgba(0,0,0,.08);
+}
+.card[data-lv="5"]:not(.no-rim) .win__bg {
+  background: #ebe9e2; /* not dark art-bg under translucent layer edges */
 }
 .card[data-lv="5"]:not(.no-rim) .card__body {
   bottom: 4.6%; /* 更瘦底框带 + 脚注 */
@@ -1212,11 +1256,6 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
   opacity: .92;
   letter-spacing: .04em;
   font-size: .68em;
-}
-.card[data-lv="5"]:not(.no-rim) .card__foot-pill {
-  border-color: rgba(58, 50, 40, .28);
-  background: rgba(255,255,255,.18);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
 }
 .card[data-lv="5"]:not(.no-rim) .card__foot-stars {
   color: rgba(120, 78, 18, .88);
@@ -1244,16 +1283,16 @@ body.no-rim   .card__rim, body.no-rim .layer--edge,
           mask-repeat: no-repeat;
   -webkit-mask-composite: source-in;
           mask-composite: intersect;
-  /* 奶油/珍珠底：hard-light 比 color-dodge 更能读出色相（dodge 易冲白） */
-  mix-blend-mode: hard-light;
-  opacity: calc((0.58 + var(--o) * 0.38) * (0.42 + var(--tilt) * 0.58));
-  filter: saturate(calc(2.6 + var(--tilt) * .7)) contrast(1.28) brightness(calc(1.04 + var(--tilt) * .08));
+  /* soft-light keeps rim laser without crushing cream→black under tilt */
+  mix-blend-mode: soft-light;
+  opacity: calc((0.72 + var(--o) * 0.28) * (0.5 + var(--tilt) * 0.5));
+  filter: saturate(calc(2.4 + var(--tilt) * .6)) contrast(1.18) brightness(calc(1.08 + var(--tilt) * .08));
   pointer-events: none;
 }
 .card[data-lv="5"]:not(.no-rim)[data-effect="rainbow"] .foil--frame {
-  mix-blend-mode: hard-light;
-  opacity: calc((0.62 + var(--o) * 0.35) * (0.4 + var(--tilt) * 0.6));
-  filter: saturate(calc(2.9 + var(--tilt) * .8)) contrast(1.32) brightness(calc(1.06 + var(--tilt) * .1));
+  mix-blend-mode: soft-light;
+  opacity: calc((0.78 + var(--o) * 0.22) * (0.48 + var(--tilt) * 0.52));
+  filter: saturate(calc(2.7 + var(--tilt) * .7)) contrast(1.2) brightness(calc(1.1 + var(--tilt) * .1));
 }
 .card[data-lv="5"]:not(.no-rim)[data-effect="sparkle"] .foil--frame,
 .card[data-lv="5"]:not(.no-rim)[data-effect="metal"] .foil--frame {
@@ -1588,8 +1627,10 @@ body.no-rarity .an-heat, .card.no-rarity .an-heat {
 body:not(.no-anim) .card[data-card="yinglong"]:not(.no-anim) .st-yl-fog { display: none; }
 .card[data-card="yinglong"] .photo-art--wing { display: none !important; }
 .card[data-card="yinglong"] .photo-art-sheet {
-  position: absolute; inset: 0; width: 100%; height: 100%;
+  position: absolute; inset: -3%; width: 106%; height: 106%;
   background-repeat: no-repeat; pointer-events: none; z-index: 2;
+  background-size: cover;
+  background-position: var(--yl-pos, 50% 28%);
 }
 body.yl-sprite-sheet .card[data-card="yinglong"] .win__bg > img.photo-art {
   opacity: 0; visibility: hidden;
@@ -1612,7 +1653,7 @@ body.yl-layers-ready .card[data-card="yinglong"]:not(.no-anim) .photo-art-sheet 
   transform: none !important;
 }
 .card[data-card="yinglong"] .yl-layers > img {
-  position: absolute; inset: 0; width: 100%; height: 100%;
+  position: absolute; inset: -3%; width: 106%; height: 106%;
   object-fit: cover; object-position: var(--yl-pos, 50% 28%);
   display: block; pointer-events: none;
   /* 禁止滤镜叠影 */
@@ -2343,7 +2384,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           <div class="layer layer--text">
             <div class="card__head"><span>应龙</span><small>传说</small></div>
             <div class="card__body">龙有翼者也。黄帝令应龙攻蚩尤于冀州之野，应龙畜水；杀蚩尤与夸父，不得复上，处南极，故下数旱。旱而为应龙之状，乃得大雨。其后去南方，故南方多雨。</div>
-            <div class="card__foot"><span class="card__foot-id">YL-001 · 山海经·大荒东经</span><span class="card__foot-pill" aria-hidden="true"></span><span class="card__foot-stars" aria-label="星级"></span></div>
+            <div class="card__foot"><span class="card__foot-no">NO.1</span><span class="card__foot-src">山海经·大荒东经</span><span class="card__foot-stars" aria-label="星级"></span></div>
           </div>
           <div class="layer layer--char">
             <img class="photo-char" src="assets/yinglong/char.png" alt="" width="630" height="880" decoding="async" />
@@ -2426,7 +2467,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           <div class="layer layer--text">
             <div class="card__head"><span>霜晶龙</span><small>HP 120</small></div>
             <div class="card__body"><b>冰棱吐息 · 60</b>令对手的下一回合无法撤退。彩虹镭射只在极光夜空里流动，立绘留在窗内。</div>
-            <div class="card__foot"><span class="card__foot-id">DR-001 · 冰棱吐息</span><span class="card__foot-pill" aria-hidden="true"></span><span class="card__foot-stars" aria-label="星级"></span></div>
+            <div class="card__foot"><span class="card__foot-no">NO.2</span><span class="card__foot-src">冰棱吐息</span><span class="card__foot-stars" aria-label="星级"></span></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
@@ -2537,7 +2578,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           <div class="layer layer--text">
             <div class="card__head"><span>焰尾狐</span><small>HP 90</small></div>
             <div class="card__body"><b>流星焰 · 40×</b>掷 3 次硬币，每次正面造成 40 点伤害。亮片只在晚霞里闪，立绘留在窗内。</div>
-            <div class="card__foot"><span class="card__foot-id">FX-002 · 流星焰</span><span class="card__foot-pill" aria-hidden="true"></span><span class="card__foot-stars" aria-label="星级"></span></div>
+            <div class="card__foot"><span class="card__foot-no">NO.3</span><span class="card__foot-src">流星焰</span><span class="card__foot-stars" aria-label="星级"></span></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
@@ -2649,7 +2690,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           <div class="layer layer--text">
             <div class="card__head"><span>星尘狐</span><small>HP 90</small></div>
             <div class="card__body"><b>流星雨 · 40×</b>亮片只在卡缘一圈闪，插画保持哑光；星辰徽记浮在窗口前方。</div>
-            <div class="card__foot"><span class="card__foot-id">SF-003 · 流星雨</span><span class="card__foot-pill" aria-hidden="true"></span><span class="card__foot-stars" aria-label="星级"></span></div>
+            <div class="card__foot"><span class="card__foot-no">NO.4</span><span class="card__foot-src">流星雨</span><span class="card__foot-stars" aria-label="星级"></span></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 100 100" aria-hidden="true">
@@ -2730,7 +2771,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           <div class="layer layer--text">
             <div class="card__head"><span>金曜狮王</span><small>HP 250</small></div>
             <div class="card__body"><b>王者咆哮 · 200</b>反闪：卡框与文字区拉丝金箔，插画保持哑光；烈日徽记浮在窗口前方。</div>
-            <div class="card__foot"><span class="card__foot-id">LN-004 · 王者咆哮</span><span class="card__foot-pill" aria-hidden="true"></span><span class="card__foot-stars" aria-label="星级"></span></div>
+            <div class="card__foot"><span class="card__foot-no">NO.5</span><span class="card__foot-src">王者咆哮</span><span class="card__foot-stars" aria-label="星级"></span></div>
           </div>
           <div class="layer layer--char">
             <svg viewBox="0 0 100 100" aria-hidden="true">
@@ -3051,7 +3092,7 @@ const LEVEL_INFO = {
   2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（框内）；高光。1–4 级真无边框（无奶油衬底）。', on: ['tilt', 'depth', 'glare'] },
   3: { name: '动态画面', desc: '动态画面：立绘主体在动——应龙躯体微呼吸+鬃/翼/眼光；霜晶龙颈呼吸；焰尾狐躯体+摆尾/耳/眨眼；星尘狐星辰摆转；金曜狮王徽记脉动。环境在 4 级。真无边框。', on: ['tilt', 'depth', 'glare', 'anim'] },
   4: { name: '专属特效', desc: '专属特效：环境在动（云雾/极光/星云等）与稀有光晕。真无边框。', on: ['tilt', 'depth', 'glare', 'anim', 'rarity'] },
-  5: { name: '镀闪卡面', desc: '镀闪卡面：镭射箔面、压纹、闪点；珍珠银奶油细外框（约 1.25% 边宽、内缘深线、框带独立镭射）；脚注卡牌号+出处 / 空槽 / 星级=特效等级。', on: FX_KEYS },
+  5: { name: '镀闪卡面', desc: '镀闪卡面：镭射箔面、压纹、闪点；珍珠银奶油细外框（约 1.25% 边宽、内缘深线、框带独立镭射）；脚注 NO.n / 出处居中 / 星级=特效等级。', on: FX_KEYS },
 };
 const presetOf = (n) => Object.fromEntries(FX_KEYS.map(k => [k, LEVEL_INFO[n].on.includes(k)]));
 /** 每张卡自己的等级（localStorage 映射）；列表缩略图与弹层各自反映 */

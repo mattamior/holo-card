@@ -34,7 +34,7 @@ export const CARDS = {
     name: '霜晶龙', hp: 'HP 120',
     move: '冰棱吐息 · 60',
     text: '令对手的下一回合无法撤退。彩虹镭射只在极光夜空里流动，龙头探出卡框。',
-    foot: ['DR-001 · Rainbow Holo', '★★'],
+    foot: ['NO.2', 'Rainbow Holo', '★★'],
     frame: [160, [[0, '#eef1f6'], [1, '#a7b1c2']]],
     artBg: (ctx, a) => linear(ctx, 180, a, [[0, '#0a1230'], [0.55, '#1d3566'], [1, '#3f73a6']]),
     panel: 'rgba(255,255,255,.82)', ink: '#1b1b22', ring: 'rgba(0,0,0,.35)',
@@ -48,7 +48,7 @@ export const CARDS = {
     name: '焰尾狐', hp: 'HP 90',
     move: '流星焰 · 40×',
     text: '掷 3 次硬币，每次正面造成 40 点伤害。亮片只在晚霞里闪，狐耳探出卡框。',
-    foot: ['FX-002 · Sparkle Foil', '★★★'],
+    foot: ['NO.3', 'Sparkle Foil', '★★★'],
     frame: [160, [[0, '#3b2a5c'], [1, '#120c22']]],
     artBg: (ctx, a) => linear(ctx, 180, a, [[0, '#241046'], [0.45, '#7a2a78'], [0.75, '#e0606a'], [1, '#f6b46a']]),
     panel: 'rgba(18,12,36,.84)', ink: '#f2eaff', ring: 'rgba(255,190,140,.35)',
@@ -61,7 +61,7 @@ export const CARDS = {
     name: '星尘狐', hp: 'HP 90',
     move: '流星雨 · 40×',
     text: '亮片只在卡缘一圈闪，插画保持哑光；星辰徽记浮在窗口前方。',
-    foot: ['SF-003 · Sparkle Border', '★★'],
+    foot: ['NO.4', 'Sparkle Border', '★★'],
     frame: [160, [[0, '#3b2a5c'], [1, '#120c22']]],
     artBg: (ctx, a) => radial(ctx, a, 0.3, 0.3, [[0, '#ff9ad5'], [0.45, '#7a3cff'], [1, '#1a0b3d']]),
     panel: 'rgba(18,12,36,.82)', ink: '#f2eaff', ring: 'rgba(200,170,255,.3)',
@@ -75,7 +75,7 @@ export const CARDS = {
     name: '金曜狮王', hp: 'HP 250',
     move: '王者咆哮 · 200',
     text: '反闪：卡框与文字区是拉丝金箔，插画保持哑光；烈日徽记浮在窗口前方。',
-    foot: ['LN-004 · Reverse Gold', '★★★'],
+    foot: ['NO.5', 'Reverse Gold', '★★★'],
     frame: [160, [[0, '#d9b45a'], [0.45, '#8a6420'], [0.7, '#e3c77a'], [1, '#7a5616']]],
     artBg: (ctx, a) => linear(ctx, 160, a, [[0, '#3a2a10'], [0.5, '#a57a28'], [1, '#2a1d08']]),
     panel: 'rgba(255,247,222,.86)', ink: '#1b1b22', ring: 'rgba(60,40,8,.4)',
@@ -259,10 +259,14 @@ function drawFront(def, flat) {
   const px = panel.x + 64;
   ctx.font = `800 46px ${FONT}`; ctx.fillText(def.move, px, panel.y + 96);
   ctx.font = `400 40px ${FONT}`; wrapText(ctx, def.text, px, panel.y + 170, panel.w - 128, 64);
-  // 页脚
+  // 页脚：NO.n | 出处居中 | ★（无空胶囊）
   ctx.globalAlpha = 0.75; ctx.font = `500 32px ${FONT}`;
-  ctx.fillText(def.foot[0], PAD + 8, TH - PAD - 10);
-  ctx.textAlign = 'right'; ctx.fillText(def.foot[1], TW - PAD - 8, TH - PAD - 10);
+  const footNo = def.foot[0] || '';
+  const footSrc = def.foot.length > 2 ? def.foot[1] : '';
+  const footStars = def.foot.length > 2 ? def.foot[2] : (def.foot[1] || '');
+  ctx.textAlign = 'left'; ctx.fillText(footNo, PAD + 8, TH - PAD - 10);
+  if (footSrc) { ctx.textAlign = 'center'; ctx.fillText(footSrc, TW / 2, TH - PAD - 10); }
+  ctx.textAlign = 'right'; ctx.fillText(footStars, TW - PAD - 8, TH - PAD - 10);
   ctx.globalAlpha = 1; ctx.textAlign = 'left';
   dither(ctx, TW, TH, 3);
   return cv;
