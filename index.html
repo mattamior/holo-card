@@ -2855,13 +2855,24 @@ function ylAspectIsLandscape4x3(w, h, tol = 0.08) {
 }
 
 /**
- * Reject L3 sequences/sheets whose frame aspect is not ~4:3.
- * Playing 3:4 region_warp frames inside the 4:3 window reintroduces letterbox / bad crop.
- * Returns anim unchanged, or null (caller keeps static art.jpg).
+ * Reject L3 packs that are region_warp / warp (Principal rejected), or whose
+ * frame aspect is not ~4:3. Returns anim unchanged, or null (static art.jpg).
  */
 async function ylGuardLandscape4x3(anim, meta) {
   if (!anim) return null;
-  const targetNote = 'L3 awaits landscape 4:3 sequences matching art.jpg window; keeping static art.jpg';
+  meta = meta || {};
+  const method = String(meta.method || '').toLowerCase();
+  if (method && (method.includes('region_warp') || method.includes('warp'))) {
+    console.info(
+      `[yinglong] L3 guard: meta.method="${meta.method}" rejected (region_warp/warp) — keeping static art.jpg`
+    );
+    return null;
+  }
+  if (String(meta.status || '') === 'awaiting-non-warp') {
+    console.info('[yinglong] L3 guard: status=awaiting-non-warp — keeping static art.jpg');
+    return null;
+  }
+  const targetNote = 'L3 awaits non-warp landscape 4:3 sequences matching art.jpg; keeping static art.jpg';
   if (anim.kind === 'sequence') {
     let w = 0, h = 0;
     if (Array.isArray(meta.size) && meta.size.length >= 2) {
@@ -2915,6 +2926,17 @@ async function ylDiscoverSequence(max = 48) {
 
 async function ylLoadAnim() {
   const meta = (await ylFetchJson(YL_ANIM_BASE + 'meta.json')) || {};
+  const method = String(meta.method || '').toLowerCase();
+  if (method && (method.includes('region_warp') || method.includes('warp'))) {
+    console.info(
+      `[yinglong] L3 load: meta.method="${meta.method}" rejected (region_warp/warp) — skip anim`
+    );
+    return null;
+  }
+  if (String(meta.status || '') === 'awaiting-non-warp') {
+    console.info('[yinglong] L3 load: status=awaiting-non-warp — skip anim (static art.jpg)');
+    return null;
+  }
   const fps = Math.max(1, Number(meta.fps) || 8);
   const frameList = Array.isArray(meta.frames) ? meta.frames : null;
   const frameCount = frameList ? frameList.length : (Number(meta.frames) || 0);

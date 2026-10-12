@@ -1,21 +1,6 @@
 {
-  "frames": [
-    "f01.jpg",
-    "f02.jpg",
-    "f03.jpg",
-    "f04.jpg",
-    "f05.jpg",
-    "f06.jpg",
-    "f07.jpg",
-    "f08.jpg"
-  ],
+  "frames": [],
   "fps": 10,
-  "loop": true,
-  "size": [
-    768,
-    1024
-  ],
-  "aspect": "3:4",
-  "method": "region_warp_from_art",
-  "note": "idle: breath, mane/whiskers, wing tips, soft eye glow; identity locked to art.jpg"
+  "status": "awaiting-non-warp",
+  "note": "region_warp rejected by Principal; static art.jpg until layered/Live2D/video"
 }

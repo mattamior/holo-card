@@ -1,0 +1,31 @@
+{
+  "frames": [
+    "f01.jpg",
+    "f02.jpg",
+    "f03.jpg",
+    "f04.jpg",
+    "f05.jpg",
+    "f06.jpg",
+    "f07.jpg",
+    "f08.jpg",
+    "f09.jpg",
+    "f10.jpg"
+  ],
+  "fps": 10,
+  "loop": true,
+  "size": [
+    1280,
+    960
+  ],
+  "aspect": "4:3",
+  "method": "region_warp_from_art",
+  "source": "../art.jpg",
+  "note": "idle: breath, mane/whiskers, wing tips, soft eye glow; identity locked",
+  "qa": {
+    "mean_abs_diff_f01_f10": 2.8642,
+    "peak_motion_px": 4.9422,
+    "mean_step_mad": 2.4379,
+    "max_step_mad": 2.8711,
+    "all_1280x960": true
+  }
+}
