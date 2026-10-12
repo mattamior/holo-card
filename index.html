@@ -43,7 +43,7 @@
   --bleed: 18px;                /* 远景/中景出血：配合更浅的 z，减少窗缘外溢感 */
 
   /* ---- 破框（克制：只允许少量顶部探出，不是整卡效果跑出框外） ---- */
-  --breakout: .08;              /* 角色向上超出窗口上沿的高度（占卡高比例） */
+  --breakout: .035;             /* 极轻破框：只允许上沿一点点探出（约卡高 3.5%） */
   --char-fade: 12%;             /* 角色底部渐隐长度 */
 
   /* ---- 彩虹镭射色板（略降饱和，避免“霓虹灯”感） ---- */
@@ -404,7 +404,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 .layer--char > svg {
   position: absolute; inset: 0; width: 100%; height: 100%; display: block;
   overflow: visible;
-  filter: drop-shadow(0 6px 8px rgba(0,0,0,.4));
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.35));
 }
 /* 不破框的卡：角色（徽记）浮在窗口正前方，只有景深、不越出窗口上沿 */
 .card[data-break="none"] .layer--char {
@@ -441,74 +441,73 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   pointer-events: none;
 }
 
-/* 倾斜反射光在远景层坐标里的落点（--px/--py 由 JS 按固定环境光 + rx/ry 导出，不是指针 UV） */
+/* 倾斜驱动的条带扫光（真闪卡）：--px/--py/--sheen 由 JS lightFromTilt 导出；不是圆心聚光灯 */
+.card {
+  --band-angle: calc(118deg + var(--rx) * 1.35deg - var(--ry) * 0.9deg);
+  --sheen: 50; /* 0–100，条带沿对角扫过的相位；JS 写入 */
+}
+
+/* 远景箔仍可参考窗内坐标（条带 mask 用角度+sheen，不依赖圆心） */
 .win__bg {
   --lx: calc(var(--px) / 100 * var(--card-w) - (var(--win-l) * var(--card-w) - var(--bleed)));
   --ly: calc(var(--py) / 100 * var(--card-h) - (var(--win-t) * var(--card-h) - var(--bleed)));
 }
 
-/* 反射高光附近才明显、远处很淡的遮罩（多段色标近似 smoothstep）
-   插画箔：以像素为半径；卡框箔：以百分比为半径。落点随倾斜扫过，非指哪亮哪 */
-.foil { --far: .15; }
-.foil--art {
-  --reach-px: 170px;
-  -webkit-mask-image: radial-gradient(circle var(--reach-px) at var(--lx) var(--ly),
-    #000 0%,
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .85)) 25%,
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .5))  50%,
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .15)) 75%,
+/* 箔面可见区 = 斜向柔边光带（随 --sheen 平移），远处很淡；绝不用小圆 spotlight */
+.foil { --far: .12; --band-half: 14%; }
+.foil--art,
+.foil--frame {
+  --band-mask: linear-gradient(var(--band-angle),
+    rgba(0,0,0, var(--far)) 0%,
+    rgba(0,0,0, var(--far)) calc(var(--sheen) * 1% - var(--band-half) - 8%),
+    rgba(0,0,0, .45)        calc(var(--sheen) * 1% - var(--band-half)),
+    #000                    calc(var(--sheen) * 1% - 2%),
+    #000                    calc(var(--sheen) * 1% + 2%),
+    rgba(0,0,0, .45)        calc(var(--sheen) * 1% + var(--band-half)),
+    rgba(0,0,0, var(--far)) calc(var(--sheen) * 1% + var(--band-half) + 8%),
     rgba(0,0,0, var(--far)) 100%);
-          mask-image: radial-gradient(circle var(--reach-px) at var(--lx) var(--ly),
-    #000 0%,
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .85)) 25%,
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .5))  50%,
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .15)) 75%,
-    rgba(0,0,0, var(--far)) 100%);
+  -webkit-mask-image: var(--band-mask);
+          mask-image: var(--band-mask);
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
 }
 .foil--frame {
-  --reach-pct: 60%;
-  --pointer-mask: radial-gradient(circle at calc(var(--px) * 1%) calc(var(--py) * 1%),  /* 名称为历史遗留：实为倾斜反射光 */
-    #000 0%,
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .85)) calc(var(--reach-pct) * .25),
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .5))  calc(var(--reach-pct) * .5),
-    rgba(0,0,0, calc(var(--far) + (1 - var(--far)) * .15)) calc(var(--reach-pct) * .75),
-    rgba(0,0,0, var(--far)) var(--reach-pct));
-  -webkit-mask-image: var(--pointer-mask);
-          mask-image: var(--pointer-mask);
+  --pointer-mask: var(--band-mask); /* 历史变量名：border 变体仍引用 */
+  --band-half: 18%;
+  --far: .18;
 }
 
-/* ---------- 局部镭射 mask 变体（来自 foil-mask） ---------- */
-/* art：只闪插画 → 关掉卡框箔 */
+/* ---------- 局部镭射 mask 变体 ---------- */
 .card[data-mask="art"] .foil--frame { display: none; }
-/* border：只闪边框环 → 指针遮罩 ∩ 羽化环形遮罩；关掉插画箔 */
 .card[data-mask="border"] .foil--art { display: none; }
 .card[data-mask="border"] .foil--frame {
-  -webkit-mask-image: var(--pointer-mask), var(--mask-ring);
-          mask-image: var(--pointer-mask), var(--mask-ring);
-  -webkit-mask-size: auto, 100% 100%;
-          mask-size: auto, 100% 100%;
+  -webkit-mask-image: var(--band-mask), var(--mask-ring);
+          mask-image: var(--band-mask), var(--mask-ring);
+  -webkit-mask-size: 100% 100%, 100% 100%;
+          mask-size: 100% 100%, 100% 100%;
   -webkit-mask-repeat: no-repeat;
           mask-repeat: no-repeat;
   -webkit-mask-composite: source-in;
           mask-composite: intersect;
 }
-/* inverse：反闪 → 只有卡框箔（插画窗口不透明挡住；文字面板半透明透出箔光），关掉插画箔 */
 .card[data-mask="inverse"] .foil--art { display: none; }
 
-/* ---------- 高光：固定环境光在倾斜卡面上的镜面斑（盖住卡框与窗口，不盖文字和角色） ---------- */
+/* ---------- 高光：斜向柔光带扫过（盖住卡框与窗口，不盖文字和角色） ---------- */
 .glare {
-  --glare-strength: .45;
-  --glare-r: 180px;
-  --gx: calc(var(--px) * 1%); --gy: calc(var(--py) * 1%);
-  background: radial-gradient(circle var(--glare-r) at var(--gx) var(--gy),
-    rgba(255,255,255, var(--glare-strength)) 0%,
-    rgba(255,255,255, calc(var(--glare-strength) * .6)) 25%,
-    rgba(255,255,255, calc(var(--glare-strength) * .25)) 55%,
-    rgba(255,255,255, calc(var(--glare-strength) * .07)) 80%,
-    rgba(255,255,255, 0) 100%);
+  --glare-strength: .55;
+  background:
+    linear-gradient(var(--band-angle),
+      transparent 0%,
+      transparent calc(var(--sheen) * 1% - 16%),
+      rgba(255,255,255, calc(var(--glare-strength) * .12)) calc(var(--sheen) * 1% - 9%),
+      rgba(255,255,255, calc(var(--glare-strength) * .7))  calc(var(--sheen) * 1% - 1.5%),
+      rgba(255,255,255, calc(var(--glare-strength) * .85)) calc(var(--sheen) * 1%),
+      rgba(255,255,255, calc(var(--glare-strength) * .7))  calc(var(--sheen) * 1% + 1.5%),
+      rgba(255,255,255, calc(var(--glare-strength) * .12)) calc(var(--sheen) * 1% + 9%),
+      transparent calc(var(--sheen) * 1% + 16%),
+      transparent 100%);
   mix-blend-mode: overlay;
-  /* 悬停增强 + 倾斜时也保留一点膜面反光 */
-  opacity: calc(var(--o) * 0.75 + var(--tilt) * 0.35);
+  opacity: calc(var(--o) * 0.8 + var(--tilt) * 0.45);
 }
 
 /* ---------- 边缘光（假菲涅尔）：倾斜越大，卡缘越亮（来自 foil-mask） ---------- */
@@ -554,14 +553,15 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
       var(--c-green) calc(var(--band) * 2), var(--c-yellow) calc(var(--band) * 3),
       var(--c-red) calc(var(--band) * 4), var(--c-violet) calc(var(--band) * 5));
   background-size: auto, 400% 400%;
+  /* 彩虹相位移：由 --sheen（倾斜反射相位）驱动，条带扫过而非定点 */
   background-position:
     0 0,
-    clamp(0%, calc((50 - var(--px)) * var(--holo-speed) * 1% + 50%), 100%)
-    clamp(0%, calc((50 - var(--py)) * var(--holo-speed) * 1% + 50%), 100%);
+    clamp(0%, calc(var(--sheen) * var(--holo-speed) * 1%), 100%)
+    clamp(0%, calc((100 - var(--sheen)) * var(--holo-speed) * 0.65% + 20%), 100%);
   background-blend-mode: soft-light;
-  filter: brightness(calc(.6 + var(--dist) * .25)) contrast(1.1) saturate(1.15);
+  filter: brightness(calc(.55 + var(--tilt) * .35)) contrast(1.12) saturate(1.2);
   mix-blend-mode: color-dodge;
-  opacity: calc((0.14 + var(--o) * 0.86) * var(--holo-max) * (0.4 + var(--tilt) * 0.6));
+  opacity: calc((0.2 + var(--o) * 0.8) * var(--holo-max) * (0.45 + var(--tilt) * 0.55));
 }
 
 /* ---- 闪光星点 ---- */
@@ -577,9 +577,9 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
     linear-gradient(125deg, hsla(300,90%,70%,.22), hsla(200,90%,70%,.22), hsla(50,90%,70%,.22));
   background-size: 130px 130px, 97px 97px, 300% 300%;
   background-position:
-    calc(var(--px) * -0.5px) calc(var(--py) * -0.5px),
-    calc(var(--px) * 0.7px) calc(var(--py) * 0.6px),
-    calc(var(--px) * 1%) calc(var(--py) * 1%);
+    calc(var(--sheen) * -0.45px) calc(var(--sheen) * -0.25px),
+    calc(var(--sheen) * 0.55px) calc((100 - var(--sheen)) * 0.35px),
+    calc(var(--sheen) * 1%) calc((100 - var(--sheen)) * 0.8%);
   mix-blend-mode: color-dodge;
   opacity: calc((0.12 + var(--o) * 0.88) * var(--glitter-max) * (0.4 + var(--tilt) * 0.6));
 }
@@ -603,10 +603,10 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   background-size: auto, auto, 300% 300%;
   background-position:
     0 0, 0 0,
-    clamp(0%, calc((50 - var(--px)) * var(--metal-speed) * 1% + 50%), 100%)
-    clamp(0%, calc((50 - var(--py)) * var(--metal-speed) * 1% + 50%), 100%);
+    clamp(0%, calc(var(--sheen) * var(--metal-speed) * 1%), 100%)
+    clamp(0%, calc((100 - var(--sheen)) * var(--metal-speed) * 0.7% + 18%), 100%);
   mix-blend-mode: soft-light;
-  opacity: calc(var(--metal-idle) + var(--o) * (var(--metal-max) - var(--metal-idle)));
+  opacity: calc(var(--metal-idle) + (var(--o) * 0.7 + var(--tilt) * 0.3) * (var(--metal-max) - var(--metal-idle)));
 }
 
 /* =========================================================
@@ -640,14 +640,14 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   --ring: rgba(60,40,8,.4);
 }
 .card[data-card="yinglong"] {
-  --breakout: .09;              /* 轻探：龙头略出上沿即可 */
+  --breakout: .04;              /* 应龙极轻探出：红框外几乎不见大半个头 */
   --frame: linear-gradient(160deg, #f4efe4, #c4b59a 40%, #8a7a5c 70%, #e8dcc4);
   --frame-pattern: radial-gradient(circle at 50% 0%, rgba(255,230,170,.35), transparent 55%);
   --panel: rgba(18,14,10,.82);
   --ink: #fff6e8;
   --head-shadow: rgba(0,0,0,.4);
   --ring: rgba(255,220,160,.4);
-  --yl-pos: 52% 38%;
+  --yl-pos: 52% 44%;
 }
 /* 照片卡：窗口底图 + 破框角色层（透明 PNG）；破框层只透出上沿，窗内交给底图，换图只替 assets/yinglong/* */
 .win__bg > img.photo-art {
@@ -665,13 +665,9 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 /* 破框层：只保留探出卡框上沿的部分，窗内与底图重合处淡出，避免双影 */
 .card[data-card="yinglong"] .layer--char {
   -webkit-mask-image: linear-gradient(to bottom,
-    #000 0%, #000 12%, rgba(0,0,0,.75) 18%, rgba(0,0,0,.25) 26%, transparent 34%);
+    #000 0%, #000 6%, rgba(0,0,0,.7) 10%, rgba(0,0,0,.2) 16%, transparent 22%);
           mask-image: linear-gradient(to bottom,
-    #000 0%, #000 12%, rgba(0,0,0,.75) 18%, rgba(0,0,0,.25) 26%, transparent 34%);
-}
-body:not(.no-anim) .card[data-card="yinglong"] .layer--char > img.photo-char {
-  transform-origin: 50% 80%;
-  animation: an-breathe 5.2s ease-in-out infinite alternate;
+    #000 0%, #000 6%, rgba(0,0,0,.7) 10%, rgba(0,0,0,.2) 16%, transparent 22%);
 }
 /* 神性体积光动画层 */
 .an-godrays {
@@ -1004,6 +1000,60 @@ body:not(.no-anim) .card[data-card="stardust"] .layer--char > svg { animation: a
 @keyframes an-heat { 0% { transform: translateY(0) scaleX(.9); opacity: 0; } 30% { opacity: .9; } 100% { transform: translateY(-300%) scaleX(1.12); opacity: 0; } }
 body:not(.no-anim) .card[data-card="lion"] .layer--char > svg { animation: an-pulse 4.5s ease-in-out infinite alternate; }
 @keyframes an-pulse { from { transform: scale(.985); } to { transform: scale(1.03); } }
+
+/* 应龙：神性光带呼吸、云雾漂移、鬃毛柔光摇曳、金尘微粒（框内；body.no-anim 关闭） */
+body:not(.no-anim) .card[data-card="yinglong"] .st-yl-fog { display: none; }
+body:not(.no-anim) .card[data-card="yinglong"] .layer--char > img.photo-char {
+  transform-origin: 50% 72%;
+  animation: an-yl-breathe 5.2s ease-in-out infinite alternate;
+}
+@keyframes an-yl-breathe {
+  from { transform: translateY(0) scale(1, 1); }
+  to   { transform: translateY(-1.1%) scale(1.012, 1.028); }
+}
+.an-yl-mist { will-change: transform, opacity; }
+.an-yl-mist--a { animation: an-yl-mist-a 14s ease-in-out infinite alternate; }
+.an-yl-mist--b { animation: an-yl-mist-b 18s ease-in-out infinite alternate; }
+@keyframes an-yl-mist-a {
+  from { transform: translate(-5%, 2%) scale(1); opacity: .55; }
+  to   { transform: translate(6%, -3%) scale(1.06); opacity: .95; }
+}
+@keyframes an-yl-mist-b {
+  from { transform: translate(4%, -2%) scale(1.04); opacity: .9; }
+  to   { transform: translate(-5%, 3%) scale(.96); opacity: .5; }
+}
+.an-yl-mane {
+  background:
+    radial-gradient(ellipse 42% 28% at 28% 18%, rgba(255,236,200,.42) 0%, rgba(255,220,160,.12) 45%, transparent 70%),
+    radial-gradient(ellipse 30% 22% at 42% 12%, rgba(255,250,230,.28) 0%, transparent 65%);
+  mix-blend-mode: screen;
+  transform-origin: 32% 16%;
+  animation: an-yl-mane 6.5s ease-in-out infinite alternate;
+}
+@keyframes an-yl-mane {
+  from { opacity: .35; transform: rotate(-2.2deg) scale(.96) translate(-1%, 1%); }
+  to   { opacity: .95; transform: rotate(2.8deg) scale(1.06) translate(2%, -1%); }
+}
+.an-yl-embers { overflow: hidden; }
+.an-yl-embers i {
+  position: absolute; left: var(--x); top: var(--y);
+  width: calc(var(--card-w) * .028); aspect-ratio: 1; margin: calc(var(--card-w) * -.014);
+  background: radial-gradient(circle, #fff6d0 0%, rgba(255,210,140,.7) 35%, rgba(255,200,120,0) 70%);
+  animation: an-yl-ember var(--d, 4s) ease-in-out var(--dl, 0s) infinite; opacity: 0;
+}
+@keyframes an-yl-ember {
+  0%, 100% { opacity: .1; transform: translate3d(0, 0, 0) scale(.45); }
+  40% { opacity: 1; transform: translate3d(calc(var(--card-w) * .02), calc(var(--card-w) * -.04), 0) scale(1); }
+  70% { opacity: .55; transform: translate3d(calc(var(--card-w) * -.015), calc(var(--card-w) * -.07), 0) scale(.7); }
+}
+/* 神性体积光：比默认更明显的呼吸（template 里的 .an-godrays） */
+body:not(.no-anim) .card[data-card="yinglong"] .an-godrays {
+  animation: an-yl-godrays 7.5s ease-in-out infinite alternate;
+}
+@keyframes an-yl-godrays {
+  0%   { opacity: .55; transform: scale(1) translate(0, 0); }
+  100% { opacity: 1; transform: scale(1.06) translate(-1.5%, 1%); }
+}
 
 /* ---------- 4 级：专属特效（每张卡定制的粒子 / 环境光；整合「稀有光效」光晕与徽章；body.no-rarity 时整层移除） ---------- */
 .layer--sfx { --z: 30; inset: 0; overflow: hidden; border-radius: var(--card-radius); }  /* 专属粒子主要留在框内 */
@@ -1563,13 +1613,30 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
                 <div class="foil foil--art"></div>
               </div>
               <div class="win__mid">
-                <svg viewBox="0 0 320 260" preserveAspectRatio="none" aria-hidden="true">
+                <svg class="st-yl-fog" viewBox="0 0 320 260" preserveAspectRatio="none" aria-hidden="true">
                   <defs><filter id="yl-fog" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="8"/></filter></defs>
                   <g filter="url(#yl-fog)" opacity=".4" fill="#c8d0dc">
                     <ellipse cx="80" cy="210" rx="120" ry="36"/>
                     <ellipse cx="240" cy="200" rx="100" ry="30"/>
                   </g>
                 </svg>
+                <svg class="an-ov an-yl-mist an-yl-mist--a" viewBox="0 0 320 260" preserveAspectRatio="none" aria-hidden="true">
+                  <defs><filter id="yl-fog-a" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="9"/></filter></defs>
+                  <g filter="url(#yl-fog-a)" opacity=".55" fill="#d5dde8"><ellipse cx="70" cy="205" rx="130" ry="40"/></g>
+                </svg>
+                <svg class="an-ov an-yl-mist an-yl-mist--b" viewBox="0 0 320 260" preserveAspectRatio="none" aria-hidden="true">
+                  <defs><filter id="yl-fog-b" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="10"/></filter></defs>
+                  <g filter="url(#yl-fog-b)" opacity=".5" fill="#c9d2dc"><ellipse cx="250" cy="195" rx="110" ry="34"/></g>
+                </svg>
+                <div class="an-ov an-yl-mane" aria-hidden="true"></div>
+                <div class="an-ov an-yl-embers" aria-hidden="true">
+                  <i style="--x:22%;--y:28%;--d:3.6s;--dl:0s"></i>
+                  <i style="--x:38%;--y:16%;--d:4.4s;--dl:-1.2s"></i>
+                  <i style="--x:58%;--y:22%;--d:3.9s;--dl:-2.1s"></i>
+                  <i style="--x:72%;--y:34%;--d:5s;--dl:-.6s"></i>
+                  <i style="--x:48%;--y:40%;--d:4.2s;--dl:-3s"></i>
+                  <i style="--x:30%;--y:48%;--d:4.8s;--dl:-1.8s"></i>
+                </div>
               </div>
             </div>
             <div class="card__etch"></div>
@@ -1598,7 +1665,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           </div>
         </div>
       </div>
-      <div class="label">① 应龙<b class="rbadge" data-r="ur" data-theme="yinglong">传说</b><small>彩虹镭射 · 神性光 · 龙头破框</small></div>
+      <div class="label">① 应龙<b class="rbadge" data-r="ur" data-theme="yinglong">传说</b><small>彩虹镭射 · 神性光 · 动态画面 · 轻破框</small></div>
     </div>
 
     <!-- ================= 卡 1：霜晶龙 · 彩虹镭射 · 只闪插画 · 龙头破框 ================= -->
@@ -2046,9 +2113,13 @@ const LIGHT = { u0: 40, v0: 34, sweepX: 36, sweepY: 32 };  // 静止偏左上；
 /** rx/ry（度）→ 箔面/高光落点（卡面 %）。右缘抬起时高光向左扫，下缘抬起时高光向上扫。 */
 function lightFromTilt(rx, ry) {
   const t = CONFIG.maxTilt || 1;
+  const nx = rx / t, ny = ry / t;
+  // sheen：沿对角扫过的相位 0–100（固定光下随倾斜滑动）
+  const sheen = clamp(LIGHT.u0 + nx * LIGHT.sweepX * 0.85 - ny * LIGHT.sweepY * 0.85);
   return {
-    px: clamp(LIGHT.u0 + (rx / t) * LIGHT.sweepX),
-    py: clamp(LIGHT.v0 - (ry / t) * LIGHT.sweepY),
+    px: clamp(LIGHT.u0 + nx * LIGHT.sweepX),
+    py: clamp(LIGHT.v0 - ny * LIGHT.sweepY),
+    sheen,
   };
 }
 const $ = (s, root = document) => root.querySelector(s);
@@ -2094,10 +2165,12 @@ function setupCard(card) {
 
   const render = () => {
     const v = motion.value, s = card.style;
+    const L = lightFromTilt(v.rx, v.ry);
     s.setProperty('--rx', v.rx.toFixed(2));
     s.setProperty('--ry', v.ry.toFixed(2));
     s.setProperty('--px', v.px.toFixed(2));
     s.setProperty('--py', v.py.toFixed(2));
+    s.setProperty('--sheen', L.sheen.toFixed(2));  // 条带扫光相位
     s.setProperty('--o', clamp(glow.value.o, 0, 1).toFixed(3));
     s.setProperty('--dist', Math.min(1, Math.hypot(v.px - 50, v.py - 50) / 50).toFixed(3));
     s.setProperty('--tilt', Math.min(1, Math.hypot(v.rx, v.ry) / CONFIG.maxTilt).toFixed(3));  // 边缘光 / 厚度
@@ -2272,7 +2345,7 @@ const LEVEL_KEY = 'holo-card:all-in-one:level';
 const LEVEL_INFO = {
   1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。', on: [] },
   2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（效果主要在框内），角色仅轻微破框；加上高光与卡缘边缘光 / 纸张厚度。', on: ['tilt', 'depth', 'glare', 'rim'] },
-  3: { name: '动态画面', desc: '动态画面：立绘本身在动——龙颈呼吸、雪落极光；狐狸摆尾眨眼；星辰摆转；烈日光芒流转。', on: ['tilt', 'depth', 'glare', 'rim', 'anim'] },
+  3: { name: '动态画面', desc: '动态画面：立绘本身在动——应龙鬃毛/神性光/云雾；霜晶龙颈呼吸与雪落；狐狸摆尾眨眼；星辰摆转；烈日光芒流转。', on: ['tilt', 'depth', 'glare', 'rim', 'anim'] },
   4: { name: '专属特效', desc: '专属特效：每张卡定制的粒子与环境光（冰晶寒雾 / 火星暖光 / 星尘拖尾 / 金尘日芒），含稀有光晕与徽章。', on: ['tilt', 'depth', 'glare', 'rim', 'anim', 'rarity'] },
   5: { name: '镀闪卡面', desc: '镀闪卡面：整张卡随角度流动的镭射箔面、压纹与闪点——全部特效叠满。', on: FX_KEYS },
 };
