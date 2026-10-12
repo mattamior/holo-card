@@ -1036,12 +1036,10 @@ body.no-rarity .an-heat {
   display: none !important;
 }
 
-/* 应龙 L3：真序列帧 / sprite（见 yinglong-sprite.js）。无素材时静帧；禁用扭曲叠层假动效。 */
+/* 应龙 L3：分层轻动（option C）。L1–L2 静帧 art.jpg；禁用 region_warp 序列。 */
 body:not(.no-anim) .card[data-card="yinglong"] .st-yl-fog { display: none; }
-body.yl-sprite-ready:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art,
-body.yl-sprite-missing:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art,
 body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art {
-  animation: none !important; /* 禁止 an-yl-body / 旧 breathe */
+  animation: none !important; /* 禁止旧 breathe / warp */
   transform: none;
 }
 .card[data-card="yinglong"] .photo-art--wing { display: none !important; }
@@ -1050,6 +1048,55 @@ body:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art {
   background-repeat: no-repeat; pointer-events: none; z-index: 2;
 }
 body.yl-sprite-sheet .card[data-card="yinglong"] .win__bg > img.photo-art { opacity: 0; }
+
+/* 应龙 L3 分层栈：仅 L3+（非 no-anim）且素材就绪时显示 */
+.card[data-card="yinglong"] .yl-layers {
+  position: absolute; inset: 0;
+  pointer-events: none; overflow: hidden;
+  display: none; z-index: 1;
+}
+body.yl-layers-ready:not(.no-anim) .card[data-card="yinglong"] .yl-layers { display: block; }
+body.yl-layers-ready:not(.no-anim) .card[data-card="yinglong"] .win__bg > img.photo-art { opacity: 0; }
+.card[data-card="yinglong"] .yl-layers > img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: var(--yl-pos, 50% 45%);
+  display: block; pointer-events: none;
+}
+.card[data-card="yinglong"] .yl-layers .yl-l-body { z-index: 1; }
+.card[data-card="yinglong"] .yl-layers .yl-l-light { z-index: 2; }
+.card[data-card="yinglong"] .yl-layers .yl-l-wingtips { z-index: 3; }
+.card[data-card="yinglong"] .yl-layers .yl-l-mane { z-index: 4; }
+.card[data-card="yinglong"] .yl-layers .yl-l-eyeglow { z-index: 5; }
+
+body:not(.no-anim).yl-layers-ready .card[data-card="yinglong"] .yl-l-mane {
+  animation: yl-l-mane 3.5s ease-in-out infinite alternate;
+}
+@keyframes yl-l-mane {
+  from { transform: translateX(-3px); }
+  to   { transform: translateX(3px); }
+}
+body:not(.no-anim).yl-layers-ready .card[data-card="yinglong"] .yl-l-wingtips {
+  transform-origin: 70% 35%;
+  animation: yl-l-wing 4.2s ease-in-out infinite alternate;
+}
+@keyframes yl-l-wing {
+  from { transform: translateY(-2px) rotate(-0.4deg); }
+  to   { transform: translateY(2px) rotate(0.4deg); }
+}
+body:not(.no-anim).yl-layers-ready .card[data-card="yinglong"] .yl-l-eyeglow {
+  animation: yl-l-eye 2.8s ease-in-out infinite alternate;
+}
+@keyframes yl-l-eye {
+  from { opacity: .7; }
+  to   { opacity: 1; }
+}
+body:not(.no-anim).yl-layers-ready .card[data-card="yinglong"] .yl-l-light {
+  animation: yl-l-light 5.5s ease-in-out infinite alternate;
+}
+@keyframes yl-l-light {
+  from { opacity: .5; }
+  to   { opacity: .85; }
+}
 
 /* 应龙 L4 环境层（rarity）：云雾 / 鬃毛柔光 / 金尘 / 神性光带 */
 body.no-rarity .card[data-card="yinglong"] .an-yl-mist,
@@ -1655,6 +1702,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
             <div class="win">
               <div class="win__bg">
                 <img class="photo-art" src="assets/yinglong/art.jpg" alt="" width="960" height="720" decoding="async" />
+                <div class="yl-layers" aria-hidden="true"></div>
                 <div class="an-ov an-godrays" aria-hidden="true"></div>
                 <div class="foil foil--art"></div>
               </div>
@@ -1711,7 +1759,7 @@ body.no-rarity .pk .pk__zoom .card .layer--sfx { display: none; }
           </div>
         </div>
       </div>
-      <div class="label">① 应龙<b class="rbadge" data-r="ur" data-theme="yinglong">传说</b><small>彩虹镭射 · 颈身翼摆 · 神性光</small></div>
+      <div class="label">① 应龙<b class="rbadge" data-r="ur" data-theme="yinglong">传说</b><small>彩虹镭射 · 分层轻动 · 神性光</small></div>
     </div>
 
     <!-- ================= 卡 1：霜晶龙 · 彩虹镭射 · 只闪插画 · 窗内立绘 ================= -->
@@ -2391,7 +2439,7 @@ const LEVEL_KEY = 'holo-card:all-in-one:level';
 const LEVEL_INFO = {
   1: { name: '基础卡面', desc: '基础卡面：静态立绘——不倾斜、无视差、无动画、无箔光，只保留轻微的悬停投影。', on: [] },
   2: { name: '立体效果', desc: '立体效果：3D 倾斜 + 多层视差（全部在框内，不破框）；加上高光与卡缘边缘光 / 纸张厚度。', on: ['tilt', 'depth', 'glare', 'rim'] },
-  3: { name: '动态画面', desc: '动态画面：立绘主体在动——应龙真序列帧（无素材时静帧）；霜晶龙颈呼吸；焰尾狐摆尾/耳抖/眨眼；星尘狐星辰摆转；金曜狮王徽记脉动。极光/雪/星云/日芒等环境层在 4 级。', on: ['tilt', 'depth', 'glare', 'rim', 'anim'] },
+  3: { name: '动态画面', desc: '动态画面：立绘主体在动——应龙分层轻动（鬃/翼/眼光）；霜晶龙颈呼吸；焰尾狐摆尾/耳抖/眨眼；星尘狐星辰摆转；金曜狮王徽记脉动。极光/雪/星云/日芒等环境层在 4 级。', on: ['tilt', 'depth', 'glare', 'rim', 'anim'] },
   4: { name: '专属特效', desc: '专属特效：环境在动——应龙云雾/鬃毛柔光/金尘/神性光带；霜晶龙极光/月光/雪花与冰晶寒雾；焰尾狐夕阳光晕与火星暖光；星尘狐星云/星点与星尘拖尾；金曜狮王日芒/光晕/热浪与金尘日芒；含稀有光晕与徽章。', on: ['tilt', 'depth', 'glare', 'rim', 'anim', 'rarity'] },
   5: { name: '镀闪卡面', desc: '镀闪卡面：整张卡随角度流动的镭射箔面、压纹与闪点——全部特效叠满。', on: FX_KEYS },
 };
@@ -2817,7 +2865,7 @@ window.__holoAio = {
   simulateOrientation(beta, gamma) { onDeviceOrientation({ beta, gamma }); },
 };
 
-/* ---------- 应龙 L3：真序列帧 / sprite sheet（无素材则静帧，不用扭曲叠层冒充） ---------- */
+/* ---------- 应龙 L3：优先分层轻动（option C）；序列/sprite 仅非 warp 真素材时启用 ---------- */
 const YL_ANIM_BASE = 'assets/yinglong/anim/';
 
 async function ylFetchJson(url) {
@@ -3097,12 +3145,72 @@ async function initYinglongSprite() {
   };
 }
 
+const YL_LAYERS_BASE = 'assets/yinglong/layers/';
+/* stack bottom→top per layers/README: 00 → 04 → 02 → 01 → 03 */
+const YL_LAYER_STACK = [
+  { file: '00_body.png', cls: 'yl-l-body' },
+  { file: '04_light.png', cls: 'yl-l-light' },
+  { file: '02_wingtips.png', cls: 'yl-l-wingtips' },
+  { file: '01_mane.png', cls: 'yl-l-mane' },
+  { file: '03_eyeglow.png', cls: 'yl-l-eyeglow' },
+];
+
+async function initYinglongLayers() {
+  const card = document.querySelector('.card[data-card="yinglong"]');
+  if (!card) return null;
+  const bg = card.querySelector('.win__bg');
+  const img = card.querySelector('.win__bg > img.photo-art:not(.photo-art--wing)');
+  if (!bg || !img) return null;
+
+  const ok = await ylProbeImage(YL_LAYERS_BASE + '00_body.png');
+  if (!ok) {
+    document.body.classList.remove('yl-layers-ready');
+    console.info('[yinglong] L3 layers: missing 00_body.png — keep static art.jpg');
+    return { ready: false };
+  }
+
+  let host = bg.querySelector('.yl-layers');
+  if (!host) {
+    host = document.createElement('div');
+    host.className = 'yl-layers';
+    host.setAttribute('aria-hidden', 'true');
+    const before = bg.querySelector('.an-godrays, .foil--art');
+    if (before) bg.insertBefore(host, before);
+    else bg.appendChild(host);
+  }
+  host.replaceChildren();
+  for (const layer of YL_LAYER_STACK) {
+    const el = document.createElement('img');
+    el.className = layer.cls;
+    el.src = YL_LAYERS_BASE + layer.file;
+    el.alt = '';
+    el.decoding = 'async';
+    el.width = 960;
+    el.height = 720;
+    host.appendChild(el);
+  }
+  document.body.classList.add('yl-layers-ready');
+  console.info('[yinglong] L3 layered option C ready (mane/wings/glow CSS motion @ L3+)');
+  return { ready: true, host };
+}
+
 window.__yinglongSprite = { init: initYinglongSprite };
-// boot after DOM; applyFx may toggle no-anim later — player reads body class each frame
+window.__yinglongLayers = { init: initYinglongLayers };
+// boot: layers first (option C); sprite stays available but anim/ is empty / warp-guarded
+async function bootYinglongL3() {
+  const layers = await initYinglongLayers();
+  if (!layers || !layers.ready) {
+    await initYinglongSprite(); // future true sequence only
+  } else {
+    // keep warp/sequence path cold — do not start sprite while layers own L3
+    document.body.classList.add('yl-sprite-missing');
+    document.body.classList.remove('yl-sprite-ready', 'yl-sprite-sheet');
+  }
+}
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => { initYinglongSprite(); });
+  document.addEventListener('DOMContentLoaded', () => { bootYinglongL3(); });
 } else {
-  initYinglongSprite();
+  bootYinglongL3();
 }
 
 

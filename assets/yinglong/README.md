@@ -27,3 +27,8 @@ YINGLONG_SRC=/path/to/new.jpg python3 assets/yinglong/prep.py
 ```
 
 预览：`#lv=3&focus=yinglong`（仅主体序列） / `#lv=4&focus=yinglong`（+ 环境） / `#lv=5&focus=yinglong`
+
+## L3 option C — layered motion
+Live path: `layers/` (00_body + mane/wingtips/eyeglow/light). CSS motion at L3+ only.
+`anim/` stays empty / non-warp; rejected region_warp packs must not be re-enabled.
+
