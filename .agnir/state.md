@@ -20,7 +20,8 @@ Durable continuity belongs to the Project.
   - `.agnir/{state,next-actions,decisions}.md` → hand-reconciled from both sides;
   - `README.md` → merged, then corrected branch/route references and the duplicated Agnir section.
 - `feature/classic` was created from `a42d348` before the merge.
-- Push of `main` + `feature/classic` and the resulting Pages deployment were still pending when this record was written; see Next Actions.
+- Pushed atomically on 2026-10-19: `main` `305944d..dab1555`, `feature/classic` new at `a42d348`; Pages runs `39224965877` and `39224978596` (both `main` @ `dab1555`) completed successfully.
+- Published checks: `/all-in-one/` serves the 汇总版 (5 cards), `/classic/` serves the classic page and contains the corner tilt clamp, homepage lists the updated routes.
 
 ## 汇总版 technical truth (carried from feature/all-in-one)
 

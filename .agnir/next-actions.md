@@ -2,10 +2,9 @@
 
 ## Outstanding
 
-1. Push `feature/classic` and `main` atomically, then verify the Pages workflow run, the published `/all-in-one/` and `/classic/` pages, and that `/classic/` still contains the corner tilt fix.
-2. QA the 汇总版 on `main` in a real browser: levels 1–5, per-card level memory, WebGL switch and fallback, pack opening, mobile layout.
-3. Confirm the corner tilt fix on `feature/classic` with a real pointer (headless geometry only so far).
-4. Consider whether `feature/all-in-one` should be retired or kept as a historical branch; it no longer has its own route.
+1. QA the 汇总版 on `main` in a real browser: levels 1–5, per-card level memory, WebGL switch and fallback, pack opening, mobile layout.
+2. Confirm the corner tilt fix on `feature/classic` with a real pointer (headless geometry only so far).
+3. Consider whether `feature/all-in-one` should be retired or kept as a historical branch; it no longer has its own route.
 
 ## Available next steps
 
