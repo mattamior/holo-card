@@ -23,9 +23,14 @@ const REPO = process.env.GITHUB_REPOSITORY || cfg.repo;
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: 1 << 28 }).trim();
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-// 优先用远程分支（CI 上 checkout 的就是它们）；本地调试时回退到同名本地分支
+// 优先用远程分支（CI 上 checkout 的就是它们）；本地调试时回退到同名本地分支。
+// 本地预览尚未推送的提交时设 PAGES_LOCAL_REFS=1，改为本地分支优先。
+const preferLocal = process.env.PAGES_LOCAL_REFS === '1';
 function resolveRef(branch) {
-  for (const ref of [`refs/remotes/origin/${branch}`, `refs/heads/${branch}`]) {
+  const refs = preferLocal
+    ? [`refs/heads/${branch}`, `refs/remotes/origin/${branch}`]
+    : [`refs/remotes/origin/${branch}`, `refs/heads/${branch}`];
+  for (const ref of refs) {
     try { git('rev-parse', '--verify', '--quiet', ref + '^{commit}'); return ref; } catch {}
   }
   return null;
@@ -38,8 +43,13 @@ const remoteFeatures = git('for-each-ref', '--format=%(refname)', 'refs/remotes/
   .split('\n').filter(Boolean).map((r) => r.replace('refs/remotes/origin/', ''));
 for (const branch of remoteFeatures.sort()) {
   if (known.has(branch)) continue;
-  let route = branch.replace(/^feature\//, '').toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
-  if (!route || versions.some((v) => v.route === route)) route = `v-${route || 'branch'}-${versions.length}`;
+  const route = branch.replace(/^feature\//, '').toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
+  // 路由已被显式登记（例如汇总版已迁到 main、同一分支仍保留）时不再生成重复版本，
+  // 否则会冒出 /v-all-in-one-6/ 这类重复入口。
+  if (!route || versions.some((v) => v.route === route)) {
+    console.log(`↷ 跳过自动发现 ${branch}：/${route || '?'}/ 已由 versions.json 显式占用`);
+    continue;
+  }
   versions.push({ route, branch, title: branch.replace(/^feature\//, ''), short: route, desc: `自动发现的分支 ${branch}。`, auto: true });
 }
 

@@ -3,7 +3,7 @@
   "versions": [
     {
       "route": "all-in-one",
-      "branch": "feature/all-in-one",
+      "branch": "main",
       "title": "汇总版 · 全部特效",
       "short": "汇总版",
       "desc": "四张卡同时叠加箔面镭射、局部 mask、蚀刻压纹、边缘光与纸张厚度、多层视差与角色破框，支持陀螺仪体感；中文面板逐层开关特效，WebGL 模式同样是真 3D 视差破框；还能「开包」抽卡，撕包、翻牌、传说卡专属演出。",
@@ -11,7 +11,7 @@
     },
     {
       "route": "classic",
-      "branch": "main",
+      "branch": "feature/classic",
       "title": "经典 CSS 版",
       "short": "经典版",
       "desc": "最初的纯 CSS 实现：彩虹镭射、闪光星点、金属拉丝三张卡，指针驱动 3D 倾斜、高光与镭射流光。",
