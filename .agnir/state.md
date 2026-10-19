@@ -12,7 +12,7 @@ Durable continuity belongs to the Project.
 
 ## 2026-10-19 integration
 
-- Merged `origin/feature/all-in-one` (`adf07cc`) into `main` after committing the corner tilt fix (`a42d348`).
+- Merged `origin/feature/all-in-one` (`adf07cc`) into `main` after committing the classic corner tilt fix (`a42d348`).
 - Conflict resolution:
   - `index.html` → 汇总版 (branch side);
   - `AGNIR.md`, `AGNIR.yaml`, `.github/pages/versions.json` → `main` side, then routes updated (`all-in-one` → `main`, `classic` → `feature/classic`);
@@ -31,11 +31,18 @@ Durable continuity belongs to the Project.
 - WebGL mode uses a local three subset and a stencil window for true layered 3D breakout; it downloads only on first switch and falls back with a notice when WebGL2 is unavailable.
 - Branch decisions and evidence for this work are preserved in `.agnir/decisions.md` and `.agnir/evidence/` (2026-10-12).
 
-## Corner tilt fix (classic page, on `feature/classic`)
+## Corner tilt fix — 汇总版 (`main`, 2026-10-19)
 
-- `rx`/`ry` were each capped at 14°, so corners reached ~19.8° of combined tilt; pointer mapping also read the transformed rotator rect.
-- Fixed by measuring the untransformed `.card` and capping the tilt vector length at `maxTilt`. Corners ~9.9°/axis, edges ~14°, near-corner perspective scale ~1.077× (was ~1.10–1.11×).
-- This fix applies to the classic page only; the 汇总版 page has its own tilt logic.
+- The Principal clarified that the original corner report referred to the 汇总版, not the classic page.
+- Before: CSS mode capped each axis at 11°, so corners reached 15.25° combined (`rx 10.74`, `ry -10.83`); WebGL mode capped each axis at 14° and allowed 19.8° combined.
+- Change: `limitTilt()` caps the tilt vector length at `maxTilt`. It is used by pointer and gyro input in `index.html`, and by hover and gyro in `js/holo.js`. Light/foil UV is derived from the clamped angles; edge midpoints keep the full per-axis angle.
+- After: CSS corners 11.00° combined (7.75/7.81 per axis); WebGL corners 14.00° (10.02/9.78); mobile CSS corner 11.00°; `prefers-reduced-motion` stays at 0.
+- Committed locally 2026-10-19; push to `main` not yet authorized.
+
+## Corner tilt fix — classic (`feature/classic`)
+
+- The earlier fix (commit `a42d348`) capped the 14° per-axis angles at a 14° vector, measured the untransformed `.card`, and reduced corner tilt to ~9.9°/axis.
+- It was implemented for the earlier report that the Principal has since clarified was about the 汇总版; it remains a valid improvement for the classic page.
 
 ## Identity and installation
 

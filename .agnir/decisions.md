@@ -36,6 +36,14 @@ This file records durable decisions required to operate and evolve this Project 
 - Unchanged durable truth is a valid checkpoint no-op; no `.agnir/` mutation is manufactured for commits.
 - No Project-defined pre-commit policy (linters, tests, build gates) is declared. The deploy workflow and local `node .github/pages/build.mjs` remain the verification paths.
 
+## Tilt model
+
+- A tilt limit is a **vector** limit. Independent per-axis clamps allow diagonal input to reach √2 × `maxTilt` (15.25° at CSS `maxTilt: 11`, 19.8° at WebGL `maxTilt: 14`).
+- Pointer and gyro input must both pass through the same `limitTilt` helper; do not clamp only at render time.
+- Light/foil UV derives from the clamped `(rx, ry)`, so specular response stays consistent at corners.
+- Edge midpoints keep the full per-axis angle; only diagonal targets are scaled down.
+- The 2026-10-19 classic fix was applied for a report the Principal later clarified targeted the 汇总版. Keep the classic fix, but treat the 汇总版 as the requested target.
+
 ## 汇总版开发决策（2026-10-12，feature/all-in-one，保留原文）
 
 - **2026-10-12** — Breakout off for all cards; stereo/foil/motion stay in-frame.

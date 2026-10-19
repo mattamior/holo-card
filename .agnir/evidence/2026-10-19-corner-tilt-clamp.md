@@ -52,3 +52,7 @@ Screenshots (temporary): `/tmp/holo-test/before-*.png`, `/tmp/holo-test/after-*.
 ## Status
 
 Uncommitted; awaiting Principal visual confirmation before the commit checkpoint.
+
+## Scope correction (2026-10-19)
+
+The Principal later clarified that the original "四角形变过头" report referred to the 汇总版 (all-in-one), not this classic page. This fix is therefore not the requested target; it remains valid for the classic page. The 汇总版 fix and measurements are recorded in `.agnir/evidence/2026-10-19-all-in-one-corner-clamp.md`.

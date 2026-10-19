@@ -2,16 +2,17 @@
 
 ## Outstanding
 
-1. QA the 汇总版 on `main` in a real browser: levels 1–5, per-card level memory, WebGL switch and fallback, pack opening, mobile layout.
-2. Confirm the corner tilt fix on `feature/classic` with a real pointer (headless geometry only so far).
-3. Consider whether `feature/all-in-one` should be retired or kept as a historical branch; it no longer has its own route.
+1. Push the 汇总版 corner tilt fix to `main` and verify the Pages deployment (awaiting Principal authorization).
+2. QA the 汇总版 on `main` in a real browser: corners, levels 1–5, per-card level memory, WebGL switch and fallback, pack opening, mobile layout.
+3. Confirm the classic corner tilt fix on `feature/classic` with a real pointer.
+4. Consider whether `feature/all-in-one` should be retired or kept as a historical branch; it no longer has its own route.
 
 ## Available next steps
 
-- Local multi-version preview: `node .github/pages/build.mjs _site`, then serve `_site`; or use the existing `/tmp/holo-preview/holo-card` build on port 8081.
-- Classic page: open `feature/classic`'s `index.html`, or http://127.0.0.1:8080/ for the working tree at the time of the install.
-- If the classic corners still feel strong, tune `CONFIG.maxTilt` or `--perspective`; the vector clamp lives in `onMove`.
-- 汇总版 tuning lives in its own `index.html` / `js/holo.js`; do not port classic tilt constants into it blindly.
+- Local multi-version preview: `PAGES_LOCAL_REFS=1 node .github/pages/build.mjs _site`, then serve `_site`; or use the existing `/tmp/holo-preview-merge` build on port 8082.
+- 汇总版 working tree: http://127.0.0.1:8080/ (serves the repo root through the local static server).
+- Classic page: check out `feature/classic`, or use the `/classic/` route in a built `_site`.
+- Corner tuning: CSS `CONFIG.maxTilt` is 11 in `index.html`, WebGL `CONFIG.maxTilt` is 14 in `js/holo.js`; both pass through `limitTilt`. Raising either raises the corner cap with it.
 
 ## Version layout reminders
 

@@ -73,6 +73,12 @@ export const CONFIG = {
   sparkleLight: new Vector3(-0.45, 0.6, 1.0), // 亮片“虚拟光源”方向（世界空间）
 };
 
+/** 把倾斜向量限制在半径 maxTilt 内：四角不再叠加出 √2 倍倾角 */
+const limitTilt = (x, y, max = CONFIG.maxTilt) => {
+  const len = Math.hypot(x, y);
+  return len > max ? [x * max / len, y * max / len] : [x, y];
+};
+
 /** 每张卡的材质外观 */
 const CARD_LOOK = {
   dragon: { rainbow: 0.3, holoEmit: 0.2, foilTint: [0.92, 0.96, 1.0], foilMetal: 0.75, foilRough: 0.30, foilCover: 0.35,
@@ -725,7 +731,8 @@ export function start({ canvas, onReady, onLayout, onFrame, initialCard = 'drago
       requestRender(); return;
     }
     // 与 CSS 版一致：指针所在一侧抬向观众
-    tilt.set({ y: -(px - 0.5) * 2 * CONFIG.maxTilt, x: -(py - 0.5) * 2 * CONFIG.maxTilt }, CONFIG.follow);
+    const [tx, ty] = limitTilt(-(py - 0.5) * 2 * CONFIG.maxTilt, -(px - 0.5) * 2 * CONFIG.maxTilt);
+    tilt.set({ x: tx, y: ty }, CONFIG.follow);
     glow.set({ o: 1 });
     requestRender();
   };
@@ -824,7 +831,8 @@ export function start({ canvas, onReady, onLayout, onFrame, initialCard = 'drago
   /** 陀螺仪姿态（度，CSS 约定：rx = rotateY，ry = rotateX）。指针在卡上或刚离开时忽略，指针优先 */
   const setGyro = (rx, ry) => {
     if (reduceMotion.matches) return;
-    gyroPose = { x: -ry, y: rx };
+    const [gx, gy] = limitTilt(-ry, rx);
+    gyroPose = { x: gx, y: gy };
     if (!fx.tilt) return;                // 关闭倾斜：体感也不驱动       // CSS rotateX(+) 下沿靠近观众 = three rotation.x(−)
     if (!active || press || over || performance.now() - lastPointerAt < CONFIG.pointerPriorityMs) return;
     tilt.set(gyroPose, CONFIG.follow); glow.set({ o: 1 }); requestRender();

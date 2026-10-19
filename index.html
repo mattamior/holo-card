@@ -2901,6 +2901,11 @@ const FX_NAMES = { foil: '镭射', etch: '压纹', rim: '边缘光', depth: '视
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const clamp = (v, min = 0, max = 100) => Math.min(max, Math.max(min, v));
+/** 把倾斜向量 (rx, ry) 限制在半径 maxTilt 内：四角不再叠加出 √2 倍倾角 */
+const limitTilt = (rx, ry, max = CONFIG.maxTilt) => {
+  const len = Math.hypot(rx, ry);
+  return len > max ? [rx * max / len, ry * max / len] : [rx, ry];
+};
 /** 固定环境光（斜上方偏左）：反光 UV 随倾斜扫过卡面，不是指针聚光灯 */
 const LIGHT = { u0: 40, v0: 34, sweepX: 36, sweepY: 32 };  // 静止偏左上；满倾扫到对角侧，少贴 0/100 边
 /** rx/ry（度）→ 箔面/高光落点（卡面 %）。右缘抬起时高光向左扫，下缘抬起时高光向上扫。 */
@@ -3008,7 +3013,7 @@ function setupCard(card) {
     const v = clamp(((e.clientY - r.top) / r.height) * 100);
     const tilt = CONFIG.maxTilt;
     // 指针所在一侧抬向观众：rotateY 负值 → 右边缘靠近；rotateX 正值 → 下边缘靠近
-    const rx = -((u - 50) / 50) * tilt, ry = ((v - 50) / 50) * tilt;
+    const [rx, ry] = limitTilt(-((u - 50) / 50) * tilt, ((v - 50) / 50) * tilt);
     const L = lightFromTilt(rx, ry);
     applyPose(rx, ry, L.px, L.py, 1, CONFIG.follow);
   };
@@ -3046,8 +3051,10 @@ const gyro = {
 const clampTilt = (v) => Math.min(CONFIG.maxTilt, Math.max(-CONFIG.maxTilt, v));
 function mapOrientation(beta, gamma) {
   // 相对零点 → rx/ry；反光 UV 与指针模式同一套 lightFromTilt。gamma 左右 → rotateY(rx)；beta 前后 → rotateX(ry)
-  const rx = clampTilt(((gamma - gyro.zeroGamma) / CONFIG.gyroRange) * CONFIG.maxTilt);
-  const ry = clampTilt(((beta - gyro.zeroBeta) / CONFIG.gyroRange) * CONFIG.maxTilt);
+  const [rx, ry] = limitTilt(
+    clampTilt(((gamma - gyro.zeroGamma) / CONFIG.gyroRange) * CONFIG.maxTilt),
+    clampTilt(((beta - gyro.zeroBeta) / CONFIG.gyroRange) * CONFIG.maxTilt),
+  );
   const L = lightFromTilt(rx, ry);
   return { rx, ry, px: L.px, py: L.py };
 }
