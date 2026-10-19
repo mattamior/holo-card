@@ -39,5 +39,11 @@ Pages 的发布来源是 GitHub Actions（workflow：[`.github/workflows/pages.y
 ## 使用
 直接用浏览器打开 `index.html` 即可。尺寸、透视、色板、光泽强度等都是文件开头的 CSS 变量；倾斜角度与弹簧手感在脚本的 `CONFIG` 里调整。
 
+## Agnir Project Instructions
+
+本项目用 Agnir 维护跨会话的项目连续性。激活与项目操作说明见 [AGNIR.md](AGNIR.md)。
+
+此节仅作为旧版激活路径的兼容定位入口，不重复 Agnir 的完整流程。
+
 ## 致谢
 思路参考 [simeydotme/pokemon-cards-css](https://github.com/simeydotme/pokemon-cards-css)。卡面均为 CSS 与内联 SVG 绘制，无外部图片素材。
