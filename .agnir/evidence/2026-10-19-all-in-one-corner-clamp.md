@@ -87,7 +87,16 @@ Screenshots:
 - `2026-10-19-allo-modal-after.jpg`
 - `2026-10-19-allo-modal-mobile-after.jpg`
 
+## Push and deployment (2026-10-19)
+
+- Committed and pushed on `main`: list clamp `35448f6`, modal perspective `9afd227`.
+
+- `git push origin main` → `7e1164d..9afd227`; `git ls-remote` confirms `refs/heads/main = 9afd227b74beb1b7a2818972445fc78fb5aaa7e7`.
+- Pages run `39231564748` (`main` @ `9afd227`) completed `success`.
+- Live checks (`https://mattamior.github.io/holo-card/`): `/all-in-one/` contains `limitTilt` (×3) and `syncCardPerspective` (×4); `/all-in-one/js/holo.js` contains `limitTilt` (×3); `/classic/` still serves the classic page.
+- Headless Chrome against the live page: list corner `--rx 7.75 / --ry -7.81` (11.00°, `--persp: 800`); modal card 620px with `--persp: 2952`, `--depth-scale: 3.6905`, corner `--rx 7.77 / --ry -7.79` (11.00°); no page errors.
+- Screenshot: `/tmp/holo-test/live-modal-after.png` (temporary).
+
 ## Limits and status
 
 - Headless geometry and screenshots only; final hand-feel judgement belongs to the Principal.
-- Committed locally on `main` (list clamp `35448f6`, modal follow-up included); push/deployment pending authorization.

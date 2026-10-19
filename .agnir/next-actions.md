@@ -2,10 +2,9 @@
 
 ## Outstanding
 
-1. Push the 汇总版 corner fixes (list + detail modal) to `main` and verify the Pages deployment (awaiting Principal authorization).
-2. QA the 汇总版 on `main` in a real browser: corners in both the list and the detail modal, levels 1–5, per-card level memory, WebGL switch and fallback, pack opening, mobile layout.
-3. Confirm the classic corner tilt fix on `feature/classic` with a real pointer.
-4. Consider whether `feature/all-in-one` should be retired or kept as a historical branch; it no longer has its own route.
+1. QA the 汇总版 on `main` in a real browser: corners in both the list and the detail modal, levels 1–5, per-card level memory, WebGL switch and fallback, pack opening, mobile layout.
+2. Confirm the classic corner tilt fix on `feature/classic` with a real pointer.
+3. Consider whether `feature/all-in-one` should be retired or kept as a historical branch; it no longer has its own route.
 
 ## Available next steps
 
