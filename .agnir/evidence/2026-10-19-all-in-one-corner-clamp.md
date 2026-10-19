@@ -62,7 +62,32 @@ Other checks:
 - `2026-10-19-allo-corner-css-after.jpg` — same corner after the fix.
 - `2026-10-19-allo-corner-webgl-after.jpg` — WebGL mode top-left after the fix.
 
+## Detail modal (follow-up, 2026-10-19)
+
+The list fix was not enough in the clicked-card preview: the modal reuses the same `.card` element but CSS grows it to 380–620px (`--card-w` in `.holo-modal__card-host`), while `--persp` stayed 800. At 620×930 the 11° corner reached ~1.15× near-corner magnification; visually the top-left corner ballooned.
+
+Fix: while a card is inside `.holo-modal__card-host`, scale both perspective and layer depth by `modalWidth / listCardWidth`:
+
+- `--persp = 800 × scale`
+- `--depth-scale = scale` (used by the `.layer` translateZ and the `.win__bg` / `.win__mid` parallax)
+
+A `ResizeObserver` keeps it in sync on modal open, card switch, and viewport resize, and removes the inline overrides when the card returns to the list.
+
+Measured:
+
+- Desktop 1400×1000: list 168 → modal 620; `--persp 2952`, `--depth-scale 3.6905`; corner remains 11.00° combined; near-corner scale ≈1.037 (was ≈1.15).
+- Modal resize 620→485: `--persp 2310`, `--depth-scale 2.8869`.
+- Mobile 390×844: list 132 → modal 328; `--persp 1988`, `--depth-scale 2.4848`; corner 11.00°.
+- Card switch (prev/next) reapplies; close removes the inline values and restores `--persp: 800` / `--depth-scale: 1`.
+- No page errors.
+
+Screenshots:
+
+- `2026-10-19-allo-modal-before.jpg`
+- `2026-10-19-allo-modal-after.jpg`
+- `2026-10-19-allo-modal-mobile-after.jpg`
+
 ## Limits and status
 
 - Headless geometry and screenshots only; final hand-feel judgement belongs to the Principal.
-- Committed locally on `main`; push/deployment pending authorization.
+- Committed locally on `main` (list clamp `35448f6`, modal follow-up included); push/deployment pending authorization.

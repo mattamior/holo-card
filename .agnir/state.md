@@ -37,7 +37,8 @@ Durable continuity belongs to the Project.
 - Before: CSS mode capped each axis at 11°, so corners reached 15.25° combined (`rx 10.74`, `ry -10.83`); WebGL mode capped each axis at 14° and allowed 19.8° combined.
 - Change: `limitTilt()` caps the tilt vector length at `maxTilt`. It is used by pointer and gyro input in `index.html`, and by hover and gyro in `js/holo.js`. Light/foil UV is derived from the clamped angles; edge midpoints keep the full per-axis angle.
 - After: CSS corners 11.00° combined (7.75/7.81 per axis); WebGL corners 14.00° (10.02/9.78); mobile CSS corner 11.00°; `prefers-reduced-motion` stays at 0.
-- Committed locally 2026-10-19; push to `main` not yet authorized.
+- Detail modal: the same card is grown to 380–620px, so `--persp` and `--depth-scale` now scale with `modalWidth / listWidth` (620 → 2952px / 3.69×), keeping the 11° corner visually equivalent to the list (~1.037× near-corner instead of ~1.15×). Mobile 328 → 1988px / 2.48×. Inline overrides are removed when the card returns to the list.
+- Committed locally 2026-10-19 (`35448f6` list clamp plus modal follow-up); push to `main` not yet authorized.
 
 ## Corner tilt fix — classic (`feature/classic`)
 
