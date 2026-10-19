@@ -1,16 +1,15 @@
 # Agnir Next Actions
 
-No Project work has been requested beyond installing Agnir, and nothing is in flight.
-
 ## Outstanding
 
-None recorded.
+1. Visually confirm the corner tilt fix in a real browser: pointer at each corner should keep the 3D tilt but no longer over-stretch the near corner; side midpoints should look unchanged.
+2. Commit the fix when accepted (`提交` / `commit` runs checkpoint evaluation first).
 
 ## Available next steps
 
 - Preview the classic version by opening `index.html` directly in a browser.
 - Preview the assembled multi-version site with `node .github/pages/build.mjs _site`, then serve `_site` with any static server.
-- Commit the Agnir installation when requested (`commit` / `提交` triggers checkpoint evaluation first).
+- If corners still feel strong, tune `CONFIG.maxTilt` (global) or `--perspective` (projection); the vector clamp lives in `onMove` in `index.html`.
 
 ## Version layout reminders for future work
 

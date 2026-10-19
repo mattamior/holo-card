@@ -424,12 +424,20 @@ function setupCard(card) {
   };
 
   const onMove = (e) => {
-    const r = rotator.getBoundingClientRect();
+    // 用未被 transform 的 .card 取矩形：rotator 倾斜后 getBoundingClientRect 会变大，
+    // 反过来压缩指针坐标，导致靠边时手感不一致。
+    const r = card.getBoundingClientRect();
     const px = clamp(((e.clientX - r.left) / r.width) * 100);
     const py = clamp(((e.clientY - r.top) / r.height) * 100);
     const tilt = reduceMotion.matches ? 0 : CONFIG.maxTilt;
     // 指针所在一侧抬向观众：rotateY 负值 → 右边缘靠近；rotateX 正值 → 下边缘靠近
-    motion.set({ rx: -((px - 50) / 50) * tilt, ry: ((py - 50) / 50) * tilt, px, py }, CONFIG.follow);
+    let tx = -((px - 50) / 50) * tilt;
+    let ty = ((py - 50) / 50) * tilt;
+    // rx / ry 各自封顶时，四角的倾斜向量长度会达到 √2 倍（约 20°），
+    // 透视下近端角被明显放大。这里按向量长度封顶，四角与边中点的最大倾角一致。
+    const len = Math.hypot(tx, ty);
+    if (len > tilt) { tx *= tilt / len; ty *= tilt / len; }
+    motion.set({ rx: tx, ry: ty, px, py }, CONFIG.follow);
     glow.set({ o: 1 });
     kick();
   };
