@@ -66,20 +66,22 @@ Other checks:
 
 The list fix was not enough in the clicked-card preview: the modal reuses the same `.card` element but CSS grows it to 380–620px (`--card-w` in `.holo-modal__card-host`), while `--persp` stayed 800. At 620×930 the 11° corner reached ~1.15× near-corner magnification; visually the top-left corner ballooned.
 
-Fix: while a card is inside `.holo-modal__card-host`, scale both perspective and layer depth by `modalWidth / listCardWidth`:
+Fix: while a card is inside `.holo-modal__card-host`, scale **perspective only** by `modalWidth / listCardWidth`:
 
 - `--persp = 800 × scale`
-- `--depth-scale = scale` (used by the `.layer` translateZ and the `.win__bg` / `.win__mid` parallax)
+- layer depth stays the design value (`--depth: 1`)
 
-A `ResizeObserver` keeps it in sync on modal open, card switch, and viewport resize, and removes the inline overrides when the card returns to the list.
+A `ResizeObserver` keeps the perspective in sync on modal open, card switch, and viewport resize, and removes the inline `--persp` when the card returns to the list.
 
 Measured:
 
-- Desktop 1400×1000: list 168 → modal 620; `--persp 2952`, `--depth-scale 3.6905`; corner remains 11.00° combined; near-corner scale ≈1.037 (was ≈1.15).
-- Modal resize 620→485: `--persp 2310`, `--depth-scale 2.8869`.
-- Mobile 390×844: list 132 → modal 328; `--persp 1988`, `--depth-scale 2.4848`; corner 11.00°.
-- Card switch (prev/next) reapplies; close removes the inline values and restores `--persp: 800` / `--depth-scale: 1`.
+- Desktop 1400×1000: list 168 → modal 620; `--persp 2952`; corner remains 11.00° combined; near-corner scale ≈1.037 (was ≈1.15).
+- Modal resize 620→485: `--persp 2310`.
+- Mobile 390×844: list 132 → modal 328; `--persp 1988`; corner 11.00°.
+- Card switch (prev/next) reapplies; close removes the inline value and restores `--persp: 800`.
 - No page errors.
+
+A first implementation also scaled layer depth (`3.69×`). That exposed the fixed window bleed: at maximum tilt `.win__bg` fell ~3.4px short of the window edge, and scaling the bleed changed the art crop. Reverted to perspective only; depth stays `1` and the window background covers the window at both corners.
 
 Screenshots:
 

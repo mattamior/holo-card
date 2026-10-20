@@ -251,7 +251,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
      所以这些属性只放在“各层自己”或层内部的元素上——只压平该层自己的子树，不影响层间景深。
    ========================================================= */
 .card {
-  --rx: 0; --ry: 0; --px: 50; --py: 50; --o: 0; --dist: 0; --tilt: 0; --depth-scale: 1;
+  --rx: 0; --ry: 0; --px: 50; --py: 50; --o: 0; --dist: 0; --tilt: 0;
   position: relative;
   width: var(--card-w);
   height: var(--card-h);
@@ -275,8 +275,8 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
   --z: 0;
   position: absolute;
   pointer-events: none;
-  transform: translateZ(calc(var(--z) * var(--depth) * var(--depth-scale, 1) * 1px))
-             scale(calc(1 - var(--z) * var(--depth) * var(--depth-scale, 1) / var(--persp)));
+  transform: translateZ(calc(var(--z) * var(--depth) * 1px))
+             scale(calc(1 - var(--z) * var(--depth) / var(--persp)));
   backface-visibility: hidden;
 }
 
@@ -357,7 +357,7 @@ p.tip { margin: 0; opacity: .6; font-size: 13px; max-width: 42em; line-height: 1
 /* 窗口内的层：比窗口大一圈（出血），按等效深度随倾斜平移：位移 = z·sin(倾斜角)
    （不支持 CSS sin() 的旧浏览器会忽略这条 transform，退化为静止，不会出错） */
 .win__bg, .win__mid {
-  --zz: calc(var(--z) * var(--depth) * var(--depth-scale, 1));
+  --zz: calc(var(--z) * var(--depth));
   position: absolute;
   inset: calc(var(--bleed) * -1);
   transform: translate(
@@ -2906,14 +2906,14 @@ const limitTilt = (rx, ry, max = CONFIG.maxTilt) => {
   const len = Math.hypot(rx, ry);
   return len > max ? [rx * max / len, ry * max / len] : [rx, ry];
 };
-/* 弹层把同一张卡放大到 380–620px。透视距离与层深按放大倍数同比缩放，
-   否则固定的 800px 透视会把 620px 卡的近角放大到约 1.15 倍。列表卡保持原值。 */
+/* 弹层把同一张卡放大到 380–620px。只按放大倍数缩放透视距离：
+   固定的 800px 透视会把 620px 卡的近角放大到约 1.15 倍。层深保持设计值，
+   否则窗内出血也要一起缩放，角色/插画的裁切会跟着变。列表卡保持原值。 */
 const BASE_PERSP = 800;
 function syncCardPerspective(card) {
   if (!card) return;
   if (!card.closest('.holo-modal__card-host')) {
     card.style.removeProperty('--persp');
-    card.style.removeProperty('--depth-scale');
     return;
   }
   const listW = document.querySelector('#css-view .card')?.offsetWidth || 168;
@@ -2921,7 +2921,6 @@ function syncCardPerspective(card) {
   if (!w || !listW) return;
   const scale = w / listW;
   card.style.setProperty('--persp', Math.round(BASE_PERSP * scale));
-  card.style.setProperty('--depth-scale', scale.toFixed(4));
 }
 const perspObserver = typeof ResizeObserver === 'function'
   ? new ResizeObserver((entries) => { for (const e of entries) syncCardPerspective(e.target); })

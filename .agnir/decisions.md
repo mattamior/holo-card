@@ -42,8 +42,9 @@ This file records durable decisions required to operate and evolve this Project 
 - Pointer and gyro input must both pass through the same `limitTilt` helper; do not clamp only at render time.
 - Light/foil UV derives from the clamped `(rx, ry)`, so specular response stays consistent at corners.
 - Edge midpoints keep the full per-axis angle; only diagonal targets are scaled down.
-- Perspective and layer depth must scale with the card's rendered size. The 800px / depth 1 defaults are tuned for the ~168px list card; the detail modal grows the same card to 380–620px and must use `--persp = 800 × modalWidth / listWidth` and `--depth-scale = modalWidth / listWidth`.
-- The modal override is scoped to `.holo-modal__card-host` and removed when the card returns to the list; list cards keep `--persp: 800`, `--depth-scale: 1`.
+- Perspective must scale with the card's rendered size. The 800px default is tuned for the ~168px list card; the detail modal grows the same card to 380–620px and must use `--persp = 800 × modalWidth / listWidth`.
+- Layer depth stays at its design value when a card is enlarged. Scaling depth alone is not size-neutral: the fixed window bleed no longer covers the window at maximum tilt, and scaling the bleed changes the art crop. If depth is ever scaled, bleed, art positioning, paper edge, and shadows must be scaled together.
+- The modal override is scoped to `.holo-modal__card-host` and removed when the card returns to the list; list cards keep `--persp: 800`, `--depth: 1`.
 - The 2026-10-19 classic fix was applied for a report the Principal later clarified targeted the 汇总版. Keep the classic fix, but treat the 汇总版 as the requested target.
 
 ## 汇总版开发决策（2026-10-12，feature/all-in-one，保留原文）

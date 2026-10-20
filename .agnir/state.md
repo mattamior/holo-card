@@ -37,8 +37,8 @@ Durable continuity belongs to the Project.
 - Before: CSS mode capped each axis at 11°, so corners reached 15.25° combined (`rx 10.74`, `ry -10.83`); WebGL mode capped each axis at 14° and allowed 19.8° combined.
 - Change: `limitTilt()` caps the tilt vector length at `maxTilt`. It is used by pointer and gyro input in `index.html`, and by hover and gyro in `js/holo.js`. Light/foil UV is derived from the clamped angles; edge midpoints keep the full per-axis angle.
 - After: CSS corners 11.00° combined (7.75/7.81 per axis); WebGL corners 14.00° (10.02/9.78); mobile CSS corner 11.00°; `prefers-reduced-motion` stays at 0.
-- Detail modal: the same card is grown to 380–620px, so `--persp` and `--depth-scale` now scale with `modalWidth / listWidth` (620 → 2952px / 3.69×), keeping the 11° corner visually equivalent to the list (~1.037× near-corner instead of ~1.15×). Mobile 328 → 1988px / 2.48×. Inline overrides are removed when the card returns to the list.
-- Committed and pushed: `35448f6` (list clamp) and `9afd227` (modal perspective); Pages run `39231564748` succeeded. Live checks: `/all-in-one/` list corner 11.00° with `--persp: 800`; modal 620px card gets `--persp: 2952` / `--depth-scale: 3.6905` and its corner stays 11.00°.
+- Detail modal: the same card is grown to 380–620px, so `--persp` scales with `modalWidth / listWidth` (620 → 2952px), keeping the 11° corner visually equivalent to the list (~1.037× near-corner instead of ~1.15×). Layer depth stays `1`; scaling it also requires scaling the window bleed and changes the art crop. Mobile 328 → 1988px. The inline `--persp` is removed when the card returns to the list.
+- Committed and pushed: `35448f6` (list clamp) and `9afd227` (modal perspective). A follow-up keeps the modal perspective-only. Live checks: `/all-in-one/` list corner 11.00° with `--persp: 800`; modal 620px card gets `--persp: 2952` / `--depth: 1` and its corner stays 11.00°.
 
 ## Corner tilt fix — classic (`feature/classic`)
 
